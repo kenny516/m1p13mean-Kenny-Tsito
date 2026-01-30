@@ -1,0 +1,15 @@
+{
+    "recommendations": [
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "angular.ng-template",
+        "mongodb.mongodb-vscode",
+        "github.copilot",
+        "github.copilot-chat",
+        "ms-vscode.vscode-typescript-next",
+        "christian-kohler.path-intellisense",
+        "formulahendry.auto-rename-tag",
+        "streetsidesoftware.code-spell-checker",
+        "streetsidesoftware.code-spell-checker-french"
+    ]
+}
