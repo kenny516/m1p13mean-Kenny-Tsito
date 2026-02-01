@@ -24,12 +24,12 @@ Application web de marketplace pour un centre commercial (type Akoor/La City) pe
 
 ## 🛠️ Stack Technique
 
-| Composant           | Technologie                           |
-| ------------------- | ------------------------------------- |
-| **Base de données** | MongoDB                               |
-| **Backend**         | Express.js (JavaScript ES Modules)    |
-| **Frontend**        | Angular 19 + ZardUI + Tailwind CSS    |
-| **Runtime**         | Node.js                               |
+| Composant           | Technologie                        |
+| ------------------- | ---------------------------------- |
+| **Base de données** | MongoDB                            |
+| **Backend**         | Express.js (JavaScript ES Modules) |
+| **Frontend**        | Angular 19 + ZardUI + Tailwind CSS |
+| **Runtime**         | Node.js                            |
 
 ---
 

@@ -28,25 +28,25 @@ applyTo: "**"
 
 ```javascript
 // TOUJOURS valider avec Joi ou express-validator
-import Joi from 'joi'
+import Joi from "joi";
 
 const userSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().min(8).required(),
   name: Joi.string().min(2).max(50).required(),
-})
+});
 
 // Middleware de validation
 export const validate = (schema) => (req, res, next) => {
-  const { error } = schema.validate(req.body)
+  const { error } = schema.validate(req.body);
   if (error) {
     return res.status(400).json({
       success: false,
       error: { code: "VALIDATION_ERROR", message: error.details[0].message },
-    })
+    });
   }
-  next()
-}
+  next();
+};
 ```
 
 ### Frontend
@@ -85,15 +85,15 @@ const user = await User.findOne({ email });
 ## 🔒 Configuration Express
 
 ```javascript
-import helmet from 'helmet'
-import rateLimit from 'express-rate-limit'
-import mongoSanitize from 'express-mongo-sanitize'
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import mongoSanitize from "express-mongo-sanitize";
 
 // Helmet pour les headers de sécurité
-app.use(helmet())
+app.use(helmet());
 
 // Sanitize les requêtes MongoDB
-app.use(mongoSanitize())
+app.use(mongoSanitize());
 
 // Rate limiting
 const limiter = rateLimit({
@@ -103,8 +103,8 @@ const limiter = rateLimit({
     success: false,
     error: { code: "RATE_LIMIT", message: "Trop de requêtes" },
   },
-})
-app.use("/api/", limiter)
+});
+app.use("/api/", limiter);
 
 // Rate limit plus strict pour l'auth
 const authLimiter = rateLimit({
@@ -117,8 +117,8 @@ const authLimiter = rateLimit({
       message: "Trop de tentatives de connexion",
     },
   },
-})
-app.use("/api/auth/login", authLimiter)
+});
+app.use("/api/auth/login", authLimiter);
 ```
 
 ---
@@ -154,31 +154,31 @@ export const authorize = (...allowedRoles) => {
       return res.status(401).json({
         success: false,
         error: { code: "UNAUTHORIZED", message: "Non authentifié" },
-      })
+      });
     }
 
     if (!allowedRoles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
         error: { code: "FORBIDDEN", message: "Accès non autorisé" },
-      })
+      });
     }
 
-    next()
-  }
-}
+    next();
+  };
+};
 
 // Usage
-import { auth } from '../middlewares/auth.middleware.js'
-import { authorize } from '../middlewares/authorize.middleware.js'
-import { deleteProduct } from '../controllers/product.controller.js'
+import { auth } from "../middlewares/auth.middleware.js";
+import { authorize } from "../middlewares/authorize.middleware.js";
+import { deleteProduct } from "../controllers/product.controller.js";
 
 router.delete(
   "/products/:id",
   auth,
   authorize("ADMIN", "SELLER"),
   deleteProduct,
-)
+);
 ```
 
 ---

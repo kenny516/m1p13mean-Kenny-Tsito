@@ -18,7 +18,7 @@ Ce projet utilise MongoDB avec Mongoose. Les règles suivantes doivent être res
 ### User (Utilisateur)
 
 ```javascript
-import mongoose from 'mongoose'
+import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
@@ -67,16 +67,16 @@ const userSchema = new mongoose.Schema(
 );
 
 // Index
-userSchema.index({ email: 1 })
-userSchema.index({ role: 1, isActive: 1 })
+userSchema.index({ email: 1 });
+userSchema.index({ role: 1, isActive: 1 });
 
-export default mongoose.model('User', userSchema)
+export default mongoose.model("User", userSchema);
 ```
 
 ### Shop (Boutique)
 
 ```javascript
-import mongoose from 'mongoose'
+import mongoose from "mongoose";
 
 const shopSchema = new mongoose.Schema(
   {
@@ -120,17 +120,17 @@ const shopSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-shopSchema.index({ name: "text", description: "text" })
-shopSchema.index({ isActive: 1 })
-shopSchema.index({ categories: 1 })
+shopSchema.index({ name: "text", description: "text" });
+shopSchema.index({ isActive: 1 });
+shopSchema.index({ categories: 1 });
 
-export default mongoose.model('Shop', shopSchema)
+export default mongoose.model("Shop", shopSchema);
 ```
 
 ### Product (Produit)
 
 ```javascript
-import mongoose from 'mongoose'
+import mongoose from "mongoose";
 
 const productSchema = new mongoose.Schema(
   {
@@ -204,16 +204,16 @@ productSchema.index({ tags: 1 });
 
 // Virtual pour le stock disponible
 productSchema.virtual("availableStock").get(function () {
-  return this.stock - this.reservedStock
-})
+  return this.stock - this.reservedStock;
+});
 
-export default mongoose.model('Product', productSchema)
+export default mongoose.model("Product", productSchema);
 ```
 
 ### Cart (Panier avec TTL)
 
 ```javascript
-import mongoose from 'mongoose'
+import mongoose from "mongoose";
 
 const cartItemSchema = new mongoose.Schema(
   {
@@ -256,17 +256,17 @@ const cartSchema = new mongoose.Schema(
     },
   },
   { timestamps: true },
-)
+);
 
-cartSchema.index({ userId: 1 })
+cartSchema.index({ userId: 1 });
 
-export default mongoose.model('Cart', cartSchema)
+export default mongoose.model("Cart", cartSchema);
 ```
 
 ### Order (Commande avec snapshot)
 
 ```javascript
-import mongoose from 'mongoose'
+import mongoose from "mongoose";
 
 const orderItemSchema = new mongoose.Schema(
   {
@@ -355,19 +355,19 @@ orderSchema.index({ status: 1, createdAt: -1 });
 // Génération numéro de commande
 orderSchema.pre("validate", async function (next) {
   if (!this.orderNumber) {
-    const count = await mongoose.model("Order").countDocuments()
-    this.orderNumber = `ORD-${Date.now()}-${String(count + 1).padStart(5, "0")}`
+    const count = await mongoose.model("Order").countDocuments();
+    this.orderNumber = `ORD-${Date.now()}-${String(count + 1).padStart(5, "0")}`;
   }
-  next()
-})
+  next();
+});
 
-export default mongoose.model('Order', orderSchema)
+export default mongoose.model("Order", orderSchema);
 ```
 
 ### Wallet (Portefeuille)
 
 ```javascript
-import mongoose from 'mongoose'
+import mongoose from "mongoose";
 
 const walletSchema = new mongoose.Schema(
   {
@@ -398,15 +398,15 @@ const walletSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-walletSchema.index({ ownerId: 1, ownerModel: 1 }, { unique: true })
+walletSchema.index({ ownerId: 1, ownerModel: 1 }, { unique: true });
 
-export default mongoose.model('Wallet', walletSchema)
+export default mongoose.model("Wallet", walletSchema);
 ```
 
 ### WalletTransaction
 
 ```javascript
-import mongoose from 'mongoose'
+import mongoose from "mongoose";
 
 const walletTransactionSchema = new mongoose.Schema(
   {
@@ -450,10 +450,10 @@ const walletTransactionSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-walletTransactionSchema.index({ walletId: 1, createdAt: -1 })
-walletTransactionSchema.index({ type: 1, status: 1 })
+walletTransactionSchema.index({ walletId: 1, createdAt: -1 });
+walletTransactionSchema.index({ type: 1, status: 1 });
 
-export default mongoose.model('WalletTransaction', walletTransactionSchema)
+export default mongoose.model("WalletTransaction", walletTransactionSchema);
 ```
 
 ---
@@ -463,16 +463,16 @@ export default mongoose.model('WalletTransaction', walletTransactionSchema)
 ### Achat complet avec transaction
 
 ```javascript
-import mongoose from 'mongoose'
-import Cart from '../models/Cart.js'
-import Product from '../models/Product.js'
-import Order from '../models/Order.js'
-import Wallet from '../models/Wallet.js'
-import WalletTransaction from '../models/WalletTransaction.js'
+import mongoose from "mongoose";
+import Cart from "../models/Cart.js";
+import Product from "../models/Product.js";
+import Order from "../models/Order.js";
+import Wallet from "../models/Wallet.js";
+import WalletTransaction from "../models/WalletTransaction.js";
 
 export const processOrder = async (userId, cartId) => {
-  const session = await mongoose.startSession()
-  session.startTransaction()
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
   try {
     // 1. Récupérer le panier
@@ -612,9 +612,9 @@ export const processOrder = async (userId, cartId) => {
 ### Dashboard Admin - Stats globales
 
 ```javascript
-import Order from '../models/Order.js'
-import User from '../models/User.js'
-import Product from '../models/Product.js'
+import Order from "../models/Order.js";
+import User from "../models/User.js";
+import Product from "../models/Product.js";
 
 export const getAdminDashboard = async () => {
   const [orderStats, userStats, productStats] = await Promise.all([
@@ -654,8 +654,8 @@ export const getAdminDashboard = async () => {
 ### Dashboard Seller - Ventes par période
 
 ```javascript
-import mongoose from 'mongoose'
-import Order from '../models/Order.js'
+import mongoose from "mongoose";
+import Order from "../models/Order.js";
 
 export const getSellerSales = async (sellerId, startDate, endDate) => {
   return Order.aggregate([

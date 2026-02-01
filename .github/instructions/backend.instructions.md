@@ -21,7 +21,7 @@ applyTo: back-end/**
 ### Modèle Mongoose (`models/*.js`)
 
 ```javascript
-import mongoose from 'mongoose'
+import mongoose from "mongoose";
 
 const exampleSchema = new mongoose.Schema(
   {
@@ -47,13 +47,13 @@ const exampleSchema = new mongoose.Schema(
   {
     timestamps: true, // createdAt, updatedAt automatiques
   },
-)
+);
 
 // Index pour optimiser les recherches
-exampleSchema.index({ name: "text" })
-exampleSchema.index({ status: 1, createdAt: -1 })
+exampleSchema.index({ name: "text" });
+exampleSchema.index({ status: 1, createdAt: -1 });
 
-export default mongoose.model("Example", exampleSchema)
+export default mongoose.model("Example", exampleSchema);
 ```
 
 ### Contrôleur (`controllers/*.controller.js`)
@@ -108,22 +108,22 @@ export const list = async (req, res, next) => {
 ### Routes (`routes/*.routes.js`)
 
 ```javascript
-import { Router } from 'express'
-import * as controller from '../controllers/example.controller.js'
-import { auth, authorize } from '../middlewares/auth.middleware.js'
+import { Router } from "express";
+import * as controller from "../controllers/example.controller.js";
+import { auth, authorize } from "../middlewares/auth.middleware.js";
 
-const router = Router()
+const router = Router();
 
 // Routes publiques
-router.get("/", controller.list)
-router.get("/:id", controller.getOne)
+router.get("/", controller.list);
+router.get("/:id", controller.getOne);
 
 // Routes protégées
-router.post("/", auth, controller.create)
-router.put("/:id", auth, controller.update)
-router.delete("/:id", auth, authorize("ADMIN"), controller.delete)
+router.post("/", auth, controller.create);
+router.put("/:id", auth, controller.update);
+router.delete("/:id", auth, authorize("ADMIN"), controller.delete);
 
-export default router
+export default router;
 ```
 
 ---
@@ -131,39 +131,39 @@ export default router
 ## 🔐 Middleware d'Authentification
 
 ```javascript
-import jwt from 'jsonwebtoken'
-import User from '../models/User.js'
+import jwt from "jsonwebtoken";
+import User from "../models/User.js";
 
 export const auth = async (req, res, next) => {
   try {
-    const token = req.header("Authorization")?.replace("Bearer ", "")
+    const token = req.header("Authorization")?.replace("Bearer ", "");
 
     if (!token) {
       return res.status(401).json({
         success: false,
         error: { code: "NO_TOKEN", message: "Token requis" },
-      })
+      });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET)
-    const user = await User.findById(decoded.userId)
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.userId);
 
     if (!user) {
       return res.status(401).json({
         success: false,
         error: { code: "USER_NOT_FOUND", message: "Utilisateur non trouvé" },
-      })
+      });
     }
 
-    req.user = user
-    next()
+    req.user = user;
+    next();
   } catch (error) {
     res.status(401).json({
       success: false,
       error: { code: "INVALID_TOKEN", message: "Token invalide" },
-    })
+    });
   }
-}
+};
 
 export const authorize = (...roles) => {
   return (req, res, next) => {
@@ -171,11 +171,11 @@ export const authorize = (...roles) => {
       return res.status(403).json({
         success: false,
         error: { code: "FORBIDDEN", message: "Accès non autorisé" },
-      })
+      });
     }
-    next()
-  }
-}
+    next();
+  };
+};
 ```
 
 ---
@@ -234,43 +234,43 @@ export const authorize = (...roles) => {
 ## 💰 Transaction d'Achat (Exemple)
 
 ```javascript
-import mongoose from 'mongoose'
-import Cart from '../models/Cart.js'
-import Product from '../models/Product.js'
-import Order from '../models/Order.js'
-import Wallet from '../models/Wallet.js'
+import mongoose from "mongoose";
+import Cart from "../models/Cart.js";
+import Product from "../models/Product.js";
+import Order from "../models/Order.js";
+import Wallet from "../models/Wallet.js";
 
 export const processOrder = async (req, res, next) => {
-  const session = await mongoose.startSession()
-  session.startTransaction()
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
   try {
-    const { cartId } = req.body
-    const cart = await Cart.findById(cartId).session(session)
+    const { cartId } = req.body;
+    const cart = await Cart.findById(cartId).session(session);
 
     // 1. Vérifier le stock
     for (const item of cart.items) {
-      const product = await Product.findById(item.productId).session(session)
+      const product = await Product.findById(item.productId).session(session);
       if (product.stock < item.quantity) {
-        throw new Error(`Stock insuffisant pour ${product.title}`)
+        throw new Error(`Stock insuffisant pour ${product.title}`);
       }
     }
 
     // 2. Déduire du wallet acheteur
     const buyerWallet = await Wallet.findOne({ ownerId: req.user._id }).session(
       session,
-    )
+    );
     const total = cart.items.reduce(
       (sum, item) => sum + item.priceSnapshot * item.quantity,
       0,
-    )
+    );
 
     if (buyerWallet.balance < total) {
-      throw new Error("Solde insuffisant")
+      throw new Error("Solde insuffisant");
     }
 
-    buyerWallet.balance -= total
-    await buyerWallet.save({ session })
+    buyerWallet.balance -= total;
+    await buyerWallet.save({ session });
 
     // 3. Créer la commande
     const order = await Order.create(
@@ -283,7 +283,7 @@ export const processOrder = async (req, res, next) => {
         },
       ],
       { session },
-    )
+    );
 
     // 4. Mettre à jour le stock
     for (const item of cart.items) {
@@ -291,26 +291,26 @@ export const processOrder = async (req, res, next) => {
         item.productId,
         { $inc: { stock: -item.quantity, reservedStock: -item.quantity } },
         { session },
-      )
+      );
     }
 
     // 5. Supprimer le panier
-    await Cart.findByIdAndDelete(cartId, { session })
+    await Cart.findByIdAndDelete(cartId, { session });
 
-    await session.commitTransaction()
+    await session.commitTransaction();
 
     res.status(201).json({
       success: true,
       data: order[0],
       message: "Commande créée avec succès",
-    })
+    });
   } catch (error) {
-    await session.abortTransaction()
-    next(error)
+    await session.abortTransaction();
+    next(error);
   } finally {
-    session.endSession()
+    session.endSession();
   }
-}
+};
 ```
 
 ---

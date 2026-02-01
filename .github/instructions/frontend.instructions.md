@@ -18,6 +18,7 @@ applyTo: front-end/**
 ## 📦 Installation ZardUI
 
 ### Prérequis
+
 ```bash
 # Installer Tailwind CSS
 npm install -D tailwindcss postcss autoprefixer
@@ -28,21 +29,23 @@ npm install @ngzard/ui
 ```
 
 ### Configuration Tailwind (`tailwind.config.js`)
+
 ```javascript
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
     "./src/**/*.{html,ts}",
-    "./node_modules/@ngzard/ui/**/*.{html,ts,js,mjs}"
+    "./node_modules/@ngzard/ui/**/*.{html,ts,js,mjs}",
   ],
   theme: {
     extend: {},
   },
   plugins: [],
-}
+};
 ```
 
 ### Styles globaux (`styles.css`)
+
 ```css
 @tailwind base;
 @tailwind components;
@@ -71,6 +74,7 @@ module.exports = {
 ## 🎨 Composants ZardUI Disponibles
 
 ### Composants de base
+
 - `ZardButton` - Boutons avec variantes
 - `ZardInput` - Champs de saisie
 - `ZardBadge` - Badges/Labels
@@ -81,6 +85,7 @@ module.exports = {
 - `ZardProgress` - Barres de progression
 
 ### Usage dans un composant
+
 ```typescript
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -233,7 +238,7 @@ import { ZardSkeletonModule } from "@ngzard/ui/skeleton";
   template: \`
     <div class="container mx-auto p-4">
       <h1 class="text-2xl font-bold mb-6">Nos Produits</h1>
-      
+
       <!-- Loading state -->
       @if (loading) {
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -662,12 +667,12 @@ Le footer doit contenir (avec Tailwind CSS):
   <div class="container mx-auto px-4 text-center">
     <p class="text-muted-foreground">© 2026 - Marketplace Centre Commercial</p>
     <p class="mt-2">
-      Développé par <strong class="text-foreground">Kenny</strong> & 
+      Développé par <strong class="text-foreground">Kenny</strong> &
       <strong class="text-foreground">Tsito</strong>
     </p>
     <p class="text-sm text-muted-foreground">Master 1 - Promotion 13</p>
-    <a 
-      href="https://github.com/kenny516/m1p13mean-Kenny-Tsito" 
+    <a
+      href="https://github.com/kenny516/m1p13mean-Kenny-Tsito"
       target="_blank"
       class="mt-2 inline-block text-primary hover:underline"
     >
@@ -682,31 +687,52 @@ Le footer doit contenir (avec Tailwind CSS):
 ## 🎨 Classes Tailwind Utiles
 
 ### Layout
+
 ```html
-<div class="container mx-auto px-4">          <!-- Container centré -->
-<div class="grid grid-cols-1 md:grid-cols-3"> <!-- Grid responsive -->
-<div class="flex items-center justify-between"> <!-- Flexbox -->
+<div class="container mx-auto px-4">
+  <!-- Container centré -->
+  <div class="grid grid-cols-1 md:grid-cols-3">
+    <!-- Grid responsive -->
+    <div class="flex items-center justify-between"><!-- Flexbox --></div>
+  </div>
+</div>
 ```
 
 ### Espacements
+
 ```html
-<div class="p-4 m-2">     <!-- padding/margin -->
-<div class="space-y-4">   <!-- espacement vertical entre enfants -->
-<div class="gap-4">       <!-- gap pour grid/flex -->
+<div class="p-4 m-2">
+  <!-- padding/margin -->
+  <div class="space-y-4">
+    <!-- espacement vertical entre enfants -->
+    <div class="gap-4"><!-- gap pour grid/flex --></div>
+  </div>
+</div>
 ```
 
 ### Typographie
+
 ```html
-<h1 class="text-2xl font-bold">             <!-- Titre -->
-<p class="text-muted-foreground text-sm">   <!-- Texte secondaire -->
-<span class="text-primary">                 <!-- Couleur primaire -->
+<h1 class="text-2xl font-bold">
+  <!-- Titre -->
+  <p class="text-muted-foreground text-sm">
+    <!-- Texte secondaire -->
+    <span class="text-primary"> <!-- Couleur primaire --></span>
+  </p>
+</h1>
 ```
 
 ### États
+
 ```html
-<button class="hover:bg-primary/90">        <!-- Hover -->
-<div class="transition-all duration-200">   <!-- Animation -->
-<input class="focus:ring-2 focus:ring-ring"> <!-- Focus -->
+<button class="hover:bg-primary/90">
+  <!-- Hover -->
+  <div class="transition-all duration-200">
+    <!-- Animation -->
+    <input class="focus:ring-2 focus:ring-ring" />
+    <!-- Focus -->
+  </div>
+</button>
 ```
 
 ---
