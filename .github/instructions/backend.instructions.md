@@ -18,7 +18,7 @@ applyTo: back-end/**
 
 ## 📁 Structure des Fichiers
 
-### Modèle Mongoose (`models/*.js`)
+### Modèle Mongoose
 
 ```javascript
 import mongoose from "mongoose";
