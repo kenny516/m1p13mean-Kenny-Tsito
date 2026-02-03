@@ -1,3 +1,66 @@
+# Node dependencies
+node_modules/
+
+# Frontend / backend node_modules
+/front-end/node_modules/
+/back-end/node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+*.log
+
+# Build outputs
+/dist/
+/build/
+/front-end/dist/
+/back-end/dist/
+
+# Angular cache and build artifacts
+.angular/
+.angular-cache/
+
+# TypeScript
+*.tsbuildinfo
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Runtime files
+pids/
+*.pid
+*.seed
+*.pid.lock
+tmp/
+temp/
+
+# Test coverage
+coverage/
+*.lcov
+
+# Editor directories and files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Misc
+.cache/
+.eslintcache
+*.tgz
+*.gz
+
+# Ignore package-lock files inside node_modules (some tools write them there)
+**/node_modules/.package-lock.json
 # Dependencies
 node_modules/
 package-lock.json
@@ -77,3 +140,19 @@ uploads/
 
 # Ignore vscode AI rules (Codacy)
 .github/instructions/codacy.instructions.md
+
+
+
+#backend
+/backend/dist
+/backend/build
+/backend/.env
+
+
+
+#frontend
+/frontend/dist
+/frontend/build
+/frontend/.angular
+/frontend/.cache
+
