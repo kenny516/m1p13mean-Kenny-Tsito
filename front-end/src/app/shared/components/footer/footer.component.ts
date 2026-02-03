@@ -1,10 +1,10 @@
 import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 
 @Component({
   selector: 'app-footer',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   template: `
     <footer class="bg-gray-100 mt-auto py-8 border-t">
       <div class="container mx-auto px-4 text-center">

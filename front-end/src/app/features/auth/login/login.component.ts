@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import {
   FormBuilder,
   FormGroup,
@@ -21,13 +21,12 @@ import { ZardCardComponent } from '@/shared/components/card';
   selector: 'app-login',
   standalone: true,
   imports: [
-    CommonModule,
     ReactiveFormsModule,
     RouterLink,
     ZardButtonComponent,
     ZardInputDirective,
-    ZardCardComponent,
-  ],
+    ZardCardComponent
+],
   template: `
     <div
       class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 py-12 px-4 sm:px-6 lg:px-8"
