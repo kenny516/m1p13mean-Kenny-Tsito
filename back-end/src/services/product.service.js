@@ -182,7 +182,7 @@ export const deleteProduct = async (id, userId, userRole) => {
 /**
  * Validation Admin (Approuver/Rejeter)
  */
-export const validateProduct = async (id, status, rejectionReason) => {
+export const moderateProduct = async (id, status, rejectionReason) => {
 	const product = await getProductById(id);
 
 	product.moderation.status = status;
