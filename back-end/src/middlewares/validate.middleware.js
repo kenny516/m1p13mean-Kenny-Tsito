@@ -33,3 +33,11 @@ export const validate = (schema, property = "body") => {
     next();
   };
 };
+
+/**
+ * Middleware de validation pour les query params
+ * Raccourci pour validate(schema, 'query')
+ *
+ * @param {Object} schema - Schéma Joi de validation
+ */
+export const validateQuery = (schema) => validate(schema, "query");

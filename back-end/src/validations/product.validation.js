@@ -171,14 +171,14 @@ export const listProductsQuerySchema = Joi.object({
 		}),
 
 	sort: Joi.object().optional().messages({
-		"object.base": "Le tri doit être un objet JSON valide (ex: {'price':'asc'})",
+		"object.base": "Le tri doit être un objet JSON valide",
 	}),
 }).strict();
 
 /**
  * Schéma de validation pour la validation/rejet d'un produit (ADMIN)
  */
-export const validateProductSchema = Joi.object({
+export const moderateProductSchema = Joi.object({
 	moderation: Joi.object({
 		status: Joi.string().valid("ACTIVE", "REJECTED").required().messages({
 			"any.only": "Le statut doit être ACTIVE ou REJECTED",
