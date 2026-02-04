@@ -53,7 +53,6 @@ const userSchema = new mongoose.Schema(
 );
 
 // Index pour optimiser les recherches
-userSchema.index({ email: 1 });
 userSchema.index({ role: 1, isActive: 1 });
 
 export default mongoose.model("User", userSchema);
