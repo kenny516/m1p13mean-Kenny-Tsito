@@ -97,7 +97,6 @@ productSchema.index({ shopId: 1, "moderation.status": 1 });
 productSchema.index({ category: 1, "moderation.status": 1, price: 1 });
 productSchema.index({ "moderation.status": 1, createdAt: -1 });
 productSchema.index({ tags: 1 });
-productSchema.index({ sku: 1 });
 productSchema.index({ "stock.cache.available": 1, "moderation.status": 1 });
 
 // Virtual pour vérifier si stock bas
