@@ -1,4 +1,6 @@
 import * as productService from "../services/product.service.js";
+import Shop from "../models/Shop.js";
+import { ApiError } from "../middlewares/error.middleware.js";
 
 /**
  * Créer un nouveau produit
@@ -8,9 +10,17 @@ export const create = async (req, res, next) => {
 	try {
 		const productData = req.body;
 		const sellerId = req.user._id;
-		const shopId = req.user.shopId; // Assumé que le shop est attaché à l'utilisateur
 
-		const product = await productService.createProduct(productData, sellerId, shopId);
+		// Récupérer la boutique du vendeur (seulement _id et isActive)
+		const shop = await Shop.findOne({ sellerId }).select("_id isActive").lean();
+		if (!shop) {
+			throw new ApiError(404, "NOT_FOUND", "Vous devez d'abord créer une boutique");
+		}
+		if (!shop.isActive) {
+			throw new ApiError(403, "FORBIDDEN", "Votre boutique n'est pas encore active");
+		}
+
+		const product = await productService.createProduct(productData, sellerId, shop._id);
 
 		res.status(201).json({
 			success: true,
@@ -139,12 +149,12 @@ export const remove = async (req, res, next) => {
  * Valider ou rejeter un produit (ADMIN)
  * PUT /api/products/:id/validate
  */
-export const validate = async (req, res, next) => {
+export const moderate = async (req, res, next) => {
 	try {
 		const { id } = req.params;
 		const { moderation } = req.body;
 
-		const product = await productService.validateProduct(
+		const product = await productService.moderateProduct(
 			id,
 			moderation.status,
 			moderation.rejectionReason,
