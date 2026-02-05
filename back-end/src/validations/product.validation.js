@@ -174,10 +174,13 @@ export const listProductsQuerySchema = Joi.object({
 			"string.pattern.base": "L'ID du vendeur doit être un ObjectId MongoDB valide",
 		}),
 
-	sort: Joi.object().optional().messages({
-		"object.base": "Le tri doit être un objet JSON valide",
-	}),
-}).strict();
+	sort: Joi.alternatives()
+		.try(Joi.object(), Joi.string())
+		.optional()
+		.messages({
+			"alternatives.match": "Le tri doit être un objet JSON valide ou une chaîne JSON",
+		}),
+});
 
 /**
  * Schéma de validation pour la validation/rejet d'un produit (ADMIN)
