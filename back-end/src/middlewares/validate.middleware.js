@@ -6,7 +6,7 @@
  * @param {string} property - Propriété de la requête à valider (body, query, params)
  */
 export const validate = (schema, property = "body") => {
-  return (req, res, next) => {
+	return (req, res, next) => {
     const { error, value } = schema.validate(req[property], {
       abortEarly: false, // Retourner toutes les erreurs
       stripUnknown: true, // Supprimer les champs inconnus
@@ -29,7 +29,14 @@ export const validate = (schema, property = "body") => {
     }
 
     // Remplacer les données par les données validées (nettoyées)
-    req[property] = value;
+    if (property === "query") {
+      // req.query est un getter seulement dans Express récents/configurés
+      // On modifie l'objet en place
+      for (const key in req.query) delete req.query[key];
+      Object.assign(req.query, value);
+    } else {
+      req[property] = value;
+    }
     next();
   };
 };
