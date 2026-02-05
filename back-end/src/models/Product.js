@@ -2,10 +2,11 @@ import mongoose from "mongoose";
 
 /**
  * Modèle Produit
- * Contient les informations produit avec cache de stock
+ * Organisé par domaines fonctionnels
  */
 const productSchema = new mongoose.Schema(
   {
+    // === RELATIONS ===
     shopId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Shop",
@@ -16,10 +17,12 @@ const productSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+
+    // === IDENTIFICATION & INFORMATIONS ===
     sku: {
       type: String,
       unique: true,
-      sparse: true, // Permet null mais unique si défini
+      sparse: true,
     },
     title: {
       type: String,
@@ -30,26 +33,6 @@ const productSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    price: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    originalPrice: Number, // Pour les promotions
-    // Stock calculé - mis à jour via agrégation des mouvements
-    // Peut être dénormalisé pour performance (recalculé périodiquement)
-    stockCache: {
-      total: { type: Number, default: 0 },
-      reserved: { type: Number, default: 0 },
-      available: { type: Number, default: 0 },
-      lastUpdated: { type: Date, default: Date.now },
-    },
-    // Seuils d'alerte
-    stockAlert: {
-      lowThreshold: { type: Number, default: 5 }, // Seuil stock bas
-      outOfStock: { type: Number, default: 0 }, // Seuil rupture
-    },
-    images: [String],
     category: {
       type: String,
       required: true,
@@ -59,12 +42,42 @@ const productSchema = new mongoose.Schema(
       type: Map,
       of: mongoose.Schema.Types.Mixed,
     },
+    images: [String],
+
+    // === TARIFICATION ===
+    price: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    originalPrice: {
+      type: Number,
+      min: 0,
+    },
+
+    // === GESTION DU STOCK ===
+    stock: {
+      cache: {
+        total: { type: Number, default: 0 },
+        reserved: { type: Number, default: 0 },
+        available: { type: Number, default: 0 },
+        lastUpdated: { type: Date, default: Date.now },
+      },
+      alert: {
+        lowThreshold: { type: Number, default: 5 },
+        outOfStock: { type: Number, default: 0 },
+      },
+    },
+
+    // === MODÉRATION ===
     status: {
       type: String,
       enum: ["DRAFT", "PENDING", "ACTIVE", "REJECTED", "ARCHIVED"],
       default: "DRAFT",
     },
     rejectionReason: String,
+
+    // === STATISTIQUES ===
     stats: {
       views: { type: Number, default: 0 },
       sales: { type: Number, default: 0 },
@@ -82,17 +95,16 @@ productSchema.index({ shopId: 1, status: 1 });
 productSchema.index({ category: 1, status: 1, price: 1 });
 productSchema.index({ status: 1, createdAt: -1 });
 productSchema.index({ tags: 1 });
-productSchema.index({ sku: 1 });
-productSchema.index({ "stockCache.available": 1, status: 1 }); // Pour alertes stock
+productSchema.index({ "stock.cache.available": 1, status: 1 });
 
 // Virtual pour vérifier si stock bas
 productSchema.virtual("isLowStock").get(function () {
-  return this.stockCache.available <= this.stockAlert.lowThreshold;
+  return this.stock.cache.available <= this.stock.alert.lowThreshold;
 });
 
 // Virtual pour vérifier rupture
 productSchema.virtual("isOutOfStock").get(function () {
-  return this.stockCache.available <= this.stockAlert.outOfStock;
+  return this.stock.cache.available <= this.stock.alert.outOfStock;
 });
 
 export default mongoose.model("Product", productSchema);
