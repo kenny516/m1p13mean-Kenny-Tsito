@@ -53,6 +53,10 @@ export const createProductSchema = Joi.object({
 
 	// === GESTION DU STOCK (Configuration) ===
 	stock: Joi.object({
+		cache: Joi.object({
+			available: Joi.number().integer().min(0).optional(),
+			total: Joi.number().integer().min(0).optional(),
+		}).optional(),
 		alert: Joi.object({
 			lowThreshold: Joi.number().integer().min(0).default(5),
 			outOfStock: Joi.number().integer().min(0).default(0),
@@ -212,6 +216,9 @@ export const updateStockSchema = Joi.object({
 		"number.base": "La quantité doit être un nombre entier",
 		"number.min": "La quantité doit être au moins 0",
 		"any.required": "La quantité est requise",
+	}),
+	operation: Joi.string().valid("add", "subtract", "set").default("set").optional().messages({
+		"any.only": "L'opération doit être 'add', 'subtract' ou 'set'",
 	}),
 }).strict();
 

@@ -84,4 +84,30 @@ router.put(
 	productController.moderate,
 );
 
+/**
+ * @route   PUT /api/products/:id/stock
+ * @desc    Mettre à jour le stock (Ajout/Retrait/Définition)
+ * @access  Private (SELLER, ADMIN)
+ */
+router.put(
+	"/:id/stock",
+	auth,
+	authorize("SELLER", "ADMIN"),
+	validate(updateStockSchema),
+	productController.updateStock,
+);
+
+/**
+ * @route   PUT /api/products/:id/reserve
+ * @desc    Réserver du stock (Système panier)
+ * @access  Private (SELLER, ADMIN - Pour tests principalement)
+ */
+router.put(
+	"/:id/reserve",
+	auth,
+	authorize("SELLER", "ADMIN"),
+	validate(reserveStockSchema),
+	productController.reserveStock,
+);
+
 export default router;
