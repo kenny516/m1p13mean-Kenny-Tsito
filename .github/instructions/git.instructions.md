@@ -86,47 +86,6 @@ docs(readme): mettre à jour les instructions d'installation
 3. Tester localement
 4. S'assurer que le build passe
 
-### Backend (consignes spécifiques)
-
-- Langage: JavaScript (ES Modules). NE PAS utiliser TypeScript pour le backend.
-- Structure: garder `back-end/src` organisée (config, models, controllers, services, routes, middlewares, utils).
-- Connexion DB: utiliser `back-end/src/config/db.js` et stocker les variables sensibles dans `.env`.
-- Scripts npm recommandés (dans `back-end/package.json`):
-	- `start` : lancement production (node server.js)
-	- `dev` : lancement en dev (nodemon)
-	- `build` : si applicable
-	- `seed` : exécuter les seeds (ex: `node src/seeds/admin.seed.js`)
-
-- Migration & Seeds:
-	- Garder les seeds idempotentes dans `back-end/src/seeds/`.
-	- Documenter l'usage dans README backend si ajout de nouvelles seeds.
-
-- Validation et sécurité:
-	- Valider toutes les entrées (Joi/express-validator).
-	- Hasher les mots de passe avec `bcryptjs` (>=10 rounds).
-	- Ne jamais commiter `.env`.
-	- Ajouter des middlewares: `helmet`, `express-rate-limit`, `express-mongo-sanitize`.
-
-- Connexions et erreurs:
-	- Centraliser la gestion d'erreur dans `error.middleware.js`.
-	- Logger les événements critiques (auth failures, suspicious activity).
-
-- Tests & CI:
-	- Avant PR: lancer `npm test` (si défini) et `npm run lint`.
-	- S'assurer que les endpoints importants ont des tests (auth, création d'utilisateur, commandes).
-
-- Dépendances:
-	- Après tout `npm install`, exécuter l'analyse de sécurité (ex: `npm audit`) et signaler CVE.
-
-### Checklist PR (ajoutée pour backend)
-
-- [ ] Build backend green (`npm run build` ou `npm run dev` selon configuration)
-- [ ] Seeds et migrations documentées/ok
-- [ ] Tests unitaires/integration exécutés
-- [ ] Variables d'environnement documentées (`.env.example` mis à jour si nécessaire)
-- [ ] Vérification que les secrets ne sont pas committés
-- [ ] Demander une review backend + frontend si changement des API
-
 ### Template de PR
 
 ```markdown
@@ -326,3 +285,24 @@ coverage/
 *.tmp
 *.temp
 ```
+
+---
+## Backend - Règles spécifiques (Express.js)
+
+- **Langage & modules**: Le dossier `back-end/` doit rester en **JavaScript** pur et utiliser **ES Modules** (`import` / `export`). **Ne jamais** ajouter TypeScript dans `back-end/`.
+- **package.json**: Assurez-vous que `"type": "module"` est présent pour le backend.
+- **Structure**: Respecter l'architecture `controllers/`, `services/`, `models/`, `routes/`, `middlewares/` et `config/`.
+- **Validation & sécurité**: Toujours valider les entrées (Joi ou équivalent), sanitize pour éviter les injections NoSQL, utiliser `helmet`, rate limiting et sanitize les payloads.
+- **Transactions**: Pour les opérations critiques (paiements, commandes), utiliser les transactions MongoDB (sessions) et vérifier l'intégrité avant commit.
+- **Secrets**: Ne **jamais** committer `.env` ou secrets. Fournir un fichier `.env.example` et stocker les secrets dans le CI/infra.
+- **Tests & build**: Avant d'ouvrir une PR, exécuter `npm install` puis `npm run build` (ou `npm test` si présent) dans `back-end/` et corriger les erreurs.
+- **Commit messages**: Utiliser le scope `backend`, p.ex. `fix(backend/auth): corriger validation token` ou `feat(backend/orders): ajouter transaction`.
+- **PR checklist (backend)**:
+	- [ ] Le code est en JavaScript ES Modules
+	- [ ] Les entrées sont validées (Joi/validation)
+	- [ ] Les opérations critiques sont en transaction
+	- [ ] `.env` n'est pas commité et `.env.example` est mis à jour
+	- [ ] Les logs et erreurs sont gérés (error.middleware)
+	- [ ] Build/tests locaux réalisés
+
+Ces règles complètent les conventions générales de Git et le workflow présentés ci-dessus.
