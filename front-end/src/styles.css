@@ -1,12 +1,8 @@
-@import "tailwindcss";
-
-/* If you prefer the CSS-first Tailwind v4 configuration, you can define
-  design tokens and theme values here using @theme { ... }.
-
-  Keep existing custom rules below; Tailwind will auto-generate utilities.
-*/
+@import 'tailwindcss';
+@plugin "tailwindcss-animate";
 
 @custom-variant dark (&:is(.dark *));
+
 
 :root {
   --radius: 0.625rem;
@@ -77,6 +73,7 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -116,6 +113,7 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -135,6 +133,7 @@
     appearance: textfield; /* Added for general compatibility */
   }
 }
+
 
 ::-webkit-scrollbar {
   width: 6px;

@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { authGuard, roleGuard } from './core/guards';
 
 export const routes: Routes = [
   // Page d'accueil
@@ -18,6 +19,13 @@ export const routes: Routes = [
     path: 'profile',
     loadChildren: () =>
       import('./features/profile/profile.routes').then((m) => m.PROFILE_ROUTES),
+  },
+  // Routes d'administration
+  {
+    path: 'admin',
+    loadChildren: () =>
+      import('./features/admin/admin.routes').then((m) => m.ADMIN_ROUTES),
+    canActivate: [authGuard, roleGuard(['ADMIN'])],
   },
   // Page non autorisée
   {

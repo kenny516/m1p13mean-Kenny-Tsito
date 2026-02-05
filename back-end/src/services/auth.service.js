@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
-import bcrypt from "bcryptjs";
-import User from "../models/User.js";
+import { User, Wallet } from "../models/index.js";
 import { ApiError } from "../middlewares/error.middleware.js";
 import {
   generateToken,
@@ -8,47 +7,46 @@ import {
   comparePassword,
   formatUserResponse,
 } from "../utils/auth.utils.js";
-import { createWallet } from "../utils/wallet.utils.js";
 
 /**
- * Enregistre un nouvel utilisateur et crée son wallet dans une transaction
+ * Service d'authentification
+ * Gère inscription, connexion, profil et mot de passe
+ */
+
+/**
+ * Enregistre un nouvel utilisateur et crée son wallet
  */
 export const registerUser = async ({ email, password, role, profile }) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
+    // Vérifier si l'email existe déjà
     const existingUser = await User.findOne({ email }).session(session);
     if (existingUser) {
       throw new ApiError(409, "CONFLICT", "Cet email est déjà utilisé");
     }
 
+    // Hasher le mot de passe et créer l'utilisateur
     const passwordHash = await hashPassword(password);
-
-    const users = await User.create(
-      [
-        {
-          email,
-          passwordHash,
-          role,
-          profile,
-          isValidated: role === "BUYER",
-        },
-      ],
+    const [user] = await User.create(
+      [{ email, passwordHash, role, profile, isValidated: role === "BUYER" }],
       { session },
     );
 
-    const user = users[0];
+    // Créer le wallet associé
+    const [wallet] = await Wallet.create(
+      [{ ownerId: user._id, ownerModel: "User" }],
+      { session },
+    );
 
-    const wallet = await createWallet(user._id, "User", session);
-
+    // Associer le wallet à l'utilisateur
     user.walletId = wallet._id;
     await user.save({ session });
 
     await session.commitTransaction();
 
     const token = generateToken(user._id);
-
     return { user: formatUserResponse(user), token };
   } catch (error) {
     await session.abortTransaction();
@@ -58,6 +56,9 @@ export const registerUser = async ({ email, password, role, profile }) => {
   }
 };
 
+/**
+ * Connecte un utilisateur
+ */
 export const loginUser = async ({ email, password }) => {
   const user = await User.findOne({ email }).select("+passwordHash");
 
@@ -86,24 +87,31 @@ export const loginUser = async ({ email, password }) => {
   return { user: formatUserResponse(user), token };
 };
 
+/**
+ * Récupère le profil complet d'un utilisateur avec son wallet
+ */
 export const getUserProfile = async (userId) => {
   const user = await User.findById(userId).populate("walletId");
+
   if (!user) {
     throw new ApiError(404, "NOT_FOUND", "Utilisateur non trouvé");
   }
 
-  // Format the response similar to controller
   return {
     _id: user._id,
     email: user.email,
     role: user.role,
     profile: user.profile,
     isValidated: user.isValidated,
+    isActive: user.isActive,
     wallet: user.walletId
       ? {
           _id: user.walletId._id,
           balance: user.walletId.balance,
           currency: user.walletId.currency,
+          pendingBalance: user.walletId.pendingBalance,
+          totalEarned: user.walletId.totalEarned,
+          totalSpent: user.walletId.totalSpent,
         }
       : null,
     createdAt: user.createdAt,
@@ -111,8 +119,12 @@ export const getUserProfile = async (userId) => {
   };
 };
 
+/**
+ * Met à jour le profil d'un utilisateur
+ */
 export const updateUserProfile = async (userId, profile) => {
   const updateData = {};
+
   if (profile.firstName !== undefined)
     updateData["profile.firstName"] = profile.firstName;
   if (profile.lastName !== undefined)
@@ -120,7 +132,8 @@ export const updateUserProfile = async (userId, profile) => {
   if (profile.phone !== undefined) updateData["profile.phone"] = profile.phone;
   if (profile.avatar !== undefined)
     updateData["profile.avatar"] = profile.avatar;
-  if (profile.address !== undefined) {
+
+  if (profile.address) {
     if (profile.address.street !== undefined)
       updateData["profile.address.street"] = profile.address.street;
     if (profile.address.city !== undefined)
@@ -131,31 +144,25 @@ export const updateUserProfile = async (userId, profile) => {
       updateData["profile.address.country"] = profile.address.country;
   }
 
-  const user = await User.findByIdAndUpdate(
-    userId,
-    { $set: updateData },
-    { new: true, runValidators: true },
-  );
+  const user = await User.findByIdAndUpdate(userId, updateData, { new: true });
+
   if (!user) {
     throw new ApiError(404, "NOT_FOUND", "Utilisateur non trouvé");
   }
 
-  return {
-    _id: user._id,
-    email: user.email,
-    role: user.role,
-    profile: user.profile,
-    isValidated: user.isValidated,
-    updatedAt: user.updatedAt,
-  };
+  return formatUserResponse(user);
 };
 
+/**
+ * Change le mot de passe d'un utilisateur
+ */
 export const changeUserPassword = async (
   userId,
   currentPassword,
   newPassword,
 ) => {
   const user = await User.findById(userId).select("+passwordHash");
+
   if (!user) {
     throw new ApiError(404, "NOT_FOUND", "Utilisateur non trouvé");
   }
@@ -175,7 +182,10 @@ export const changeUserPassword = async (
   return true;
 };
 
-export const checkEmailExists = async (email) => {
-  const existingUser = await User.findOne({ email });
-  return !!existingUser;
+export default {
+  registerUser,
+  loginUser,
+  getUserProfile,
+  updateUserProfile,
+  changeUserPassword,
 };
