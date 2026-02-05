@@ -12,6 +12,8 @@ import { AuthService, ToastService } from '../../../core';
 import { ZardButtonComponent } from '@/shared/components/button';
 import { ZardInputDirective } from '@/shared/components/input';
 import { ZardCardComponent } from '@/shared/components/card';
+import { ZardLabelComponent } from '@/shared/components/label';
+import { ZardSpinnerComponent } from '@/shared/components/spinner';
 
 /**
  * Composant de connexion utilisant ZardUI
@@ -25,8 +27,10 @@ import { ZardCardComponent } from '@/shared/components/card';
     RouterLink,
     ZardButtonComponent,
     ZardInputDirective,
-    ZardCardComponent
-],
+    ZardCardComponent,
+    ZardLabelComponent,
+    ZardSpinnerComponent,
+  ],
   template: `
     <div
       class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 py-12 px-4 sm:px-6 lg:px-8"
@@ -42,9 +46,7 @@ import { ZardCardComponent } from '@/shared/components/card';
             </div>
           </div>
           <h1 class="text-4xl font-bold text-slate-900">MEAN Mall</h1>
-          <p class="mt-2 text-sm text-slate-600">
-            Votre marketplace en ligne
-          </p>
+          <p class="mt-2 text-sm text-slate-600">Votre marketplace en ligne</p>
           <h2 class="mt-6 text-2xl font-semibold text-slate-800">Connexion</h2>
         </div>
 
@@ -57,9 +59,7 @@ import { ZardCardComponent } from '@/shared/components/card';
           >
             <!-- Email -->
             <div class="space-y-2">
-              <label for="email" class="block text-sm font-medium text-slate-700">
-                Adresse email
-              </label>
+              <z-label for="email">Adresse email</z-label>
               <input
                 z-input
                 id="email"
@@ -69,7 +69,7 @@ import { ZardCardComponent } from '@/shared/components/card';
                 class="w-full"
               />
               @if (isFieldInvalid('email')) {
-                <p class="text-sm text-red-500 mt-1">
+                <p class="text-sm text-destructive mt-1">
                   @if (getControl('email')?.errors?.['required']) {
                     L'email est requis
                   } @else if (getControl('email')?.errors?.['email']) {
@@ -81,12 +81,7 @@ import { ZardCardComponent } from '@/shared/components/card';
 
             <!-- Password -->
             <div class="space-y-2">
-              <label
-                for="password"
-                class="block text-sm font-medium text-slate-700"
-              >
-                Mot de passe
-              </label>
+              <z-label for="password">Mot de passe</z-label>
               <input
                 z-input
                 id="password"
@@ -96,7 +91,7 @@ import { ZardCardComponent } from '@/shared/components/card';
                 class="w-full"
               />
               @if (isFieldInvalid('password')) {
-                <p class="text-sm text-red-500 mt-1">
+                <p class="text-sm text-destructive mt-1">
                   @if (getControl('password')?.errors?.['required']) {
                     Le mot de passe est requis
                   }
@@ -122,26 +117,7 @@ import { ZardCardComponent } from '@/shared/components/card';
               class="w-full"
             >
               @if (isLoading()) {
-                <svg
-                  class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline-block"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    class="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    stroke-width="4"
-                  ></circle>
-                  <path
-                    class="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
+                <z-spinner class="mr-2 h-4 w-4" />
                 Connexion en cours...
               } @else {
                 Se connecter
