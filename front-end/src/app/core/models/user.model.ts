@@ -26,6 +26,10 @@ export interface Wallet {
   _id: string;
   balance: number;
   currency: string;
+  pendingBalance?: number;
+  totalEarned?: number;
+  totalSpent?: number;
+  isActive?: boolean;
 }
 
 /**
@@ -37,6 +41,7 @@ export interface User {
   role: 'BUYER' | 'SELLER' | 'ADMIN';
   profile: UserProfile;
   isValidated: boolean;
+  isActive?: boolean;
   walletId?: string;
   wallet?: Wallet;
   createdAt: string;
@@ -47,3 +52,75 @@ export interface User {
  * Type pour les rôles utilisateur
  */
 export type UserRole = 'BUYER' | 'SELLER' | 'ADMIN';
+
+/**
+ * Interface pour les statistiques utilisateurs
+ */
+export interface UserStats {
+  total: number;
+  byRole: {
+    buyers: number;
+    sellers: number;
+    admins: number;
+  };
+  active: number;
+  inactive: number;
+  pendingValidation: number;
+}
+
+/**
+ * Interface pour créer un utilisateur (Admin)
+ */
+export interface CreateUserRequest {
+  email: string;
+  password: string;
+  role: UserRole;
+  isValidated?: boolean;
+  isActive?: boolean;
+  profile: {
+    firstName: string;
+    lastName: string;
+    phone?: string;
+    address?: Address;
+  };
+}
+
+/**
+ * Interface pour mettre à jour un utilisateur (Admin)
+ */
+export interface UpdateUserRequest {
+  email?: string;
+  role?: UserRole;
+  isValidated?: boolean;
+  isActive?: boolean;
+  profile?: {
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    avatar?: string;
+    address?: Address;
+  };
+}
+
+/**
+ * Interface pour une transaction wallet
+ */
+export interface WalletTransaction {
+  _id: string;
+  type:
+    | 'DEPOSIT'
+    | 'WITHDRAWAL'
+    | 'PURCHASE'
+    | 'SALE_INCOME'
+    | 'REFUND'
+    | 'COMMISSION'
+    | 'TRANSFER_IN'
+    | 'TRANSFER_OUT';
+  amount: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  status: 'PENDING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+  paymentMethod?: 'WALLET' | 'CARD' | 'MOBILE_MONEY' | 'BANK_TRANSFER' | 'CASH';
+  description?: string;
+  createdAt: string;
+}
