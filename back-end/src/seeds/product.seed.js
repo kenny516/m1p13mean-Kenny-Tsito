@@ -220,9 +220,7 @@ async function seedProducts() {
 					price: productData.price,
 					originalPrice: productData.originalPrice || null,
 					stock: productData.stock,
-					moderation: {
-						status: "ACTIVE", // Produits actifs pour les tests
-					},
+					status: "ACTIVE", // Produits actifs pour les tests
 				});
 
 				createdProducts.push({ shop: shop.name, product });

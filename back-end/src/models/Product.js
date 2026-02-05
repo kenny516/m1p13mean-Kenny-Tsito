@@ -70,14 +70,12 @@ const productSchema = new mongoose.Schema(
     },
 
     // === MODÉRATION ===
-    moderation: {
-      status: {
-        type: String,
-        enum: ["DRAFT", "PENDING", "ACTIVE", "REJECTED", "ARCHIVED"],
-        default: "DRAFT",
-      },
-      rejectionReason: String,
+    status: {
+      type: String,
+      enum: ["DRAFT", "PENDING", "ACTIVE", "REJECTED", "ARCHIVED"],
+      default: "DRAFT",
     },
+    rejectionReason: String,
 
     // === STATISTIQUES ===
     stats: {
@@ -93,11 +91,11 @@ const productSchema = new mongoose.Schema(
 // Index pour recherche full-text
 productSchema.index({ title: "text", description: "text", tags: "text" });
 // Index composites
-productSchema.index({ shopId: 1, "moderation.status": 1 });
-productSchema.index({ category: 1, "moderation.status": 1, price: 1 });
-productSchema.index({ "moderation.status": 1, createdAt: -1 });
+productSchema.index({ shopId: 1, status: 1 });
+productSchema.index({ category: 1, status: 1, price: 1 });
+productSchema.index({ status: 1, createdAt: -1 });
 productSchema.index({ tags: 1 });
-productSchema.index({ "stock.cache.available": 1, "moderation.status": 1 });
+productSchema.index({ "stock.cache.available": 1, status: 1 });
 
 // Virtual pour vérifier si stock bas
 productSchema.virtual("isLowStock").get(function () {

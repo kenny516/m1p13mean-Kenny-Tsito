@@ -37,14 +37,14 @@ export const getProducts = async (filters = {}) => {
 
 	// Filtre par statut (sauf si un vendeur regarde ses produits ou admin)
 	if (status && status !== "ALL") {
-		query["moderation.status"] = status;
+		query.status = status;
 	}
 
 	// Filtre vendeur
 	if (sellerId) {
 		query.sellerId = sellerId;
 		// Si c'est le vendeur, on peut ignorer le status par défaut si non spécifié explicitement
-		if (!filters.status) delete query["moderation.status"];
+		if (!filters.status) delete query.status;
 	}
 
 	// Filtre boutique
@@ -148,9 +148,9 @@ export const updateProduct = async (id, updateData, userId, userRole) => {
 		delete updateData.stock;
 	}
 
-	if (updateData.moderation?.status) {
-		product.moderation.status = updateData.moderation.status;
-		delete updateData.moderation;
+	if (updateData.status) {
+		product.status = updateData.status;
+		delete updateData.status;
 	}
 
 	// Si modif par vendeur, potentiellement remettre en PENDING si c'était ACTIVE
@@ -185,11 +185,11 @@ export const deleteProduct = async (id, userId, userRole) => {
 export const moderateProduct = async (id, status, rejectionReason) => {
 	const product = await getProductById(id);
 
-	product.moderation.status = status;
+	product.status = status;
 	if (status === "REJECTED") {
-		product.moderation.rejectionReason = rejectionReason;
+		product.rejectionReason = rejectionReason;
 	} else if (status === "ACTIVE") {
-		product.moderation.rejectionReason = undefined;
+		product.rejectionReason = undefined;
 	}
 
 	await product.save();

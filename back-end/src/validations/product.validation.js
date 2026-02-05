@@ -118,11 +118,9 @@ export const updateProductSchema = Joi.object({
 	}).optional(),
 
 	// === MODÉRATION ===
-	moderation: Joi.object({
-		status: Joi.string().valid("DRAFT", "PENDING", "ARCHIVED").optional().messages({
-			"any.only": "Le statut doit être DRAFT, PENDING ou ARCHIVED",
-		}),
-	}).optional(),
+	status: Joi.string().valid("DRAFT", "PENDING", "ARCHIVED").optional().messages({
+		"any.only": "Le statut doit être DRAFT, PENDING ou ARCHIVED",
+	}),
 }).strict();
 
 /**
@@ -186,28 +184,22 @@ export const listProductsQuerySchema = Joi.object({
  * Schéma de validation pour la validation/rejet d'un produit (ADMIN)
  */
 export const moderateProductSchema = Joi.object({
-	moderation: Joi.object({
-		status: Joi.string().valid("ACTIVE", "REJECTED").required().messages({
-			"any.only": "Le statut doit être ACTIVE ou REJECTED",
-			"any.required": "Le statut est requis",
-		}),
+	status: Joi.string().valid("ACTIVE", "REJECTED").required().messages({
+		"any.only": "Le statut doit être ACTIVE ou REJECTED",
+		"any.required": "Le statut est requis",
+	}),
 
-		rejectionReason: Joi.string()
-			.when("status", {
-				is: "REJECTED",
-				then: Joi.required().messages({
-					"any.required": "La raison du rejet est requise",
-				}),
-				otherwise: Joi.optional(),
-			})
-			.max(500)
-			.messages({
-				"string.max": "La raison ne doit pas dépasser 500 caractères",
+	rejectionReason: Joi.string()
+		.when("status", {
+			is: "REJECTED",
+			then: Joi.required().messages({
+				"any.required": "La raison du rejet est requise",
 			}),
-	})
-		.required()
+			otherwise: Joi.optional(),
+		})
+		.max(500)
 		.messages({
-			"any.required": "Les informations de modération sont requises",
+			"string.max": "La raison ne doit pas dépasser 500 caractères",
 		}),
 }).strict();
 

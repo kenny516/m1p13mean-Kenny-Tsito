@@ -152,15 +152,15 @@ export const remove = async (req, res, next) => {
 export const moderate = async (req, res, next) => {
 	try {
 		const { id } = req.params;
-		const { moderation } = req.body;
+		const { status, rejectionReason } = req.body;
 
 		const product = await productService.moderateProduct(
 			id,
-			moderation.status,
-			moderation.rejectionReason,
+			status,
+			rejectionReason,
 		);
 
-		const action = moderation.status === "ACTIVE" ? "approuvé" : "rejeté";
+		const action = status === "ACTIVE" ? "approuvé" : "rejeté";
 
 		res.json({
 			success: true,
