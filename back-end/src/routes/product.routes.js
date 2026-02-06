@@ -7,7 +7,6 @@ import {
 	updateProductSchema,
 	listProductsQuerySchema,
 	updateStockSchema,
-	reserveStockSchema,
 } from "../validations/product.validation.js";
 
 const router = Router();

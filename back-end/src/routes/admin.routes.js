@@ -2,6 +2,7 @@ import { Router } from "express";
 import * as userController from "../controllers/user.controller.js";
 import adminShopRoutes from "./admin.shop.routes.js";
 import adminProductRoutes from "./admin.product.routes.js";
+import adminStockMovementRoutes from "./admin.stockMovement.routes.js";
 import { auth, authorize } from "../middlewares/auth.middleware.js";
 import { validate } from "../middlewares/validate.middleware.js";
 import {
@@ -99,5 +100,10 @@ router.use("/shops", adminShopRoutes);
  * Routes de gestion des produits (admin)
  */
 router.use("/products", adminProductRoutes);
+
+/**
+ * Routes de gestion des mouvements de stock (admin)
+ */
+router.use("/stock-movements", adminStockMovementRoutes);
 
 export default router;

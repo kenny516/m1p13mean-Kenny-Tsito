@@ -1,5 +1,74 @@
 import mongoose from "mongoose";
 
+// ==========================================
+// Constantes réutilisables (exportées)
+// ==========================================
+
+export const MOVEMENT_TYPES = [
+  "SUPPLY",
+  "SALE",
+  "RETURN_CUSTOMER",
+  "RETURN_SUPPLIER",
+  "ADJUSTMENT_PLUS",
+  "ADJUSTMENT_MINUS",
+  "TRANSFER_IN",
+  "TRANSFER_OUT",
+  "RESERVATION",
+  "RESERVATION_CANCEL",
+];
+
+export const IN_MOVEMENTS = [
+  "SUPPLY",
+  "RETURN_CUSTOMER",
+  "ADJUSTMENT_PLUS",
+  "TRANSFER_IN",
+  "RESERVATION_CANCEL",
+];
+
+export const SALE_STATUSES = [
+  "PENDING",
+  "PAID",
+  "PROCESSING",
+  "SHIPPED",
+  "DELIVERED",
+  "CANCELLED",
+  "REFUNDED",
+];
+
+export const PAYMENT_METHODS = ["WALLET", "CARD", "MOBILE_MONEY", "CASH_ON_DELIVERY"];
+
+export const ADJUSTMENT_REASONS = [
+  "INVENTORY_COUNT",
+  "DAMAGED",
+  "LOST",
+  "STOLEN",
+  "EXPIRED",
+  "OTHER",
+];
+
+export const REFERENCE_PREFIXES = {
+  SUPPLY: "SUP",
+  SALE: "SAL",
+  RETURN_CUSTOMER: "RTC",
+  RETURN_SUPPLIER: "RTS",
+  ADJUSTMENT_PLUS: "AJP",
+  ADJUSTMENT_MINUS: "AJM",
+  TRANSFER_IN: "TRI",
+  TRANSFER_OUT: "TRO",
+  RESERVATION: "RES",
+  RESERVATION_CANCEL: "REC",
+};
+
+export const VALID_SALE_TRANSITIONS = {
+  PENDING: ["PAID", "CANCELLED"],
+  PAID: ["PROCESSING", "CANCELLED", "REFUNDED", "DELIVERED"],
+  PROCESSING: ["SHIPPED", "CANCELLED", "DELIVERED"],
+  SHIPPED: ["DELIVERED"],
+  DELIVERED: ["REFUNDED"],
+  CANCELLED: [],
+  REFUNDED: [],
+};
+
 /**
  * Modèle UNIQUE et CENTRAL pour la gestion de stock
  * Chaque mouvement de stock est tracé ici
@@ -29,18 +98,7 @@ const stockMovementSchema = new mongoose.Schema(
     // Type de mouvement
     movementType: {
       type: String,
-      enum: [
-        "SUPPLY", // Approvisionnement
-        "SALE", // Vente
-        "RETURN_CUSTOMER", // Retour client
-        "RETURN_SUPPLIER", // Retour fournisseur
-        "ADJUSTMENT_PLUS", // Ajustement +
-        "ADJUSTMENT_MINUS", // Ajustement -
-        "TRANSFER_IN", // Transfert entrant
-        "TRANSFER_OUT", // Transfert sortant
-        "RESERVATION", // Réservation panier
-        "RESERVATION_CANCEL", // Annulation réservation
-      ],
+      enum: MOVEMENT_TYPES,
       required: true,
     },
     // Direction du mouvement (calculé automatiquement)
@@ -88,7 +146,8 @@ const stockMovementSchema = new mongoose.Schema(
         title: String,
         sku: String,
         price: Number,
-        image: String,
+        originalPrice: Number,
+        images: [String],
       },
       // Adresse de livraison
       deliveryAddress: {
@@ -100,20 +159,12 @@ const stockMovementSchema = new mongoose.Schema(
       // Statut de la commande
       status: {
         type: String,
-        enum: [
-          "PENDING",
-          "PAID",
-          "PROCESSING",
-          "SHIPPED",
-          "DELIVERED",
-          "CANCELLED",
-          "REFUNDED",
-        ],
+        enum: SALE_STATUSES,
         default: "PENDING",
       },
       paymentMethod: {
         type: String,
-        enum: ["WALLET", "CARD", "MOBILE_MONEY", "CASH_ON_DELIVERY"],
+        enum: PAYMENT_METHODS,
       },
       // Numéro de suivi
       trackingNumber: String,
@@ -138,7 +189,7 @@ const stockMovementSchema = new mongoose.Schema(
     adjustment: {
       reason: {
         type: String,
-        enum: ["INVENTORY_COUNT", "DAMAGED", "LOST", "STOLEN", "EXPIRED", "OTHER"],
+        enum: ADJUSTMENT_REASONS,
       },
       notes: String,
     },
@@ -185,7 +236,6 @@ stockMovementSchema.index({ productId: 1, createdAt: -1 });
 stockMovementSchema.index({ shopId: 1, movementType: 1, createdAt: -1 });
 stockMovementSchema.index({ movementType: 1, createdAt: -1 });
 stockMovementSchema.index({ performedBy: 1, createdAt: -1 });
-stockMovementSchema.index({ reference: 1 });
 stockMovementSchema.index({ "sale.buyerId": 1, createdAt: -1 });
 stockMovementSchema.index({ "sale.status": 1 });
 stockMovementSchema.index({ "reservation.cartId": 1 });
@@ -200,34 +250,13 @@ stockMovementSchema.pre("validate", async function (next) {
     const month = (date.getMonth() + 1).toString().padStart(2, "0");
     const day = date.getDate().toString().padStart(2, "0");
 
-    // Préfixe selon le type
-    const prefixes = {
-      SUPPLY: "SUP",
-      SALE: "SAL",
-      RETURN_CUSTOMER: "RTC",
-      RETURN_SUPPLIER: "RTS",
-      ADJUSTMENT_PLUS: "AJP",
-      ADJUSTMENT_MINUS: "AJM",
-      TRANSFER_IN: "TRI",
-      TRANSFER_OUT: "TRO",
-      RESERVATION: "RES",
-      RESERVATION_CANCEL: "REC",
-    };
-
-    const prefix = prefixes[this.movementType] || "MOV";
+    const prefix = REFERENCE_PREFIXES[this.movementType] || "MOV";
     const random = Math.random().toString(36).substring(2, 8).toUpperCase();
     this.reference = `${prefix}-${year}${month}${day}-${random}`;
   }
 
   // Déterminer automatiquement la direction selon le type
-  const inMovements = [
-    "SUPPLY",
-    "RETURN_CUSTOMER",
-    "ADJUSTMENT_PLUS",
-    "TRANSFER_IN",
-    "RESERVATION_CANCEL",
-  ];
-  this.direction = inMovements.includes(this.movementType) ? "IN" : "OUT";
+  this.direction = IN_MOVEMENTS.includes(this.movementType) ? "IN" : "OUT";
 
   next();
 });
