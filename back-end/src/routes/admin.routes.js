@@ -1,5 +1,6 @@
 import { Router } from "express";
 import * as userController from "../controllers/user.controller.js";
+import adminShopRoutes from "./admin.shop.routes.js";
 import { auth, authorize } from "../middlewares/auth.middleware.js";
 import { validate } from "../middlewares/validate.middleware.js";
 import {
@@ -87,5 +88,10 @@ router.patch("/users/:id/validate", userController.validateUser);
  * @access  Admin
  */
 router.delete("/users/:id", userController.deleteUser);
+
+/**
+ * Routes de gestion des boutiques (admin)
+ */
+router.use("/shops", adminShopRoutes);
 
 export default router;
