@@ -6,7 +6,6 @@ import {
 	createProductSchema,
 	updateProductSchema,
 	listProductsQuerySchema,
-	moderateProductSchema,
 	updateStockSchema,
 	reserveStockSchema,
 } from "../validations/product.validation.js";
@@ -74,19 +73,6 @@ router.put(
 router.delete("/:id", auth, authorize("SELLER", "ADMIN"), productController.remove);
 
 /**
- * @route   PUT /api/products/:id/validate
- * @desc    Valider ou rejeter un produit (Modération)
- * @access  Private (ADMIN)
- */
-router.put(
-	"/:id/validate",
-	auth,
-	authorize("ADMIN"),
-	validate(moderateProductSchema),
-	productController.moderate,
-);
-
-/**
  * @route   PUT /api/products/:id/stock
  * @desc    Mettre à jour le stock (Ajout/Retrait/Définition)
  * @access  Private (SELLER, ADMIN)
@@ -97,19 +83,6 @@ router.put(
 	authorize("SELLER", "ADMIN"),
 	validate(updateStockSchema),
 	productController.updateStock,
-);
-
-/**
- * @route   PUT /api/products/:id/reserve
- * @desc    Réserver du stock (Système panier)
- * @access  Private (SELLER, ADMIN - Pour tests principalement)
- */
-router.put(
-	"/:id/reserve",
-	auth,
-	authorize("SELLER", "ADMIN"),
-	validate(reserveStockSchema),
-	productController.reserveStock,
 );
 
 export default router;
