@@ -1,5 +1,35 @@
 import Product from "../models/Product.js";
 import { ApiError } from "../middlewares/error.middleware.js";
+import { parseSortOption } from "../utils/request.util.js";
+
+/**
+ * Vérifie que le produit existe, est ACTIVE, et appartient au shop donné.
+ * Utilisé par d'autres services (stockMovement, etc.)
+ */
+export const requireActiveProduct = async (productId, shopId, session = null) => {
+	const query = Product.findById(productId);
+	if (session) query.session(session);
+
+	const product = await query;
+	if (!product) {
+		throw new ApiError(404, "NOT_FOUND", "Produit non trouvé");
+	}
+	if (product.shopId.toString() !== shopId) {
+		throw new ApiError(
+			400,
+			"INVALID_SHOP",
+			"Le produit n'appartient pas à cette boutique",
+		);
+	}
+	if (product.status !== "ACTIVE") {
+		throw new ApiError(
+			400,
+			"PRODUCT_NOT_ACTIVE",
+			"Le produit doit être au statut ACTIVE",
+		);
+	}
+	return product;
+};
 
 /**
  * Crée un nouveau produit
@@ -78,28 +108,7 @@ export const getProducts = async (filters = {}) => {
 	}
 
 	// Tri
-	let sortOptions = { createdAt: -1 };
-
-	if (sort) {
-		try {
-			// Format attendu: JSON object directement {"price": "asc", "createdAt": "desc"}
-			// Si sort est déjà un objet après parsing de query string par Express
-			const sortParsed = typeof sort === "string" ? JSON.parse(sort) : sort;
-			const newSortOptions = {};
-
-			for (const [key, value] of Object.entries(sortParsed)) {
-				// Conversion 'asc'/1 -> 1, 'desc'/-1 -> -1
-				const direction = String(value).toLowerCase() === "asc" || value == 1 ? 1 : -1;
-				newSortOptions[key] = direction;
-			}
-
-			if (Object.keys(newSortOptions).length > 0) {
-				sortOptions = newSortOptions;
-			}
-		} catch (e) {
-			console.warn("Invalid sort format:", sort);
-		}
-	}
+	const sortOptions = parseSortOption(sort);
 
 	// Exécution
 	const skip = (page - 1) * limit;

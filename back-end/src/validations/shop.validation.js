@@ -118,7 +118,13 @@ export const listShopsQuerySchema = Joi.object({
 
 	sellerId: Joi.string().optional(),
 
-	sort: Joi.alternatives().try(Joi.string(), Joi.object()).optional(),
+	sort: Joi.string()
+		.pattern(/^[a-zA-Z]+_(asc|desc)$/)
+		.default("createdAt_desc")
+		.optional()
+		.messages({
+			"string.pattern.base": "Le tri doit être au format champ_asc ou champ_desc",
+		}),
 });
 
 /**

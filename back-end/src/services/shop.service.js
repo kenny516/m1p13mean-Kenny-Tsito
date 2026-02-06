@@ -1,5 +1,28 @@
 import Shop from "../models/Shop.js";
 import { ApiError } from "../middlewares/error.middleware.js";
+import { parseSortOption } from "../utils/request.util.js";
+
+/**
+ * Vérifie que la boutique existe et est active.
+ * Utilisé par d'autres services (stockMovement, etc.)
+ */
+export const requireActiveShop = async (shopId, session = null) => {
+	const query = Shop.findById(shopId);
+	if (session) query.session(session);
+
+	const shop = await query;
+	if (!shop) {
+		throw new ApiError(404, "NOT_FOUND", "Boutique non trouvée");
+	}
+	if (!shop.isActive) {
+		throw new ApiError(
+			400,
+			"SHOP_NOT_ACTIVE",
+			"La boutique doit être active",
+		);
+	}
+	return shop;
+};
 
 /**
  * Crée une nouvelle boutique (status DRAFT, isActive false)
@@ -59,25 +82,7 @@ export const getShops = async (filters = {}) => {
 	}
 
 	// Tri
-	let sortOptions = { createdAt: -1 };
-
-	if (sort) {
-		try {
-			const sortParsed = typeof sort === "string" ? JSON.parse(sort) : sort;
-			const newSortOptions = {};
-
-			for (const [key, value] of Object.entries(sortParsed)) {
-				const direction = String(value).toLowerCase() === "asc" || value == 1 ? 1 : -1;
-				newSortOptions[key] = direction;
-			}
-
-			if (Object.keys(newSortOptions).length > 0) {
-				sortOptions = newSortOptions;
-			}
-		} catch (e) {
-			console.warn("Invalid sort format:", sort);
-		}
-	}
+	const sortOptions = parseSortOption(sort);
 
 	const skip = (page - 1) * limit;
 
