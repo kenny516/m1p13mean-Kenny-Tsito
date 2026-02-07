@@ -242,7 +242,7 @@ stockMovementSchema.index({ "reservation.cartId": 1 });
 stockMovementSchema.index({ groupId: 1 });
 
 // Génération automatique de la référence et direction
-stockMovementSchema.pre("validate", async function (next) {
+stockMovementSchema.pre("validate", function () {
   // Générer la référence si non définie
   if (!this.reference) {
     const date = new Date();
@@ -258,7 +258,6 @@ stockMovementSchema.pre("validate", async function (next) {
   // Déterminer automatiquement la direction selon le type
   this.direction = IN_MOVEMENTS.includes(this.movementType) ? "IN" : "OUT";
 
-  next();
 });
 
 // Méthode statique pour calculer le stock actuel d'un produit
