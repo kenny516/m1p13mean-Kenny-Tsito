@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 /**
  * Modèle Boutique
- * Chaque vendeur (SELLER) peut avoir une boutique
+ * Un vendeur (SELLER) peut avoir plusieurs boutiques
  */
 const shopSchema = new mongoose.Schema(
   {
@@ -10,7 +10,6 @@ const shopSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      unique: true, // Un vendeur = une boutique
     },
     name: {
       type: String,
@@ -26,9 +25,17 @@ const shopSchema = new mongoose.Schema(
       address: String,
     },
     categories: [String],
+
+    // === MODÉRATION ===
+    status: {
+      type: String,
+      enum: ["DRAFT", "PENDING", "ACTIVE", "REJECTED", "ARCHIVED"],
+      default: "DRAFT",
+    },
+    rejectionReason: String,
     isActive: {
       type: Boolean,
-      default: false, // Nécessite validation admin
+      default: false,
     },
     commissionRate: {
       type: Number,
@@ -45,9 +52,25 @@ const shopSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Sync isActive avec le status avant chaque sauvegarde
+shopSchema.pre("save", function () {
+  this.isActive = this.status === "ACTIVE";
+});
+
+// Sync isActive pour les opérations findOneAndUpdate
+shopSchema.pre(["findOneAndUpdate", "updateOne", "updateMany"], function () {
+  const update = this.getUpdate();
+  if (update.status || update.$set?.status) {
+    const newStatus = update.status || update.$set.status;
+    this.set({ isActive: newStatus === "ACTIVE" });
+  }
+});
+
 // Index pour recherche full-text et filtres
 shopSchema.index({ name: "text", description: "text" });
 shopSchema.index({ isActive: 1 });
 shopSchema.index({ categories: 1 });
+shopSchema.index({ status: 1, createdAt: -1 });
+shopSchema.index({ sellerId: 1, status: 1 });
 
 export default mongoose.model("Shop", shopSchema);

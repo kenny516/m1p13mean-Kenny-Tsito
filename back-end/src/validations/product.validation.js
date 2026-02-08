@@ -172,11 +172,12 @@ export const listProductsQuerySchema = Joi.object({
 			"string.pattern.base": "L'ID du vendeur doit être un ObjectId MongoDB valide",
 		}),
 
-	sort: Joi.alternatives()
-		.try(Joi.object(), Joi.string())
+	sort: Joi.string()
+		.pattern(/^[a-zA-Z]+_(asc|desc)$/)
+		.default("createdAt_desc")
 		.optional()
 		.messages({
-			"alternatives.match": "Le tri doit être un objet JSON valide ou une chaîne JSON",
+			"string.pattern.base": "Le tri doit être au format champ_asc ou champ_desc",
 		}),
 });
 

@@ -1,0 +1,62 @@
+import { Router } from "express";
+import * as cartController from "../controllers/cart.controller.js";
+import { auth, authorize } from "../middlewares/auth.middleware.js";
+import { validate } from "../middlewares/validate.middleware.js";
+import {
+	addCartItemSchema,
+	updateCartItemSchema,
+	checkoutCartSchema,
+} from "../validations/cart.validation.js";
+
+const router = Router();
+
+// Toutes les routes panier nécessitent une authentification BUYER
+router.use(auth, authorize("BUYER"));
+
+/**
+ * @route   GET /api/cart
+ * @desc    Récupérer le panier de l'utilisateur connecté
+ * @access  Private (BUYER)
+ */
+router.get("/", cartController.getCart);
+
+/**
+ * @route   POST /api/cart/items
+ * @desc    Ajouter un produit au panier
+ * @access  Private (BUYER)
+ */
+router.post("/items", validate(addCartItemSchema), cartController.addItem);
+
+/**
+ * @route   PUT /api/cart/items/:productId
+ * @desc    Mettre à jour la quantité d'un produit du panier
+ * @access  Private (BUYER)
+ */
+router.put(
+	"/items/:productId",
+	validate(updateCartItemSchema),
+	cartController.updateItem,
+);
+
+/**
+ * @route   DELETE /api/cart/items/:productId
+ * @desc    Retirer un produit du panier
+ * @access  Private (BUYER)
+ */
+router.delete("/items/:productId", cartController.removeItem);
+
+/**
+ * @route   DELETE /api/cart
+ * @desc    Vider le panier
+ * @access  Private (BUYER)
+ */
+router.delete("/", cartController.clearCart);
+
+/**
+ * @route   POST /api/cart/checkout
+ * @desc    Valider le panier (créer les ventes)
+ * @access  Private (BUYER)
+ */
+router.post("/checkout", validate(checkoutCartSchema), cartController.checkout);
+
+export default router;

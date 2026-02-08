@@ -26,11 +26,6 @@ const cartItemSchema = new mongoose.Schema(
       required: true,
       min: 1,
     },
-    // Référence du mouvement de réservation
-    reservationMovementId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "StockMovement",
-    },
   },
   { _id: true }
 );
@@ -43,6 +38,12 @@ const cartSchema = new mongoose.Schema(
       required: true,
     },
     items: [cartItemSchema],
+    total: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: 0,
+    },
     // Date d'expiration du panier
     expiresAt: {
       type: Date,

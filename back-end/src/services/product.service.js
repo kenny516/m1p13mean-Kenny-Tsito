@@ -1,5 +1,36 @@
+import mongoose from "mongoose";
 import Product from "../models/Product.js";
 import { ApiError } from "../middlewares/error.middleware.js";
+import { parseSortOption } from "../utils/request.util.js";
+
+/**
+ * Vérifie que le produit existe, est ACTIVE, et appartient au shop donné.
+ * Utilisé par d'autres services (stockMovement, etc.)
+ */
+export const requireActiveProduct = async (productId, shopId, session = null) => {
+	const query = Product.findById(productId);
+	if (session) query.session(session);
+
+	const product = await query;
+	if (!product) {
+		throw new ApiError(404, "NOT_FOUND", "Produit non trouvé");
+	}
+	if (product.shopId.toString() !== shopId) {
+		throw new ApiError(
+			400,
+			"INVALID_SHOP",
+			"Le produit n'appartient pas à cette boutique",
+		);
+	}
+	if (product.status !== "ACTIVE") {
+		throw new ApiError(
+			400,
+			"PRODUCT_NOT_ACTIVE",
+			"Le produit doit être au statut ACTIVE",
+		);
+	}
+	return product;
+};
 
 /**
  * Crée un nouveau produit
@@ -78,28 +109,7 @@ export const getProducts = async (filters = {}) => {
 	}
 
 	// Tri
-	let sortOptions = { createdAt: -1 };
-
-	if (sort) {
-		try {
-			// Format attendu: JSON object directement {"price": "asc", "createdAt": "desc"}
-			// Si sort est déjà un objet après parsing de query string par Express
-			const sortParsed = typeof sort === "string" ? JSON.parse(sort) : sort;
-			const newSortOptions = {};
-
-			for (const [key, value] of Object.entries(sortParsed)) {
-				// Conversion 'asc'/1 -> 1, 'desc'/-1 -> -1
-				const direction = String(value).toLowerCase() === "asc" || value == 1 ? 1 : -1;
-				newSortOptions[key] = direction;
-			}
-
-			if (Object.keys(newSortOptions).length > 0) {
-				sortOptions = newSortOptions;
-			}
-		} catch (e) {
-			console.warn("Invalid sort format:", sort);
-		}
-	}
+	const sortOptions = parseSortOption(sort);
 
 	// Exécution
 	const skip = (page - 1) * limit;
@@ -120,8 +130,10 @@ export const getProducts = async (filters = {}) => {
 /**
  * Récupère un produit par son ID
  */
-export const getProductById = async (id) => {
-	const product = await Product.findById(id).populate("shopId", "name ownerId");
+export const getProductById = async (id, session = null) => {
+	const query = Product.findById(id).populate("shopId", "name ownerId");
+	if (session) query.session(session);
+	const product = await query;
 	if (!product) {
 		throw new ApiError(404, "NOT_FOUND", "Produit non trouvé");
 	}
@@ -192,80 +204,6 @@ export const moderateProduct = async (id, status, rejectionReason) => {
 		product.rejectionReason = undefined;
 	}
 
-	await product.save();
-	return product;
-};
-
-/**
- * Met à jour le stock
- */
-export const updateStock = async (id, quantity, operation = "set") => {
-	const product = await getProductById(id);
-
-	if (operation === "add") {
-		product.stock.cache.total += quantity;
-		product.stock.cache.available += quantity;
-	} else if (operation === "subtract") {
-		product.stock.cache.total -= quantity;
-		product.stock.cache.available -= quantity;
-	} else if (operation === "set") {
-		// Vérifier que le nouveau total couvre au moins le stock réservé
-		if (quantity < product.stock.cache.reserved) {
-			throw new ApiError(
-				400,
-				"BAD_REQUEST",
-				`Impossible de réduire le stock à ${quantity}. ${product.stock.cache.reserved} articles sont réservés.`,
-			);
-		}
-		const diff = quantity - product.stock.cache.total;
-		product.stock.cache.total = quantity;
-		product.stock.cache.available += diff;
-	}
-
-	product.stock.cache.lastUpdated = new Date();
-	await product.save();
-	return product;
-};
-
-/**
- * Gère la réservation de stock (Panier/Commande)
- */
-export const manageStockReservation = async (id, quantity, action) => {
-	const product = await getProductById(id);
-
-	if (action === "reserve") {
-		// Vérification disponibilité
-		if (product.stock.cache.available < quantity) {
-			throw new ApiError(
-				400,
-				"STOCK_INSUFFICIENT",
-				`Stock insuffisant. Disponible: ${product.stock.cache.available}`,
-			);
-		}
-		product.stock.cache.reserved += quantity;
-		product.stock.cache.available -= quantity;
-	} else if (action === "release") {
-		// Libération (Annulation panier/commande)
-		// On ne peut pas libérer plus que ce qui est réservé
-		const safeQuantity = Math.min(quantity, product.stock.cache.reserved);
-		product.stock.cache.reserved -= safeQuantity;
-		product.stock.cache.available += safeQuantity;
-	} else if (action === "commit") {
-		// Validation définitive (Achat finalisé)
-		// Le stock quitte les réserves et sort définitivement du total
-		if (product.stock.cache.reserved < quantity) {
-			throw new ApiError(
-				400,
-				"STOCK_ERROR",
-				"Incohérence: tentative de valider plus de stock que réservé",
-			);
-		}
-		product.stock.cache.reserved -= quantity;
-		product.stock.cache.total -= quantity;
-		// 'available' ne change pas, car il avait déjà été déduit lors du 'reserve'
-	}
-
-	product.stock.cache.lastUpdated = new Date();
 	await product.save();
 	return product;
 };
