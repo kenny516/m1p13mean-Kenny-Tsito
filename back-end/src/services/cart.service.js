@@ -17,14 +17,19 @@ const populateCart = (query) =>
 		.populate("items.productId", "title price images status stock.cache.available")
 		.populate("items.shopId", "name");
 
-const findActiveCartByUser = async (userId, session = null) => {
+const findActiveCartByUser = (userId, session = null) => {
 	const query = Cart.findOne({ userId, expiresAt: { $gt: new Date() } });
 	if (session) query.session(session);
 	return query;
 };
 
 export const getCart = async (userId) => {
-	let cart = await populateCart(findActiveCartByUser(userId));
+	let cart = null;
+	try {
+		cart = await populateCart(findActiveCartByUser(userId)).exec();
+	} catch {
+		cart = await findActiveCartByUser(userId).exec();
+	}
 
 	if (!cart) {
 		const created = await Cart.create({
@@ -33,7 +38,11 @@ export const getCart = async (userId) => {
 			total: 0,
 			expiresAt: getExpiresAt(),
 		});
-		cart = await populateCart(Cart.findById(created._id));
+		try {
+			cart = await populateCart(Cart.findById(created._id)).exec();
+		} catch {
+			cart = await Cart.findById(created._id).exec();
+		}
 	}
 
 	return cart;
@@ -107,7 +116,7 @@ export const addItem = async (userId, { productId, quantity }) => {
 
 		await session.commitTransaction();
 
-		return await populateCart(Cart.findById(cart._id));
+		return await populateCart(Cart.findById(cart._id)).exec();
 	} catch (error) {
 		await session.abortTransaction();
 		throw error;
@@ -177,7 +186,7 @@ export const updateItem = async (userId, productId, quantity) => {
 		await cart.save({ session });
 		await session.commitTransaction();
 
-		return await populateCart(Cart.findById(cart._id));
+		return await populateCart(Cart.findById(cart._id)).exec();
 	} catch (error) {
 		await session.abortTransaction();
 		throw error;
@@ -232,7 +241,7 @@ export const removeItem = async (userId, productId) => {
 		await cart.save({ session });
 		await session.commitTransaction();
 
-		return await populateCart(Cart.findById(cart._id));
+		return await populateCart(Cart.findById(cart._id)).exec();
 	} catch (error) {
 		await session.abortTransaction();
 		throw error;
@@ -260,7 +269,7 @@ export const clearCart = async (userId) => {
 				{ session },
 			);
 			await session.commitTransaction();
-			return await populateCart(Cart.findById(emptyCart._id));
+			return await populateCart(Cart.findById(emptyCart._id)).exec();
 		}
 
 		cart.expiresAt = getExpiresAt();
@@ -292,7 +301,7 @@ export const clearCart = async (userId) => {
 		await cart.save({ session });
 		await session.commitTransaction();
 
-		return await populateCart(Cart.findById(cart._id));
+		return await populateCart(Cart.findById(cart._id)).exec();
 	} catch (error) {
 		await session.abortTransaction();
 		throw error;
@@ -388,7 +397,7 @@ export const checkoutCart = async (userId, payload) => {
 		await session.commitTransaction();
 
 		return {
-			cart: await populateCart(Cart.findById(nextCart._id)),
+			cart: await populateCart(Cart.findById(nextCart._id)).exec(),
 			movements,
 			walletTransaction,
 		};
