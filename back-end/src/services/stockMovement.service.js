@@ -17,6 +17,60 @@ import { parseSortOption } from "../utils/request.util.js";
  */
 const _getDirection = (movementType) => (IN_MOVEMENTS.includes(movementType) ? "IN" : "OUT");
 
+const RESERVATION_TYPES = new Set(["RESERVATION", "RESERVATION_CANCEL"]);
+
+const _affectsTotal = (movementType) => !RESERVATION_TYPES.has(movementType);
+
+const _getStockSnapshot = async (product, useCache) => {
+	const cache = product?.stock?.cache;
+	if (
+		useCache &&
+		cache &&
+		typeof cache.total === "number" &&
+		typeof cache.reserved === "number"
+	) {
+		return {
+			total: cache.total,
+			reserved: cache.reserved,
+			available: cache.total - cache.reserved,
+		};
+	}
+
+	const stockData = await StockMovement.calculateStock(product._id);
+	return {
+		total: stockData.total,
+		reserved: stockData.reserved,
+		available: stockData.available,
+	};
+};
+
+const _applyMovementToCache = (product, movementType, quantity, direction) => {
+	const cache = product.stock.cache;
+	const affectsTotal = _affectsTotal(movementType);
+
+	if (movementType === "RESERVATION") {
+		cache.reserved += quantity;
+	} else if (movementType === "RESERVATION_CANCEL") {
+		cache.reserved = Math.max(0, cache.reserved - quantity);
+	} else {
+		if (direction === "IN") {
+			cache.total += quantity;
+		} else {
+			cache.total = Math.max(0, cache.total - quantity);
+		}
+
+		if (movementType === "SALE") {
+			cache.reserved = Math.max(0, cache.reserved - quantity);
+		}
+	}
+
+	if (affectsTotal) {
+		cache.available = Math.max(0, cache.total - cache.reserved);
+	}
+
+	cache.lastUpdated = new Date();
+};
+
 
 
 /**
@@ -50,26 +104,57 @@ const _syncProductStockCache = async (productId, session = null) => {
  * Crée un mouvement de stock dans une transaction.
  * Calcule stockBefore/stockAfter, totalAmount, et met à jour product.stock.cache.
  */
-export const createMovement = async (movementData, performedBy) => {
-	const session = await mongoose.startSession();
-	session.startTransaction();
+export const createMovement = async (movementData, performedBy, options = {}) => {
+	const providedSession = options.session || null;
+	const session = providedSession || (await mongoose.startSession());
+	const ownsSession = !providedSession;
+	const useCache = options.useCache !== false;
+	const providedProduct = options.product || null;
+
+	if (ownsSession) {
+		session.startTransaction();
+	}
 
 	try {
 		const { productId, shopId, movementType, quantity, unitPrice = 0 } = movementData;
 
-		// 1. Valider shop et produit
-		await requireActiveShop(shopId, session);
-		const product = await requireActiveProduct(productId, shopId, session);
+		const resolvedProductId = providedProduct?._id?.toString() || productId;
+		const resolvedShopId = shopId || providedProduct?.shopId?.toString();
+		if (!resolvedProductId) {
+			throw new ApiError(400, "INVALID_PRODUCT", "Produit requis pour le mouvement");
+		}
+		if (!resolvedShopId) {
+			throw new ApiError(400, "INVALID_SHOP", "Boutique requise pour le mouvement");
+		}
 
-		// 2. Calculer stock courant depuis les mouvements
-		const currentStock = await StockMovement.calculateStock(productId);
+		// 1. Valider shop et produit
+		await requireActiveShop(resolvedShopId, session);
+		const product = providedProduct
+			? providedProduct
+			: await requireActiveProduct(resolvedProductId, resolvedShopId, session);
+
+		if (product.status !== "ACTIVE") {
+			throw new ApiError(
+				400,
+				"PRODUCT_NOT_ACTIVE",
+				"Le produit doit être au statut ACTIVE",
+			);
+		}
+		if (product.shopId.toString() !== resolvedShopId) {
+			throw new ApiError(
+				400,
+				"INVALID_SHOP",
+				"Le produit n'appartient pas à cette boutique",
+			);
+		}
+
+		// 2. Utiliser le cache s'il est fiable
+		const currentStock = await _getStockSnapshot(product, useCache);
 		const direction = _getDirection(movementType);
 
 		// 3. Vérifier disponibilité pour les mouvements sortants
-		if (direction === "OUT") {
-			const effectiveAvailable =
-				movementType === "RESERVATION" ? currentStock.available : currentStock.total;
-
+		if (movementType === "RESERVATION") {
+			const effectiveAvailable = currentStock.total - currentStock.reserved;
 			if (quantity > effectiveAvailable) {
 				throw new ApiError(
 					400,
@@ -77,17 +162,30 @@ export const createMovement = async (movementData, performedBy) => {
 					`Stock insuffisant. Disponible : ${effectiveAvailable}, demandé : ${quantity}`,
 				);
 			}
+		} else if (direction === "OUT" && _affectsTotal(movementType)) {
+			if (quantity > currentStock.total) {
+				throw new ApiError(
+					400,
+					"INSUFFICIENT_STOCK",
+					`Stock insuffisant. Disponible : ${currentStock.total}, demandé : ${quantity}`,
+				);
+			}
 		}
 
 		// 4. Calculer les valeurs d'audit
 		const stockBefore = currentStock.total;
-		const stockAfter = direction === "IN" ? stockBefore + quantity : stockBefore - quantity;
+		const affectsTotal = _affectsTotal(movementType);
+		const stockAfter = affectsTotal
+			? direction === "IN"
+				? stockBefore + quantity
+				: stockBefore - quantity
+			: stockBefore;
 		const totalAmount = quantity * unitPrice;
 
 		// 5. Construire le document mouvement
 		const movementDoc = {
-			productId,
-			shopId,
+			productId: resolvedProductId,
+			shopId: resolvedShopId,
 			movementType,
 			direction,
 			quantity,
@@ -122,19 +220,22 @@ export const createMovement = async (movementData, performedBy) => {
 			session,
 		});
 
-		// 8. Synchroniser le cache stock du produit
-		await _syncProductStockCache(productId, session);
+		// 8. Mettre à jour le cache stock du produit
+		_applyMovementToCache(product, movementType, quantity, direction);
+		await product.save({ session });
 
 		// 9. Mettre à jour les stats de vente du produit si c'est une vente
 		if (movementType === "SALE") {
 			await Product.findByIdAndUpdate(
-				productId,
+				product._id,
 				{ $inc: { "stats.sales": quantity } },
 				{ session },
 			);
 		}
 
-		await session.commitTransaction();
+		if (ownsSession) {
+			await session.commitTransaction();
+		}
 
 		// Retourner le mouvement peuplé
 		return StockMovement.findById(movement._id)
@@ -142,10 +243,14 @@ export const createMovement = async (movementData, performedBy) => {
 			.populate("shopId", "name")
 			.populate("performedBy", "email profile");
 	} catch (error) {
-		await session.abortTransaction();
+		if (ownsSession) {
+			await session.abortTransaction();
+		}
 		throw error;
 	} finally {
-		session.endSession();
+		if (ownsSession) {
+			session.endSession();
+		}
 	}
 };
 
