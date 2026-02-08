@@ -71,17 +71,4 @@ router.put(
  */
 router.delete("/:id", auth, authorize("SELLER", "ADMIN"), productController.remove);
 
-/**
- * @route   PUT /api/products/:id/stock
- * @desc    Mettre à jour le stock (Ajout/Retrait/Définition)
- * @access  Private (SELLER, ADMIN)
- */
-router.put(
-	"/:id/stock",
-	auth,
-	authorize("SELLER", "ADMIN"),
-	validate(updateStockSchema),
-	productController.updateStock,
-);
-
 export default router;
