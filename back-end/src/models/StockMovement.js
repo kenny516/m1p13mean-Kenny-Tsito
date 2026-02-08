@@ -269,12 +269,30 @@ stockMovementSchema.statics.calculateStock = async function (productId) {
         _id: null,
         totalIn: {
           $sum: {
-            $cond: [{ $eq: ["$direction", "IN"] }, "$quantity", 0],
+            $cond: [
+              {
+                $and: [
+                  { $eq: ["$direction", "IN"] },
+                  { $not: [{ $in: ["$movementType", ["RESERVATION", "RESERVATION_CANCEL"]] }] },
+                ],
+              },
+              "$quantity",
+              0,
+            ],
           },
         },
         totalOut: {
           $sum: {
-            $cond: [{ $eq: ["$direction", "OUT"] }, "$quantity", 0],
+            $cond: [
+              {
+                $and: [
+                  { $eq: ["$direction", "OUT"] },
+                  { $not: [{ $in: ["$movementType", ["RESERVATION", "RESERVATION_CANCEL"]] }] },
+                ],
+              },
+              "$quantity",
+              0,
+            ],
           },
         },
         reserved: {
