@@ -53,19 +53,17 @@ const shopSchema = new mongoose.Schema(
 );
 
 // Sync isActive avec le status avant chaque sauvegarde
-shopSchema.pre("save", function (next) {
+shopSchema.pre("save", function () {
   this.isActive = this.status === "ACTIVE";
-  next();
 });
 
 // Sync isActive pour les opérations findOneAndUpdate
-shopSchema.pre(["findOneAndUpdate", "updateOne", "updateMany"], function (next) {
+shopSchema.pre(["findOneAndUpdate", "updateOne", "updateMany"], function () {
   const update = this.getUpdate();
   if (update.status || update.$set?.status) {
     const newStatus = update.status || update.$set.status;
     this.set({ isActive: newStatus === "ACTIVE" });
   }
-  next();
 });
 
 // Index pour recherche full-text et filtres
