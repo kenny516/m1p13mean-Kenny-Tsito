@@ -101,39 +101,6 @@ JWT_EXPIRE=7d
 
 ---
 
-## 📡 API Endpoints
-
-### Authentification
-
-- `POST /api/auth/register` - Inscription
-- `POST /api/auth/login` - Connexion
-- `GET /api/auth/me` - Profil utilisateur
-
-### Produits
-
-- `GET /api/products` - Liste des produits
-- `GET /api/products/:id` - Détail produit
-- `POST /api/products` - Créer (Seller)
-- `PUT /api/products/:id` - Modifier (Seller)
-
-### Panier
-
-- `GET /api/cart` - Mon panier
-- `POST /api/cart/items` - Ajouter au panier
-- `DELETE /api/cart/items/:id` - Retirer
-
-### Commandes
-
-- `GET /api/orders` - Mes commandes
-- `POST /api/orders` - Créer commande
-
-### Wallet
-
-- `GET /api/wallets` - Mon portefeuille
-- `POST /api/wallets/deposit` - Recharger
-
----
-
 ## 👥 Comptes de Test
 
 ### Admin
@@ -158,7 +125,7 @@ JWT_EXPIRE=7d
 | Service  | Plateforme       |
 | -------- | ---------------- |
 | Frontend | Vercel           |
-| Backend  | Render / Railway |
+| Backend  | Vercel           |
 | Database | MongoDB Atlas    |
 
 ---
@@ -192,16 +159,6 @@ JWT_EXPIRE=7d
 
 ---
 
-## 📚 Documentation
-
-- [Instructions Backend](.github/instructions/backend.instructions.md)
-- [Instructions Frontend](.github/instructions/frontend.instructions.md)
-- [API Documentation](.github/instructions/api.instructions.md)
-- [MongoDB Models](.github/instructions/mongodb.instructions.md)
-- [Sécurité](.github/instructions/security.instructions.md)
-- [Git Workflow](.github/instructions/git.instructions.md)
-
----
 
 ## 👨‍💻 Développeurs
 
@@ -209,20 +166,6 @@ JWT_EXPIRE=7d
 | --------- | ---------------------- |
 | **Kenny** | Développeur Full Stack |
 | **Tsito** | Développeur Full Stack |
-
----
-
-## 📄 Licence
-
-Ce projet est réalisé dans le cadre académique - Master 1 Promotion 13.
-
----
-
-<p align="center">
-  <strong>© 2026 - Marketplace Centre Commercial</strong><br>
-  Développé par Kenny & Tsito
-</p>
-Tsito** | Développeur Full Stack |
 
 ---
 
