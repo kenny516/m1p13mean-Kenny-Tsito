@@ -10,6 +10,7 @@ export const validate = (schema, property = "body") => {
     const { error, value } = schema.validate(req[property], {
       abortEarly: false, // Retourner toutes les erreurs
       stripUnknown: true, // Supprimer les champs inconnus
+      convert: true, // Autoriser la coercion de types (ex: string → Date)
     });
 
     if (error) {

@@ -2,251 +2,228 @@ import mongoose from "mongoose";
 import Cart from "../models/Cart.js";
 import Product from "../models/Product.js";
 import { ApiError } from "../middlewares/error.middleware.js";
-import { createMovement } from "./stockMovement.service.js";
+import {
+	createStockMovement,
+	createCartMovementLine,
+} from "./stockMovementLine.service.js";
+import { updateSaleStatus } from "./stockMovement.service.js";
 import { debitWallet } from "./wallet.service.js";
+import { requireActiveProduct } from "./product.service.js";
 
 const CART_TTL_MINUTES = 30;
 
 const getExpiresAt = () => new Date(Date.now() + CART_TTL_MINUTES * 60 * 1000);
 
-const computeTotal = (items = []) =>
-	items.reduce((sum, item) => sum + item.priceSnapshot * item.quantity, 0);
+const computeTotal = (items = []) => items.reduce((sum, item) => sum + (item.totalAmount || 0), 0);
 
-const populateCart = (query) =>
-	query
-		.populate("items.productId", "title price images status stock.cache.available")
-		.populate("items.shopId", "name");
+const buildItemSnapshot = (product) => {
+	const unitPrice = product.price || 0;
+	return {
+		title: product.title,
+		description: product.description,
+		images: product.images || [],
+		unitPrice,
+		availableStock: product.stock?.cache?.available || 0,
+	};
+};
 
-const findActiveCartByUser = (userId, session = null) => {
-	const query = Cart.findOne({ userId, expiresAt: { $gt: new Date() } });
+const findActiveCartByUser = async (userId, session = null) => {
+	const query = Cart.findOne({ userId, status: "CART" });
 	if (session) query.session(session);
-	return query;
+	return (await query.exec()) || null;
 };
 
 export const getCart = async (userId) => {
-	let cart = null;
-	try {
-		cart = await populateCart(findActiveCartByUser(userId)).exec();
-	} catch {
-		cart = await findActiveCartByUser(userId).exec();
-	}
-
+	const cart = await findActiveCartByUser(userId);
 	if (!cart) {
 		const created = await Cart.create({
 			userId,
 			items: [],
-			total: 0,
+			status: "CART",
+			totalAmount: 0,
 			expiresAt: getExpiresAt(),
 		});
-		try {
-			cart = await populateCart(Cart.findById(created._id)).exec();
-		} catch {
-			cart = await Cart.findById(created._id).exec();
-		}
+
+		return created;
+	}
+
+	if (cart.expiresAt <= new Date()) {
+		cart.status = "EXPIRED";
+		await cart.save();
+		throw new ApiError(400, "CART_EXPIRED", "Le panier a expiré");
 	}
 
 	return cart;
 };
 
-export const addItem = async (userId, { productId, quantity }) => {
-	const session = await mongoose.startSession();
-	session.startTransaction();
+export const addItem = async (userId, { productId, quantity }, options = {}) => {
+	const ownsSession = !options.session;
+	const session = options.session || (await mongoose.startSession());
+	if (ownsSession) session.startTransaction();
 
 	try {
-		const product = await Product.findById(productId).session(session);
-		if (!product) {
-			throw new ApiError(404, "NOT_FOUND", "Produit non trouvé");
-		}
-		if (product.status !== "ACTIVE") {
-			throw new ApiError(
-				400,
-				"PRODUCT_NOT_ACTIVE",
-				"Le produit doit être au statut ACTIVE",
-			);
-		}
+		const cart = options.cart || (await getCart(userId, session));
+		const itemIndex =
+			options.itemIndex !== undefined
+				? options.itemIndex
+				: cart.items.findIndex((cartItem) => cartItem.productId.toString() === productId);
+		const product = options.product || (await requireActiveProduct(productId, null, session));
 
-		let cart = await findActiveCartByUser(userId, session);
-		if (!cart) {
-			cart = new Cart({
-				userId,
-				items: [],
-				total: 0,
-				expiresAt: getExpiresAt(),
-			});
-		}
-
-		const existing = cart.items.find(
-			(item) => item.productId.toString() === productId,
-		);
-
-		cart.expiresAt = getExpiresAt();
-		const groupId = `GRP${cart._id}`;
-		await createMovement(
+		await createCartMovementLine(
 			{
 				productId: product._id.toString(),
 				shopId: product.shopId.toString(),
 				movementType: "RESERVATION",
 				quantity,
 				unitPrice: product.price,
-				groupId,
-				reservation: {
-					cartId: cart._id,
-					expiresAt: cart.expiresAt,
-				},
+				cartId: cart._id,
+				date: new Date(),
 			},
 			userId,
-			{ session, product, useCache: true },
+			{ session, product, cache: true },
 		);
 
-		if (existing) {
-			existing.quantity += quantity;
-			existing.priceSnapshot = product.price;
-			existing.shopId = product.shopId;
+		const snapshot = buildItemSnapshot(product);
+		if (itemIndex !== -1) {
+			cart.items[itemIndex].quantity += quantity;
+			cart.items[itemIndex].shopId = product.shopId;
+			cart.items[itemIndex].productSnapshot = snapshot;
+			cart.items[itemIndex].totalAmount = product.price * cart.items[itemIndex].quantity;
 		} else {
 			cart.items.push({
 				productId: product._id,
 				shopId: product.shopId,
-				priceSnapshot: product.price,
 				quantity,
+				productSnapshot: snapshot,
+				totalAmount: product.price * quantity,
 			});
 		}
-		cart.total = computeTotal(cart.items);
 
-		await cart.save({ session });
+		cart.totalAmount = computeTotal(cart.items);
+		cart.expiresAt = getExpiresAt();
 
-		await session.commitTransaction();
-
-		return await populateCart(Cart.findById(cart._id)).exec();
+		const updatedCart = await cart.save({ session });
+		if (ownsSession) await session.commitTransaction();
+		return updatedCart;
 	} catch (error) {
-		await session.abortTransaction();
+		if (ownsSession) await session.abortTransaction();
 		throw error;
 	} finally {
-		session.endSession();
+		if (ownsSession) await session.endSession();
 	}
 };
 
 export const updateItem = async (userId, productId, quantity) => {
 	const session = await mongoose.startSession();
+	const ownsSession = true;
 	session.startTransaction();
 
 	try {
-		const cart = await findActiveCartByUser(userId, session);
-		if (!cart) {
-			throw new ApiError(404, "NOT_FOUND", "Panier non trouvé");
-		}
+		let newCart = null;
 
-		const item = cart.items.find(
-			(cartItem) => cartItem.productId.toString() === productId,
-		);
-		if (!item) {
-			throw new ApiError(404, "NOT_FOUND", "Produit non trouvé dans le panier");
-		}
-
-		const product = await Product.findById(productId).session(session);
-		if (!product) {
-			throw new ApiError(404, "NOT_FOUND", "Produit non trouvé");
-		}
-		if (product.status !== "ACTIVE") {
-			throw new ApiError(
-				400,
-				"PRODUCT_NOT_ACTIVE",
-				"Le produit doit être au statut ACTIVE",
-			);
-		}
-
-		const delta = quantity - item.quantity;
-		cart.expiresAt = getExpiresAt();
-		if (delta !== 0) {
-			const movementType = delta > 0 ? "RESERVATION" : "RESERVATION_CANCEL";
-			const movementQuantity = Math.abs(delta);
-			const groupId = `GRP${cart._id}`;
-			await createMovement(
-				{
-					productId: product._id.toString(),
-					shopId: product.shopId.toString(),
-					movementType,
-					quantity: movementQuantity,
-					unitPrice: product.price,
-					groupId,
-					reservation: {
-						cartId: cart._id,
-						expiresAt: cart.expiresAt,
-					},
-				},
-				userId,
-				{ session, product, useCache: true },
-			);
-		}
-
-		item.quantity = quantity;
-		item.priceSnapshot = product.price;
-		item.shopId = product.shopId;
-		cart.total = computeTotal(cart.items);
-
-		await cart.save({ session });
-		await session.commitTransaction();
-
-		return await populateCart(Cart.findById(cart._id)).exec();
-	} catch (error) {
-		await session.abortTransaction();
-		throw error;
-	} finally {
-		session.endSession();
-	}
-};
-
-export const removeItem = async (userId, productId) => {
-	const session = await mongoose.startSession();
-	session.startTransaction();
-
-	try {
-		const cart = await findActiveCartByUser(userId, session);
-		if (!cart) {
-			throw new ApiError(404, "NOT_FOUND", "Panier non trouvé");
-		}
-
+		const cart = await getCart(userId, session);
 		const itemIndex = cart.items.findIndex(
 			(cartItem) => cartItem.productId.toString() === productId,
 		);
+		const product = await requireActiveProduct(productId, null, session);
+
+		// Calculate delta: (Target Quantity) - (Current Quantity)
+		// If item doesn't exist, delta is the full target quantity
+		const currentQty = itemIndex !== -1 ? cart.items[itemIndex].quantity : 0;
+		const delta = quantity - currentQty;
+
+		// Determination logic
+		const isAdd = delta > 0;
+		const isRemove = delta < 0;
+
+		if (isAdd) {
+			// Adding: pass the positive delta
+			newCart = await addItem(
+				userId,
+				{ productId, quantity: delta },
+				{ cart, itemIndex, product, session },
+			);
+		} else if (isRemove) {
+			newCart = await removeItem(
+				userId,
+				{ productId, quantity: Math.abs(delta) },
+				{ cart, itemIndex, product, session },
+			);
+		} else {
+			if (itemIndex === -1) {
+				throw new ApiError(404, "ITEM_NOT_FOUND", "L'article n'est pas dans le panier");
+			}
+			newCart = cart;
+		}
+
+		if (ownsSession) await session.commitTransaction();
+		return newCart;
+	} catch (error) {
+		if (ownsSession) await session.abortTransaction();
+		throw error;
+	} finally {
+		if (ownsSession) await session.endSession();
+	}
+};
+
+export const removeItem = async (userId, { productId, quantity }, options = {}) => {
+	const ownsSession = !options.session;
+	const session = options.session || (await mongoose.startSession());
+	if (ownsSession) session.startTransaction();
+
+	try {
+		const cart = options.cart || (await findActiveCartByUser(userId, session));
+		if (!cart) {
+			throw new ApiError(404, "CART_NOT_FOUND", "Panier non trouvé");
+		}
+		const itemIndex =
+			options.itemIndex !== undefined
+				? options.itemIndex
+				: cart.items.findIndex((cartItem) => cartItem.productId.toString() === productId);
+
 		if (itemIndex === -1) {
-			throw new ApiError(404, "NOT_FOUND", "Produit non trouvé dans le panier");
+			throw new ApiError(404, "ITEM_NOT_FOUND", "L'article n'est pas dans le panier");
 		}
 
-		const product = await Product.findById(productId).session(session);
-		if (!product) {
-			throw new ApiError(404, "NOT_FOUND", "Produit non trouvé");
-		}
+		const effectiveQuantity = quantity === -1 ? cart.items[itemIndex].quantity : quantity;
+		const product = options.product || (await requireActiveProduct(productId, null, session));
 
-		cart.expiresAt = getExpiresAt();
-		const [removed] = cart.items.splice(itemIndex, 1);
-		const groupId = `GRP${cart._id}`;
-		await createMovement(
+		await createCartMovementLine(
 			{
 				productId: product._id.toString(),
 				shopId: product.shopId.toString(),
 				movementType: "RESERVATION_CANCEL",
-				quantity: removed.quantity,
+				quantity: effectiveQuantity,
 				unitPrice: product.price,
-				groupId,
-				reservation: {
-					cartId: cart._id,
-					expiresAt: cart.expiresAt,
-				},
+				cartId: cart._id,
+				date: new Date(),
 			},
 			userId,
-			{ session, product, useCache: true },
+			{ session, product, cache: true },
 		);
-		cart.total = computeTotal(cart.items);
 
-		await cart.save({ session });
-		await session.commitTransaction();
+		const snapshot = buildItemSnapshot(product);
+		if (cart.items[itemIndex].quantity > effectiveQuantity) {
+			cart.items[itemIndex].quantity -= effectiveQuantity;
+			cart.items[itemIndex].shopId = product.shopId;
+			cart.items[itemIndex].productSnapshot = snapshot;
+			cart.items[itemIndex].totalAmount = product.price * cart.items[itemIndex].quantity;
+		} else {
+			cart.items.splice(itemIndex, 1);
+		}
 
-		return await populateCart(Cart.findById(cart._id)).exec();
+		cart.totalAmount = computeTotal(cart.items);
+		cart.expiresAt = getExpiresAt();
+
+		const updatedCart = await cart.save({ session });
+		if (ownsSession) await session.commitTransaction();
+
+		return updatedCart;
 	} catch (error) {
-		await session.abortTransaction();
+		if (ownsSession) await session.abortTransaction();
 		throw error;
 	} finally {
-		session.endSession();
+		if (ownsSession) await session.endSession();
 	}
 };
 
@@ -262,51 +239,50 @@ export const clearCart = async (userId) => {
 					{
 						userId,
 						items: [],
-						total: 0,
+						status: "CART",
+						totalAmount: 0,
 						expiresAt: getExpiresAt(),
 					},
 				],
 				{ session },
 			);
 			await session.commitTransaction();
-			return await populateCart(Cart.findById(emptyCart._id)).exec();
+			return emptyCart;
 		}
 
-		cart.expiresAt = getExpiresAt();
 		for (const item of cart.items) {
 			const product = await Product.findById(item.productId).session(session);
 			if (!product) {
 				throw new ApiError(404, "NOT_FOUND", "Produit non trouvé");
 			}
-			await createMovement(
+			await createCartMovementLine(
 				{
 					productId: product._id.toString(),
 					shopId: product.shopId.toString(),
 					movementType: "RESERVATION_CANCEL",
 					quantity: item.quantity,
 					unitPrice: product.price,
-					groupId: `GRP${cart._id}`,
-					reservation: {
-						cartId: cart._id,
-						expiresAt: cart.expiresAt,
-					},
+					cartId: cart._id,
+					date: new Date(),
 				},
 				userId,
-				{ session, product, useCache: true },
+				{ session, product, cache: true },
 			);
 		}
 
 		cart.items = [];
-		cart.total = 0;
-		await cart.save({ session });
+		cart.totalAmount = 0;
+		cart.expiresAt = getExpiresAt();
+
+		const updatedCart = await cart.save({ session });
 		await session.commitTransaction();
 
-		return await populateCart(Cart.findById(cart._id)).exec();
+		return updatedCart;
 	} catch (error) {
 		await session.abortTransaction();
 		throw error;
 	} finally {
-		session.endSession();
+		await session.endSession();
 	}
 };
 
@@ -320,64 +296,57 @@ export const checkoutCart = async (userId, payload) => {
 			throw new ApiError(400, "CART_EMPTY", "Le panier est vide");
 		}
 
-		const groupId = `GRP${cart._id}`;
 		const computedTotal = computeTotal(cart.items);
-		if (cart.total !== computedTotal) {
-			cart.total = computedTotal;
+		if (cart.totalAmount !== computedTotal) {
+			cart.totalAmount = computedTotal;
 		}
 
-		let walletTransaction = null;
+		let paymentTransaction = null;
 		if (payload.paymentMethod === "WALLET") {
 			const result = await debitWallet(
 				userId,
-				cart.total,
+				cart.totalAmount,
 				"WALLET",
 				`Achat via panier ${cart._id}`,
 			);
-			walletTransaction = result.transaction;
+			paymentTransaction = result.transaction;
 		}
 
-		const movements = [];
+		const saleItems = [];
 		for (const item of cart.items) {
-			const product = await Product.findById(item.productId).session(session);
-			if (!product) {
-				throw new ApiError(404, "NOT_FOUND", "Produit non trouvé");
-			}
-			if (product.status !== "ACTIVE") {
-				throw new ApiError(
-					400,
-					"PRODUCT_NOT_ACTIVE",
-					"Le produit doit être au statut ACTIVE",
-				);
-			}
-
-			const movement = await createMovement(
-				{
-					productId: product._id.toString(),
-					shopId: product.shopId.toString(),
-					movementType: "SALE",
-					quantity: item.quantity,
-					unitPrice: item.priceSnapshot,
-					groupId,
-					sale: {
-						buyerId: userId,
-						productSnapshot: {
-							title: product.title,
-							sku: product.sku,
-							price: item.priceSnapshot,
-							originalPrice: product.originalPrice || null,
-							images: product.images || [],
-						},
-						deliveryAddress: payload.deliveryAddress,
-						paymentMethod: payload.paymentMethod,
-					},
-				},
-				userId,
-				{ session, product, useCache: true },
-			);
-
-			movements.push(movement);
+			const product = await requireActiveProduct(item.productId, null, session);
+			saleItems.push({
+				productId: item.productId.toString(),
+				shopId: item.shopId.toString(),
+				quantity: item.quantity,
+				cartId: cart._id,
+				unitPrice: item.productSnapshot?.unitPrice || product.price,
+				product,
+			});
 		}
+
+		const { header, lines } = await createStockMovement(
+			{
+				movementType: "SALE",
+				sale: {
+					cartId: cart._id,
+					paymentTransaction: paymentTransaction?._id,
+					deliveryAddress: payload.deliveryAddress,
+					paymentMethod: payload.paymentMethod,
+				},
+				items: saleItems,
+			},
+			userId,
+			{ session, cache: true },
+		);
+
+		cart.status = "ORDER";
+
+		cart.order.reference = header.reference;
+		cart.order.saleId = header._id.toString();
+
+		cart.order.paymentMethod = payload.paymentMethod;
+		cart.order.paymentTransaction = paymentTransaction?._id.toString();
 
 		cart.expiresAt = new Date();
 		await cart.save({ session });
@@ -387,7 +356,8 @@ export const checkoutCart = async (userId, payload) => {
 				{
 					userId,
 					items: [],
-					total: 0,
+					status: "CART",
+					totalAmount: 0,
 					expiresAt: getExpiresAt(),
 				},
 			],
@@ -397,14 +367,42 @@ export const checkoutCart = async (userId, payload) => {
 		await session.commitTransaction();
 
 		return {
-			cart: await populateCart(Cart.findById(nextCart._id)).exec(),
-			movements,
-			walletTransaction,
+			cart: nextCart,
+			order: cart,
+			paymentTransaction,
 		};
 	} catch (error) {
 		await session.abortTransaction();
 		throw error;
 	} finally {
-		session.endSession();
+		await session.endSession();
+	}
+};
+
+export const confirmDelivery = async (userId, cartId) => {
+	const session = await mongoose.startSession();
+	session.startTransaction();
+
+	try {
+		const cart = await Cart.findOne({ _id: cartId, userId }).session(session);
+		if (!cart) {
+			throw new ApiError(404, "NOT_FOUND", "Panier non trouvé");
+		}
+		if (cart.status !== "ORDER") {
+			throw new ApiError(400, "INVALID_STATUS", "Le panier n'est pas en cours de commande");
+		}
+
+		await updateSaleStatus(cart.order.saleId, { status: "DELIVERED" }, userId);
+
+		cart.status = "DELIVERED";
+		await cart.save({ session });
+
+		await session.commitTransaction();
+		return cart;
+	} catch (error) {
+		await session.abortTransaction();
+		throw error;
+	} finally {
+		await session.endSession();
 	}
 };

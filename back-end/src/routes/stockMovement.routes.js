@@ -9,6 +9,7 @@ import {
 	listSalesQuerySchema,
 	listSuppliesQuerySchema,
 } from "../validations/stockMovement.validation.js";
+import { listStockMovementLineQuerySchema } from "../validations/stockMovementLine.validation.js";
 
 const router = Router();
 
@@ -18,6 +19,18 @@ router.use(auth);
 // ==========================================
 // Routes vendeur
 // ==========================================
+
+/**
+ * @route   GET /api/stock-movements/lines
+ * @desc    Lister les lignes de mouvement de stock
+ * @access  Private (SELLER, ADMIN)
+ */
+router.get(
+	"/lines",
+	authorize("SELLER", "ADMIN"),
+	validateQuery(listStockMovementLineQuerySchema),
+	stockMovementController.listLines,
+);
 
 /**
  * @route   GET /api/stock-movements/sales

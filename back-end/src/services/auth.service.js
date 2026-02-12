@@ -52,7 +52,7 @@ export const registerUser = async ({ email, password, role, profile }) => {
     await session.abortTransaction();
     throw error;
   } finally {
-    session.endSession();
+    await session.endSession();
   }
 };
 

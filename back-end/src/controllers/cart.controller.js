@@ -63,7 +63,10 @@ export const updateItem = async (req, res, next) => {
  */
 export const removeItem = async (req, res, next) => {
 	try {
-		const cart = await cartService.removeItem(req.user._id, req.params.productId);
+		const cart = await cartService.removeItem(req.user._id, {
+			productId: req.params.productId,
+			quantity: -1,
+		});
 
 		res.json({
 			success: true,
@@ -105,6 +108,24 @@ export const checkout = async (req, res, next) => {
 			success: true,
 			data: result,
 			message: "Commande créée avec succès",
+		});
+	} catch (error) {
+		next(error);
+	}
+};
+
+/**
+ * Confirmer la livraison d'une commande
+ * POST /api/cart/:cartId/confirm-delivery
+ */
+export const confirmDelivery = async (req, res, next) => {
+	try {
+		const cart = await cartService.confirmDelivery(req.user._id, req.params.cartId);
+
+		res.json({
+			success: true,
+			data: cart,
+			message: "Livraison confirmée",
 		});
 	} catch (error) {
 		next(error);

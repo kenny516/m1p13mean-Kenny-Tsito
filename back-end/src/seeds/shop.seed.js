@@ -129,6 +129,7 @@ async function seedShops() {
 				categories: sellerData.shop.categories,
 				contact: sellerData.shop.contact,
 				commissionRate: sellerData.shop.commissionRate,
+				status: "ACTIVE",
 				isActive: true, // Boutique déjà validée pour les tests
 			});
 
