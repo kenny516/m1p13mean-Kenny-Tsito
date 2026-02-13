@@ -59,4 +59,11 @@ router.delete("/", cartController.clearCart);
  */
 router.post("/checkout", validate(checkoutCartSchema), cartController.checkout);
 
+/**
+ * @route   POST /api/cart/:cartId/confirm-delivery
+ * @desc    Confirmer la livraison d'une commande
+ * @access  Private (BUYER)
+ */
+router.post("/:cartId/confirm-delivery", cartController.confirmDelivery);
+
 export default router;

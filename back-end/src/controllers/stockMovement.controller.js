@@ -1,4 +1,5 @@
 import * as stockMovementService from "../services/stockMovement.service.js";
+import { listMovementLines } from "../services/stockMovementLine.service.js";
 
 // ==========================================
 // Créer un mouvement de stock
@@ -204,6 +205,30 @@ export const reconcile = async (req, res, next) => {
 			success: true,
 			data: result,
 			message: "Cache stock réconcilié avec succès",
+		});
+	} catch (error) {
+		next(error);
+	}
+};
+
+// ==========================================
+// Lister les lignes de mouvement
+// GET /api/stock-movements/lines
+// ==========================================
+
+export const listLines = async (req, res, next) => {
+	try {
+		const { lines, total, page, limit } = await listMovementLines(req.query);
+
+		res.json({
+			success: true,
+			data: lines,
+			pagination: {
+				page,
+				limit,
+				total,
+				pages: Math.ceil(total / limit),
+			},
 		});
 	} catch (error) {
 		next(error);

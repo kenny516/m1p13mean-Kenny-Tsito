@@ -112,7 +112,7 @@ export const createUser = async (userData) => {
     await session.abortTransaction();
     throw error;
   } finally {
-    session.endSession();
+    await session.endSession();
   }
 };
 

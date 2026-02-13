@@ -7,7 +7,7 @@ import { parseSortOption } from "../utils/request.util.js";
  * Vérifie que le produit existe, est ACTIVE, et appartient au shop donné.
  * Utilisé par d'autres services (stockMovement, etc.)
  */
-export const requireActiveProduct = async (productId, shopId, session = null) => {
+export const requireActiveProduct = async (productId, shopId = null, session = null) => {
 	const query = Product.findById(productId);
 	if (session) query.session(session);
 
@@ -15,7 +15,7 @@ export const requireActiveProduct = async (productId, shopId, session = null) =>
 	if (!product) {
 		throw new ApiError(404, "NOT_FOUND", "Produit non trouvé");
 	}
-	if (product.shopId.toString() !== shopId) {
+	if (shopId && product.shopId.toString() !== shopId) {
 		throw new ApiError(
 			400,
 			"INVALID_SHOP",
