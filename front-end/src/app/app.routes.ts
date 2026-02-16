@@ -20,6 +20,13 @@ export const routes: Routes = [
     loadChildren: () =>
       import('./features/profile/profile.routes').then((m) => m.PROFILE_ROUTES),
   },
+  // Routes Acheteur (BUYER)
+  {
+    path: 'buyer',
+    loadChildren: () =>
+      import('./features/buyer/buyer.routes').then((m) => m.BUYER_ROUTES),
+    canActivate: [authGuard, roleGuard(['BUYER'])],
+  },
   // Routes d'administration
   {
     path: 'admin',
