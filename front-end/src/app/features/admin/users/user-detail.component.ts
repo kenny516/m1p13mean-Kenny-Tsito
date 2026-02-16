@@ -313,7 +313,11 @@ import { ZardSeparatorComponent } from '@/shared/components/separator';
           @if (showResetPasswordModal) {
             <div
               class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+              role="button"
+              tabindex="0"
               (click)="showResetPasswordModal = false"
+              (keydown.escape)="showResetPasswordModal = false"
+              (keydown.enter)="showResetPasswordModal = false"
             >
               <z-card
                 class="w-full max-w-md mx-4 p-6"
@@ -394,7 +398,7 @@ export class UserDetailComponent implements OnInit {
     try {
       const user = await this.userService.getUserById(userId);
       this.user.set(user);
-    } catch (error) {
+    } catch {
       this.toastService.error("Erreur lors du chargement de l'utilisateur");
       this.router.navigate(['/admin/users']);
     } finally {
@@ -436,7 +440,7 @@ export class UserDetailComponent implements OnInit {
       await this.userService.validateUser(this.user()!._id);
       this.toastService.success('Utilisateur validé avec succès');
       await this.loadUser(this.user()!._id);
-    } catch (error) {
+    } catch {
       this.toastService.error('Erreur lors de la validation');
     }
   }
@@ -446,7 +450,7 @@ export class UserDetailComponent implements OnInit {
       await this.userService.activateUser(this.user()!._id);
       this.toastService.success('Utilisateur activé avec succès');
       await this.loadUser(this.user()!._id);
-    } catch (error) {
+    } catch {
       this.toastService.error("Erreur lors de l'activation");
     }
   }
@@ -457,7 +461,7 @@ export class UserDetailComponent implements OnInit {
         await this.userService.deactivateUser(this.user()!._id);
         this.toastService.success('Utilisateur désactivé avec succès');
         await this.loadUser(this.user()!._id);
-      } catch (error) {
+      } catch {
         this.toastService.error('Erreur lors de la désactivation');
       }
     }
@@ -471,7 +475,7 @@ export class UserDetailComponent implements OnInit {
       this.toastService.success('Mot de passe réinitialisé avec succès');
       this.showResetPasswordModal = false;
       this.newPassword = '';
-    } catch (error) {
+    } catch {
       this.toastService.error(
         'Erreur lors de la réinitialisation du mot de passe',
       );
@@ -488,7 +492,7 @@ export class UserDetailComponent implements OnInit {
         await this.userService.deleteUser(this.user()!._id);
         this.toastService.success('Utilisateur supprimé avec succès');
         this.router.navigate(['/admin/users']);
-      } catch (error) {
+      } catch {
         this.toastService.error('Erreur lors de la suppression');
       }
     }
