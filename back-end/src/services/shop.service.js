@@ -258,7 +258,7 @@ export const moderateShop = async (id, status, rejectionReason) => {
  * Met à jour les statistiques d'une boutique (usage interne)
  * Utilisé par d'autres services (commandes, produits, avis)
  */
-export const updateShopStats = async (shopId, statUpdates) => {
+/* export const updateShopStats = async (shopId, statUpdates) => {
 	const shop = await Shop.findById(shopId);
 	if (!shop) {
 		throw new ApiError(404, "NOT_FOUND", "Boutique non trouvée");
@@ -277,7 +277,7 @@ export const updateShopStats = async (shopId, statUpdates) => {
 
 	await shop.save();
 	return shop;
-};
+}; */
 
 /**
  * Mise à jour admin d'une boutique (commissionRate, etc.)
