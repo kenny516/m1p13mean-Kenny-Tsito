@@ -64,9 +64,7 @@ interface RegisterFormData {
             </div>
           </div>
           <h1 class="text-4xl font-bold text-slate-900">MEAN Mall</h1>
-          <p class="mt-2 text-sm text-slate-600">
-            Votre marketplace en ligne
-          </p>
+          <p class="mt-2 text-sm text-slate-600">Votre marketplace en ligne</p>
           <h2 class="mt-6 text-2xl font-semibold text-slate-800">
             Créer un compte
           </h2>
@@ -81,13 +79,15 @@ interface RegisterFormData {
           >
             <!-- Type de compte -->
             <div class="space-y-3">
-              <label class="block text-sm font-medium text-slate-700">
+              <span class="block text-sm font-medium text-slate-700">
                 Type de compte
-              </label>
+              </span>
               <div class="flex gap-4">
                 <label
                   class="flex-1 cursor-pointer"
-                  [class.opacity-50]="registerForm.get('role')?.value !== 'BUYER'"
+                  [class.opacity-50]="
+                    registerForm.get('role')?.value !== 'BUYER'
+                  "
                 >
                   <input
                     type="radio"
@@ -112,7 +112,9 @@ interface RegisterFormData {
 
                 <label
                   class="flex-1 cursor-pointer"
-                  [class.opacity-50]="registerForm.get('role')?.value !== 'SELLER'"
+                  [class.opacity-50]="
+                    registerForm.get('role')?.value !== 'SELLER'
+                  "
                 >
                   <input
                     type="radio"
@@ -139,7 +141,10 @@ interface RegisterFormData {
 
             <!-- Email -->
             <div class="space-y-2">
-              <label for="email" class="block text-sm font-medium text-slate-700">
+              <label
+                for="email"
+                class="block text-sm font-medium text-slate-700"
+              >
                 Adresse email
               </label>
               <input
@@ -181,9 +186,13 @@ interface RegisterFormData {
                 />
                 @if (isFieldInvalid('profile.firstName')) {
                   <p class="text-sm text-red-500 mt-1">
-                    @if (getControl('profile.firstName')?.errors?.['required']) {
+                    @if (
+                      getControl('profile.firstName')?.errors?.['required']
+                    ) {
                       Le prénom est requis
-                    } @else if (getControl('profile.firstName')?.errors?.['minlength']) {
+                    } @else if (
+                      getControl('profile.firstName')?.errors?.['minlength']
+                    ) {
                       Minimum 2 caractères
                     }
                   </p>
@@ -210,7 +219,9 @@ interface RegisterFormData {
                   <p class="text-sm text-red-500 mt-1">
                     @if (getControl('profile.lastName')?.errors?.['required']) {
                       Le nom est requis
-                    } @else if (getControl('profile.lastName')?.errors?.['minlength']) {
+                    } @else if (
+                      getControl('profile.lastName')?.errors?.['minlength']
+                    ) {
                       Minimum 2 caractères
                     }
                   </p>
@@ -220,7 +231,10 @@ interface RegisterFormData {
 
             <!-- Téléphone (optionnel) -->
             <div class="space-y-2" formGroupName="profile">
-              <label for="phone" class="block text-sm font-medium text-slate-700">
+              <label
+                for="phone"
+                class="block text-sm font-medium text-slate-700"
+              >
                 Téléphone (optionnel)
               </label>
               <input
@@ -265,7 +279,9 @@ interface RegisterFormData {
                   }
                 </p>
               }
-              @if (!isFieldInvalid('password') && getControl('password')?.value) {
+              @if (
+                !isFieldInvalid('password') && getControl('password')?.value
+              ) {
                 <p class="text-xs text-slate-600 mt-1">
                   Minimum 8 caractères avec majuscule, minuscule et chiffre
                 </p>

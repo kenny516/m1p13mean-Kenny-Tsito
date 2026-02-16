@@ -1,5 +1,6 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import {
   FormBuilder,
   FormGroup,
@@ -28,6 +29,7 @@ import { ZardSpinnerComponent } from '@/shared/components/spinner';
   standalone: true,
   imports: [
     CommonModule,
+    RouterLink,
     ReactiveFormsModule,
     ZardCardComponent,
     ZardButtonComponent,
@@ -140,6 +142,155 @@ import { ZardSpinnerComponent } from '@/shared/components/spinner';
                 </div>
               }
             </z-card>
+
+            <!-- Section spécifique au rôle BUYER -->
+            @if (userData.role === 'BUYER') {
+              <z-card class="p-6">
+                <div class="flex items-center justify-between mb-4">
+                  <h2 class="text-lg font-semibold text-foreground">
+                    <z-icon zType="shopping-bag" class="inline mr-2 h-5 w-5" />
+                    Espace Acheteur
+                  </h2>
+                </div>
+                <p class="text-sm text-muted-foreground mb-4">
+                  Accédez rapidement à vos fonctionnalités d'acheteur
+                </p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <a
+                    routerLink="/buyer/products"
+                    class="flex items-center p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors group"
+                  >
+                    <div
+                      class="p-3 rounded-full bg-primary/10 text-primary mr-4 group-hover:bg-primary group-hover:text-white transition-colors"
+                    >
+                      <z-icon zType="search" class="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p class="font-medium text-foreground">
+                        Parcourir les produits
+                      </p>
+                      <p class="text-sm text-muted-foreground">
+                        Découvrez notre catalogue
+                      </p>
+                    </div>
+                  </a>
+                  <a
+                    routerLink="/buyer/cart"
+                    class="flex items-center p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors group"
+                  >
+                    <div
+                      class="p-3 rounded-full bg-green-100 text-green-600 mr-4 group-hover:bg-green-600 group-hover:text-white transition-colors"
+                    >
+                      <z-icon zType="shopping-cart" class="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p class="font-medium text-foreground">Mon panier</p>
+                      <p class="text-sm text-muted-foreground">
+                        Gérer vos articles
+                      </p>
+                    </div>
+                  </a>
+                </div>
+              </z-card>
+            }
+
+            <!-- Section spécifique au rôle SELLER -->
+            @if (userData.role === 'SELLER') {
+              <z-card class="p-6">
+                <div class="flex items-center justify-between mb-4">
+                  <h2 class="text-lg font-semibold text-foreground">
+                    <z-icon zType="store" class="inline mr-2 h-5 w-5" />
+                    Espace Vendeur
+                  </h2>
+                </div>
+                <p class="text-sm text-muted-foreground mb-4">
+                  Gérez votre boutique et vos produits
+                </p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div
+                    class="flex items-center p-4 rounded-lg border border-border bg-muted/30"
+                  >
+                    <div
+                      class="p-3 rounded-full bg-purple-100 text-purple-600 mr-4"
+                    >
+                      <z-icon zType="store" class="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p class="font-medium text-foreground">Ma boutique</p>
+                      <p class="text-sm text-muted-foreground">
+                        Bientôt disponible
+                      </p>
+                    </div>
+                  </div>
+                  <div
+                    class="flex items-center p-4 rounded-lg border border-border bg-muted/30"
+                  >
+                    <div
+                      class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4"
+                    >
+                      <z-icon zType="package" class="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p class="font-medium text-foreground">Mes produits</p>
+                      <p class="text-sm text-muted-foreground">
+                        Bientôt disponible
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </z-card>
+            }
+
+            <!-- Section spécifique au rôle ADMIN -->
+            @if (userData.role === 'ADMIN') {
+              <z-card class="p-6">
+                <div class="flex items-center justify-between mb-4">
+                  <h2 class="text-lg font-semibold text-foreground">
+                    <z-icon zType="settings" class="inline mr-2 h-5 w-5" />
+                    Espace Administration
+                  </h2>
+                </div>
+                <p class="text-sm text-muted-foreground mb-4">
+                  Accédez aux outils d'administration
+                </p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <a
+                    routerLink="/admin"
+                    class="flex items-center p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors group"
+                  >
+                    <div
+                      class="p-3 rounded-full bg-red-100 text-red-600 mr-4 group-hover:bg-red-600 group-hover:text-white transition-colors"
+                    >
+                      <z-icon zType="layout-dashboard" class="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p class="font-medium text-foreground">Dashboard Admin</p>
+                      <p class="text-sm text-muted-foreground">
+                        Vue d'ensemble
+                      </p>
+                    </div>
+                  </a>
+                  <a
+                    routerLink="/admin/users"
+                    class="flex items-center p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors group"
+                  >
+                    <div
+                      class="p-3 rounded-full bg-orange-100 text-orange-600 mr-4 group-hover:bg-orange-600 group-hover:text-white transition-colors"
+                    >
+                      <z-icon zType="users" class="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p class="font-medium text-foreground">
+                        Gestion utilisateurs
+                      </p>
+                      <p class="text-sm text-muted-foreground">
+                        Gérer les comptes
+                      </p>
+                    </div>
+                  </a>
+                </div>
+              </z-card>
+            }
 
             <!-- Formulaire de modification du profil -->
             <z-card class="p-6">
