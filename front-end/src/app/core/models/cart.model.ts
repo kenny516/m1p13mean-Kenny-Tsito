@@ -40,6 +40,16 @@ export type PaymentMethod =
   | 'CASH_ON_DELIVERY';
 
 /**
+ * Interface représentant une adresse de livraison
+ */
+export interface DeliveryAddress {
+  street: string;
+  city: string;
+  postalCode?: string;
+  country?: string;
+}
+
+/**
  * Interface représentant les informations de commande
  */
 export interface OrderInfo {
@@ -84,6 +94,8 @@ export interface UpdateCartItemRequest {
  */
 export interface CheckoutRequest {
   paymentMethod: PaymentMethod;
+  deliveryAddress: DeliveryAddress;
+  notes?: string;
 }
 
 /**
@@ -91,14 +103,22 @@ export interface CheckoutRequest {
  */
 export interface CheckoutResponse {
   order: Cart;
-  newCart: Cart;
-  walletTransaction?: {
+  cart: Cart;
+  paymentTransaction?: {
     _id: string;
     type: string;
     amount: number;
     balanceAfter: number;
     status: string;
   };
+}
+
+/**
+ * Interface pour la réponse des commandes
+ */
+export interface OrdersResponse {
+  orders: Cart[];
+  pagination: import('./api.model').Pagination;
 }
 
 /**

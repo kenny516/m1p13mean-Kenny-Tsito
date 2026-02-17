@@ -8,7 +8,7 @@ import {
   AuthService,
   WalletService,
 } from '../../../core/services';
-import { CartItem, PaymentMethod } from '../../../core/models';
+import { CartItem, PaymentMethod, DeliveryAddress } from '../../../core/models';
 import { ZardCardComponent } from '../../../shared/components/card';
 import { ZardButtonComponent } from '../../../shared/components/button';
 import { ZardIconComponent } from '../../../shared/components/icon';
@@ -19,6 +19,8 @@ import {
   ZardSelectComponent,
   ZardSelectItemComponent,
 } from '../../../shared/components/select';
+import { ZardInputDirective } from '../../../shared/components/input';
+import { ZardLabelComponent } from '../../../shared/components/label';
 import {
   ZardTableComponent,
   ZardTableHeaderComponent,
@@ -48,6 +50,8 @@ import { ZardDialogService } from '../../../shared/components/dialog';
     ZardSpinnerComponent,
     ZardSelectComponent,
     ZardSelectItemComponent,
+    ZardInputDirective,
+    ZardLabelComponent,
     ZardTableComponent,
     ZardTableHeaderComponent,
     ZardTableBodyComponent,
@@ -390,6 +394,46 @@ import { ZardDialogService } from '../../../shared/components/dialog';
                     </z-select>
                   </div>
 
+                  <!-- Adresse de livraison -->
+                  <div class="mb-4 space-y-3">
+                    <span class="text-sm font-medium text-foreground block">
+                      Adresse de livraison
+                    </span>
+                    <div>
+                      <z-label for="street">Rue *</z-label>
+                      <input
+                        z-input
+                        id="street"
+                        type="text"
+                        placeholder="Numéro et nom de rue"
+                        [(ngModel)]="deliveryAddress.street"
+                        class="w-full"
+                      />
+                    </div>
+                    <div>
+                      <z-label for="city">Ville *</z-label>
+                      <input
+                        z-input
+                        id="city"
+                        type="text"
+                        placeholder="Ville"
+                        [(ngModel)]="deliveryAddress.city"
+                        class="w-full"
+                      />
+                    </div>
+                    <div>
+                      <z-label for="postalCode">Code postal</z-label>
+                      <input
+                        z-input
+                        id="postalCode"
+                        type="text"
+                        placeholder="Code postal (optionnel)"
+                        [(ngModel)]="deliveryAddress.postalCode"
+                        class="w-full"
+                      />
+                    </div>
+                  </div>
+
                   <!-- Solde wallet si paiement par wallet -->
                   @if (selectedPaymentMethod === 'WALLET') {
                     <div
@@ -428,6 +472,7 @@ import { ZardDialogService } from '../../../shared/components/dialog';
                     zSize="lg"
                     [disabled]="
                       isCheckingOut() ||
+                      !isDeliveryAddressValid() ||
                       (selectedPaymentMethod === 'WALLET' &&
                         !hasEnoughBalance())
                     "
@@ -471,6 +516,12 @@ export class CartComponent implements OnInit {
   isCheckingOut = signal(false);
   selectedPaymentMethod: PaymentMethod = 'WALLET';
   walletBalance = signal(0);
+  deliveryAddress: DeliveryAddress = {
+    street: '',
+    city: '',
+    postalCode: '',
+    country: 'Madagascar',
+  };
 
   ngOnInit(): void {
     // Charger le panier
@@ -571,9 +622,24 @@ export class CartComponent implements OnInit {
   }
 
   /**
+   * Vérifie si l'adresse de livraison est valide
+   */
+  isDeliveryAddressValid(): boolean {
+    return !!(
+      this.deliveryAddress.street?.trim() && this.deliveryAddress.city?.trim()
+    );
+  }
+
+  /**
    * Passe la commande
    */
   async checkout(): Promise<void> {
+    // Vérifier l'adresse de livraison
+    if (!this.isDeliveryAddressValid()) {
+      this.toastService.error("Veuillez renseigner l'adresse de livraison");
+      return;
+    }
+
     // Vérifier le solde si paiement par wallet
     if (this.selectedPaymentMethod === 'WALLET' && !this.hasEnoughBalance()) {
       this.toastService.error('Solde insuffisant');
@@ -582,7 +648,10 @@ export class CartComponent implements OnInit {
 
     this.isCheckingOut.set(true);
     try {
-      await this.cartService.checkout(this.selectedPaymentMethod);
+      await this.cartService.checkout(
+        this.selectedPaymentMethod,
+        this.deliveryAddress,
+      );
 
       this.toastService.success('Commande passée avec succès !');
 
@@ -591,8 +660,8 @@ export class CartComponent implements OnInit {
         this.loadWalletBalance();
       }
 
-      // Rediriger vers la confirmation ou le profil
-      // Pour l'instant, on reste sur la page panier qui affichera "panier vide"
+      // Rediriger vers la page des commandes
+      this.router.navigate(['/buyer/orders']);
     } catch {
       this.toastService.error('Erreur lors de la commande');
     } finally {

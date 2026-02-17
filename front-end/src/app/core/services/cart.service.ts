@@ -8,6 +8,8 @@ import {
   UpdateCartItemRequest,
   CheckoutRequest,
   CheckoutResponse,
+  DeliveryAddress,
+  OrdersResponse,
 } from '../models';
 
 /**
@@ -151,19 +153,27 @@ export class CartService {
   /**
    * Passe la commande (checkout)
    * @param paymentMethod - Méthode de paiement
+   * @param deliveryAddress - Adresse de livraison
+   * @param notes - Notes optionnelles
    */
   async checkout(
     paymentMethod: CheckoutRequest['paymentMethod'],
+    deliveryAddress: DeliveryAddress,
+    notes?: string,
   ): Promise<CheckoutResponse> {
     this.isLoadingSignal.set(true);
     try {
-      const request: CheckoutRequest = { paymentMethod };
+      const request: CheckoutRequest = {
+        paymentMethod,
+        deliveryAddress,
+        notes,
+      };
       const response = await this.api.post<CheckoutResponse>(
         '/cart/checkout',
         request,
       );
       // Mettre à jour le panier avec le nouveau panier vide
-      this.cartSignal.set(response.newCart);
+      this.cartSignal.set(response.cart);
       return response;
     } finally {
       this.isLoadingSignal.set(false);
@@ -185,6 +195,39 @@ export class CartService {
     } finally {
       this.isLoadingSignal.set(false);
     }
+  }
+
+  /**
+   * Récupère les commandes de l'utilisateur
+   * @param page - Numéro de page
+   * @param limit - Nombre d'éléments par page
+   * @param status - Filtrer par statut (optionnel)
+   */
+  async getOrders(
+    page = 1,
+    limit = 10,
+    status?: string,
+  ): Promise<OrdersResponse> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+    if (status) {
+      params.append('status', status);
+    }
+    const response = await this.api.get<Cart[]>(
+      `/cart/orders?${params.toString()}`,
+    );
+    // L'API retourne data directement avec pagination
+    return response as unknown as OrdersResponse;
+  }
+
+  /**
+   * Récupère une commande par son ID
+   * @param orderId - Identifiant de la commande
+   */
+  async getOrderById(orderId: string): Promise<Cart> {
+    return this.api.get<Cart>(`/cart/orders/${orderId}`);
   }
 
   /**

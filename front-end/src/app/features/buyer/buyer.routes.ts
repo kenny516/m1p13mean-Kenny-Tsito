@@ -25,4 +25,9 @@ export const BUYER_ROUTES: Routes = [
     loadComponent: () =>
       import('./cart/cart.component').then((m) => m.CartComponent),
   },
+  {
+    path: 'orders',
+    loadComponent: () =>
+      import('./orders/orders.component').then((m) => m.OrdersComponent),
+  },
 ];
