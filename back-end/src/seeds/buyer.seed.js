@@ -17,7 +17,11 @@ const BUYERS_DATA = [
       firstName: "Rafidy",
       lastName: "Andriamahefa",
       phone: "+261344444444",
-      address: "Ankorondrano, Antananarivo 101",
+      address: {
+        street: "Ankorondrano",
+        city: "Antananarivo",
+        postalCode: "101",
+      },
     },
     walletBalance: 5000000, // 5 million MGA pour tester les achats
   },
@@ -28,7 +32,11 @@ const BUYERS_DATA = [
       firstName: "Voahirana",
       lastName: "Rasoamanarivo",
       phone: "+261345555555",
-      address: "Ambohijatovo, Antananarivo 101",
+      address: {
+        street: "Ambohijatovo",
+        city: "Antananarivo",
+        postalCode: "101",
+      },
     },
     walletBalance: 2000000, // 2 million MGA
   },
@@ -39,7 +47,11 @@ const BUYERS_DATA = [
       firstName: "Tiana",
       lastName: "Raveloson",
       phone: "+261346666666",
-      address: "Talatamaty, Antananarivo 106",
+      address: {
+        street: "Talatamaty",
+        city: "Antananarivo",
+        postalCode: "106",
+      },
     },
     walletBalance: 10000000, // 10 million MGA pour tester les gros achats
   },
