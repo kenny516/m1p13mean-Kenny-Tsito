@@ -3,22 +3,8 @@ import { Routes } from '@angular/router';
 export const BUYER_ROUTES: Routes = [
   {
     path: '',
-    redirectTo: 'products',
+    redirectTo: 'cart',
     pathMatch: 'full',
-  },
-  {
-    path: 'products',
-    loadComponent: () =>
-      import('./products/product-list.component').then(
-        (m) => m.ProductListComponent,
-      ),
-  },
-  {
-    path: 'products/:id',
-    loadComponent: () =>
-      import('./products/product-detail.component').then(
-        (m) => m.ProductDetailComponent,
-      ),
   },
   {
     path: 'cart',

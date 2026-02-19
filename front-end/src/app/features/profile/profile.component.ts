@@ -23,6 +23,10 @@ import { ZardLabelComponent } from '@/shared/components/label';
 import { ZardIconComponent } from '@/shared/components/icon';
 import { ZardSkeletonComponent } from '@/shared/components/skeleton';
 import { ZardSpinnerComponent } from '@/shared/components/spinner';
+import {
+  ZardTabGroupComponent,
+  ZardTabComponent,
+} from '@/shared/components/tabs';
 
 @Component({
   selector: 'app-profile',
@@ -38,315 +42,154 @@ import { ZardSpinnerComponent } from '@/shared/components/spinner';
     ZardIconComponent,
     ZardSkeletonComponent,
     ZardSpinnerComponent,
+    ZardTabGroupComponent,
+    ZardTabComponent,
   ],
   template: `
-    <div class="min-h-screen bg-muted/30 py-8">
-      <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <!-- Header -->
-        <div class="mb-8">
-          <h1 class="text-2xl font-bold text-foreground">Mon Profil</h1>
-          <p class="mt-1 text-sm text-muted-foreground">
-            Gérez vos informations personnelles
-          </p>
-        </div>
-
+    <div class="min-h-screen bg-muted/30 py-6">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         @if (user(); as userData) {
-          <div class="space-y-6">
-            <!-- Informations du compte -->
-            <z-card class="p-6">
-              <h2 class="text-lg font-semibold text-foreground mb-4">
-                Informations du compte
-              </h2>
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <span class="text-sm text-muted-foreground">Email</span>
-                  <p class="font-medium text-foreground">
+          <!-- Header compact avec infos principales -->
+          <div class="mb-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <!-- Carte utilisateur -->
+            <z-card class="p-4 lg:col-span-2">
+              <div class="flex items-center gap-4">
+                <div
+                  class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary text-2xl font-bold"
+                >
+                  {{
+                    userData.profile.firstName?.[0] || userData.email[0]
+                      | uppercase
+                  }}
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <h1 class="text-xl font-bold text-foreground truncate">
+                      {{
+                        userData.profile.firstName || userData.profile.lastName
+                          ? userData.profile.firstName +
+                            ' ' +
+                            userData.profile.lastName
+                          : userData.email
+                      }}
+                    </h1>
+                    <span
+                      class="px-2 py-0.5 text-xs font-medium rounded-md shrink-0"
+                      [ngClass]="{
+                        'bg-primary text-primary-foreground':
+                          userData.role === 'BUYER',
+                        'bg-green-600 text-white': userData.role === 'SELLER',
+                        'bg-secondary text-secondary-foreground':
+                          userData.role === 'ADMIN',
+                      }"
+                    >
+                      {{ getRoleLabel(userData.role) }}
+                    </span>
+                  </div>
+                  <p class="text-sm text-muted-foreground truncate">
                     {{ userData.email }}
                   </p>
-                </div>
-                <div>
-                  <span class="text-sm text-muted-foreground">Rôle</span>
-                  <span
-                    class="ml-2 px-2 py-0.5 text-xs font-medium rounded-md"
-                    [ngClass]="{
-                      'bg-primary text-primary-foreground':
-                        userData.role === 'BUYER',
-                      'bg-green-600 text-white': userData.role === 'SELLER',
-                      'bg-secondary text-secondary-foreground':
-                        userData.role === 'ADMIN',
-                    }"
-                  >
-                    {{ getRoleLabel(userData.role) }}
-                  </span>
-                </div>
-                <div>
-                  <span class="text-sm text-muted-foreground"
-                    >Membre depuis</span
-                  >
-                  <p class="font-medium text-foreground">
-                    {{ userData.createdAt | date: 'longDate' }}
+                  <p class="text-xs text-muted-foreground mt-1">
+                    Membre depuis {{ userData.createdAt | date: 'MMMM yyyy' }}
                   </p>
                 </div>
-                <div>
-                  <span class="text-sm text-muted-foreground">Statut</span>
-                  <span
-                    class="ml-2 px-2 py-0.5 text-xs font-medium rounded-md"
-                    [ngClass]="{
-                      'bg-green-600 text-white': userData.isValidated,
-                      'bg-yellow-500 text-white': !userData.isValidated,
-                    }"
-                  >
-                    {{ userData.isValidated ? 'Validé' : 'En attente' }}
-                  </span>
-                </div>
+                <button
+                  z-button
+                  zType="destructive"
+                  zSize="sm"
+                  (click)="logout()"
+                  class="shrink-0"
+                >
+                  <z-icon zType="log-out" class="h-4 w-4" />
+                </button>
               </div>
-
-              @if (userData.wallet) {
-                <div class="mt-6 pt-6 border-t border-border">
-                  <span class="text-sm text-muted-foreground"
-                    >Solde du portefeuille</span
-                  >
-                  <p class="text-2xl font-bold text-green-600">
-                    {{ userData.wallet.balance | number: '1.0-0' }}
-                    {{ userData.wallet.currency }}
-                  </p>
-                  @if (userData.wallet.pendingBalance) {
-                    <p class="text-sm text-yellow-600 mt-1">
-                      En attente:
-                      {{ userData.wallet.pendingBalance | number: '1.0-0' }}
-                      {{ userData.wallet.currency }}
-                    </p>
-                  }
-                  <div class="mt-3 grid grid-cols-2 gap-4 text-sm">
-                    <div class="p-3 bg-green-50 dark:bg-green-950 rounded-lg">
-                      <span class="text-green-600 dark:text-green-400"
-                        >Total gagné</span
-                      >
-                      <p
-                        class="font-semibold text-green-800 dark:text-green-300"
-                      >
-                        {{ userData.wallet.totalEarned || 0 | number: '1.0-0' }}
-                        {{ userData.wallet.currency }}
-                      </p>
-                    </div>
-                    <div class="p-3 bg-red-50 dark:bg-red-950 rounded-lg">
-                      <span class="text-red-600 dark:text-red-400"
-                        >Total dépensé</span
-                      >
-                      <p class="font-semibold text-red-800 dark:text-red-300">
-                        {{ userData.wallet.totalSpent || 0 | number: '1.0-0' }}
-                        {{ userData.wallet.currency }}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              }
             </z-card>
 
-            <!-- Section spécifique au rôle BUYER -->
-            @if (userData.role === 'BUYER') {
-              <z-card class="p-6">
-                <div class="flex items-center justify-between mb-4">
-                  <h2 class="text-lg font-semibold text-foreground">
-                    <z-icon zType="shopping-bag" class="inline mr-2 h-5 w-5" />
-                    Espace Acheteur
-                  </h2>
-                </div>
-                <p class="text-sm text-muted-foreground mb-4">
-                  Accédez rapidement à vos fonctionnalités d'acheteur
-                </p>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <a
-                    routerLink="/buyer/products"
-                    class="flex items-center p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors group"
-                  >
-                    <div
-                      class="p-3 rounded-full bg-primary/10 text-primary mr-4 group-hover:bg-primary group-hover:text-white transition-colors"
-                    >
-                      <z-icon zType="search" class="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p class="font-medium text-foreground">
-                        Parcourir les produits
-                      </p>
-                      <p class="text-sm text-muted-foreground">
-                        Découvrez notre catalogue
-                      </p>
-                    </div>
-                  </a>
-                  <a
-                    routerLink="/buyer/cart"
-                    class="flex items-center p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors group"
-                  >
-                    <div
-                      class="p-3 rounded-full bg-green-100 text-green-600 mr-4 group-hover:bg-green-600 group-hover:text-white transition-colors"
-                    >
-                      <z-icon zType="shopping-cart" class="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p class="font-medium text-foreground">Mon panier</p>
-                      <p class="text-sm text-muted-foreground">
-                        Gérer vos articles
-                      </p>
-                    </div>
-                  </a>
-                </div>
-              </z-card>
-            }
-
-            <!-- Section spécifique au rôle SELLER -->
-            @if (userData.role === 'SELLER') {
-              <z-card class="p-6">
-                <div class="flex items-center justify-between mb-4">
-                  <h2 class="text-lg font-semibold text-foreground">
-                    <z-icon zType="store" class="inline mr-2 h-5 w-5" />
-                    Espace Vendeur
-                  </h2>
-                </div>
-                <p class="text-sm text-muted-foreground mb-4">
-                  Gérez votre boutique et vos produits
-                </p>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div
-                    class="flex items-center p-4 rounded-lg border border-border bg-muted/30"
-                  >
-                    <div
-                      class="p-3 rounded-full bg-purple-100 text-purple-600 mr-4"
-                    >
-                      <z-icon zType="store" class="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p class="font-medium text-foreground">Ma boutique</p>
-                      <p class="text-sm text-muted-foreground">
-                        Bientôt disponible
-                      </p>
-                    </div>
+            <!-- Carte wallet -->
+            @if (userData.wallet) {
+              <z-card class="p-4">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm text-muted-foreground">Solde</p>
+                    <p class="text-2xl font-bold text-green-600">
+                      {{ userData.wallet.balance | number: '1.0-0' }}
+                      <span class="text-sm font-normal">{{
+                        userData.wallet.currency
+                      }}</span>
+                    </p>
                   </div>
                   <div
-                    class="flex items-center p-4 rounded-lg border border-border bg-muted/30"
+                    class="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center"
                   >
-                    <div
-                      class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4"
-                    >
-                      <z-icon zType="package" class="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p class="font-medium text-foreground">Mes produits</p>
-                      <p class="text-sm text-muted-foreground">
-                        Bientôt disponible
-                      </p>
-                    </div>
+                    <z-icon zType="wallet" class="h-6 w-6 text-green-600" />
+                  </div>
+                </div>
+                <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+                  <div class="text-green-600">
+                    +{{ userData.wallet.totalEarned || 0 | number: '1.0-0' }}
+                    gagné
+                  </div>
+                  <div class="text-red-600 text-right">
+                    -{{ userData.wallet.totalSpent || 0 | number: '1.0-0' }}
+                    dépensé
                   </div>
                 </div>
               </z-card>
             }
+          </div>
 
-            <!-- Section spécifique au rôle ADMIN -->
-            @if (userData.role === 'ADMIN') {
-              <z-card class="p-6">
-                <div class="flex items-center justify-between mb-4">
-                  <h2 class="text-lg font-semibold text-foreground">
-                    <z-icon zType="settings" class="inline mr-2 h-5 w-5" />
-                    Espace Administration
-                  </h2>
-                </div>
-                <p class="text-sm text-muted-foreground mb-4">
-                  Accédez aux outils d'administration
-                </p>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <a
-                    routerLink="/admin"
-                    class="flex items-center p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors group"
-                  >
-                    <div
-                      class="p-3 rounded-full bg-red-100 text-red-600 mr-4 group-hover:bg-red-600 group-hover:text-white transition-colors"
-                    >
-                      <z-icon zType="layout-dashboard" class="h-5 w-5" />
+          <!-- Tabs pour le contenu -->
+          <z-tab-group class="bg-background rounded-lg border border-border">
+            <!-- Tab Profil -->
+            <z-tab label="Mon profil">
+              <div class="p-6">
+                <form
+                  [formGroup]="profileForm"
+                  (ngSubmit)="updateProfile()"
+                  class="grid grid-cols-1 md:grid-cols-2 gap-6"
+                >
+                  <div formGroupName="profile" class="space-y-4">
+                    <h3 class="font-semibold text-foreground">
+                      Informations personnelles
+                    </h3>
+                    <div class="grid grid-cols-2 gap-3">
+                      <div>
+                        <z-label for="firstName">Prénom</z-label>
+                        <input
+                          z-input
+                          id="firstName"
+                          type="text"
+                          formControlName="firstName"
+                          class="mt-1 w-full"
+                        />
+                      </div>
+                      <div>
+                        <z-label for="lastName">Nom</z-label>
+                        <input
+                          z-input
+                          id="lastName"
+                          type="text"
+                          formControlName="lastName"
+                          class="mt-1 w-full"
+                        />
+                      </div>
                     </div>
                     <div>
-                      <p class="font-medium text-foreground">Dashboard Admin</p>
-                      <p class="text-sm text-muted-foreground">
-                        Vue d'ensemble
-                      </p>
-                    </div>
-                  </a>
-                  <a
-                    routerLink="/admin/users"
-                    class="flex items-center p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors group"
-                  >
-                    <div
-                      class="p-3 rounded-full bg-orange-100 text-orange-600 mr-4 group-hover:bg-orange-600 group-hover:text-white transition-colors"
-                    >
-                      <z-icon zType="users" class="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p class="font-medium text-foreground">
-                        Gestion utilisateurs
-                      </p>
-                      <p class="text-sm text-muted-foreground">
-                        Gérer les comptes
-                      </p>
-                    </div>
-                  </a>
-                </div>
-              </z-card>
-            }
-
-            <!-- Formulaire de modification du profil -->
-            <z-card class="p-6">
-              <h2 class="text-lg font-semibold text-foreground mb-4">
-                Modifier le profil
-              </h2>
-              <form
-                [formGroup]="profileForm"
-                (ngSubmit)="updateProfile()"
-                class="space-y-4"
-              >
-                <div formGroupName="profile">
-                  <div class="grid grid-cols-2 gap-4">
-                    <div>
-                      <z-label for="firstName">Prénom</z-label>
+                      <z-label for="phone">Téléphone</z-label>
                       <input
                         z-input
-                        id="firstName"
-                        type="text"
-                        formControlName="firstName"
+                        id="phone"
+                        type="tel"
+                        formControlName="phone"
                         class="mt-1 w-full"
-                        [class.border-destructive]="
-                          isProfileFieldInvalid('profile.firstName')
-                        "
-                      />
-                    </div>
-                    <div>
-                      <z-label for="lastName">Nom</z-label>
-                      <input
-                        z-input
-                        id="lastName"
-                        type="text"
-                        formControlName="lastName"
-                        class="mt-1 w-full"
-                        [class.border-destructive]="
-                          isProfileFieldInvalid('profile.lastName')
-                        "
+                        placeholder="+261 34 00 000 00"
                       />
                     </div>
                   </div>
 
-                  <div class="mt-4">
-                    <z-label for="phone">Téléphone</z-label>
-                    <input
-                      z-input
-                      id="phone"
-                      type="tel"
-                      formControlName="phone"
-                      class="mt-1 w-full"
-                      placeholder="+261 34 00 000 00"
-                    />
-                  </div>
-
-                  <div class="mt-4" formGroupName="address">
-                    <z-label>Adresse</z-label>
-                    <div class="mt-2 space-y-2">
+                  <div formGroupName="profile" class="space-y-4">
+                    <h3 class="font-semibold text-foreground">Adresse</h3>
+                    <div formGroupName="address" class="space-y-3">
                       <input
                         z-input
                         type="text"
@@ -354,7 +197,7 @@ import { ZardSpinnerComponent } from '@/shared/components/spinner';
                         class="w-full"
                         placeholder="Rue"
                       />
-                      <div class="grid grid-cols-2 gap-2">
+                      <div class="grid grid-cols-2 gap-3">
                         <input
                           z-input
                           type="text"
@@ -369,205 +212,171 @@ import { ZardSpinnerComponent } from '@/shared/components/spinner';
                         />
                       </div>
                     </div>
+                    <div class="pt-2">
+                      <button
+                        z-button
+                        type="submit"
+                        [disabled]="profileForm.invalid || isLoading()"
+                        class="w-full"
+                      >
+                        @if (isLoading()) {
+                          <z-spinner class="mr-2 h-4 w-4" />
+                        }
+                        Enregistrer
+                      </button>
+                    </div>
                   </div>
-                </div>
+                </form>
+              </div>
+            </z-tab>
 
-                <div class="flex justify-end pt-4">
-                  <button
-                    z-button
-                    type="submit"
-                    [disabled]="profileForm.invalid || isLoading()"
-                  >
-                    @if (isLoading()) {
-                      <z-spinner class="mr-2 h-4 w-4" />
+            <!-- Tab Sécurité -->
+            <z-tab label="Sécurité">
+              <div class="p-6 max-w-md">
+                <h3 class="font-semibold text-foreground mb-4">
+                  Changer le mot de passe
+                </h3>
+                <form
+                  [formGroup]="passwordForm"
+                  (ngSubmit)="changePassword()"
+                  class="space-y-4"
+                >
+                  <div>
+                    <z-label for="currentPassword">Mot de passe actuel</z-label>
+                    <input
+                      z-input
+                      id="currentPassword"
+                      type="password"
+                      formControlName="currentPassword"
+                      class="mt-1 w-full"
+                    />
+                  </div>
+                  <div>
+                    <z-label for="newPassword">Nouveau mot de passe</z-label>
+                    <input
+                      z-input
+                      id="newPassword"
+                      type="password"
+                      formControlName="newPassword"
+                      class="mt-1 w-full"
+                    />
+                    @if (isPasswordFieldInvalid('newPassword')) {
+                      <p class="mt-1 text-xs text-destructive">
+                        Min. 8 caractères avec majuscule, minuscule et chiffre
+                      </p>
                     }
-                    Enregistrer les modifications
-                  </button>
-                </div>
-              </form>
-            </z-card>
-
-            <!-- Formulaire de changement de mot de passe -->
-            <z-card class="p-6">
-              <h2 class="text-lg font-semibold text-foreground mb-4">
-                Changer le mot de passe
-              </h2>
-              <form
-                [formGroup]="passwordForm"
-                (ngSubmit)="changePassword()"
-                class="space-y-4"
-              >
-                <div>
-                  <z-label for="currentPassword">Mot de passe actuel</z-label>
-                  <input
-                    z-input
-                    id="currentPassword"
-                    type="password"
-                    formControlName="currentPassword"
-                    class="mt-1 w-full"
-                    [class.border-destructive]="
-                      isPasswordFieldInvalid('currentPassword')
-                    "
-                  />
-                </div>
-
-                <div>
-                  <z-label for="newPassword">Nouveau mot de passe</z-label>
-                  <input
-                    z-input
-                    id="newPassword"
-                    type="password"
-                    formControlName="newPassword"
-                    class="mt-1 w-full"
-                    [class.border-destructive]="
-                      isPasswordFieldInvalid('newPassword')
-                    "
-                  />
-                  @if (isPasswordFieldInvalid('newPassword')) {
-                    <p class="mt-1 text-sm text-destructive">
-                      Minimum 8 caractères avec majuscule, minuscule et chiffre
-                    </p>
-                  }
-                </div>
-
-                <div>
-                  <z-label for="confirmNewPassword"
-                    >Confirmer le nouveau mot de passe</z-label
-                  >
-                  <input
-                    z-input
-                    id="confirmNewPassword"
-                    type="password"
-                    formControlName="confirmPassword"
-                    class="mt-1 w-full"
-                    [class.border-destructive]="
-                      isPasswordFieldInvalid('confirmPassword')
-                    "
-                  />
-                  @if (isPasswordFieldInvalid('confirmPassword')) {
-                    <p class="mt-1 text-sm text-destructive">
-                      Les mots de passe ne correspondent pas
-                    </p>
-                  }
-                </div>
-
-                <div class="flex justify-end pt-4">
+                  </div>
+                  <div>
+                    <z-label for="confirmNewPassword">Confirmer</z-label>
+                    <input
+                      z-input
+                      id="confirmNewPassword"
+                      type="password"
+                      formControlName="confirmPassword"
+                      class="mt-1 w-full"
+                    />
+                    @if (isPasswordFieldInvalid('confirmPassword')) {
+                      <p class="mt-1 text-xs text-destructive">
+                        Les mots de passe ne correspondent pas
+                      </p>
+                    }
+                  </div>
                   <button
                     z-button
                     type="submit"
                     [disabled]="passwordForm.invalid || isLoading()"
+                    class="w-full"
                   >
                     Changer le mot de passe
                   </button>
-                </div>
-              </form>
-            </z-card>
+                </form>
+              </div>
+            </z-tab>
 
-            <!-- Actions -->
-            <z-card class="p-6">
-              <h2 class="text-lg font-semibold text-foreground mb-4">
-                Actions
-              </h2>
-              <button z-button zType="destructive" (click)="logout()">
-                <z-icon zType="log-out" class="mr-2" />
-                Se déconnecter
-              </button>
-            </z-card>
-
-            <!-- Historique des transactions -->
+            <!-- Tab Transactions -->
             @if (userData.wallet) {
-              <z-card class="p-6">
-                <div class="flex justify-between items-center mb-4">
-                  <h2 class="text-lg font-semibold text-foreground">
-                    Historique des transactions
-                  </h2>
-                  <button
-                    z-button
-                    zType="ghost"
-                    zSize="sm"
-                    (click)="loadTransactions()"
-                    [disabled]="isLoadingTransactions()"
-                  >
-                    @if (isLoadingTransactions()) {
-                      <z-spinner class="mr-2 h-4 w-4" />
-                    }
-                    Actualiser
-                  </button>
-                </div>
+              <z-tab label="Transactions">
+                <div class="p-6">
+                  <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-semibold text-foreground">
+                      Historique des transactions
+                    </h3>
+                    <button
+                      z-button
+                      zType="ghost"
+                      zSize="sm"
+                      (click)="loadTransactions()"
+                      [disabled]="isLoadingTransactions()"
+                    >
+                      @if (isLoadingTransactions()) {
+                        <z-spinner class="h-4 w-4" />
+                      } @else {
+                        <z-icon zType="loader-circle" class="h-4 w-4" />
+                      }
+                    </button>
+                  </div>
 
-                @if (isLoadingTransactions() && transactions().length === 0) {
-                  <div class="space-y-3">
-                    @for (i of [1, 2, 3]; track i) {
-                      <z-skeleton class="h-16 w-full" />
-                    }
-                  </div>
-                } @else if (transactions().length === 0) {
-                  <div class="text-center py-8 text-muted-foreground">
-                    <z-icon zType="file-text" class="mx-auto h-12 w-12" />
-                    <p class="mt-2">Aucune transaction</p>
-                  </div>
-                } @else {
-                  <div class="space-y-3">
-                    @for (
-                      transaction of transactions();
-                      track transaction._id
-                    ) {
-                      <div
-                        class="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                      >
-                        <div class="flex items-center space-x-3">
-                          <div
-                            class="w-10 h-10 rounded-full flex items-center justify-center"
-                            [ngClass]="{
-                              'bg-green-100 dark:bg-green-900':
-                                isPositiveTransaction(transaction.type),
-                              'bg-red-100 dark:bg-red-900':
-                                !isPositiveTransaction(transaction.type) &&
-                                transaction.type !== 'REFUND' &&
-                                transaction.type !== 'COMMISSION',
-                              'bg-yellow-100 dark:bg-yellow-900':
-                                transaction.type === 'REFUND',
-                              'bg-purple-100 dark:bg-purple-900':
-                                transaction.type === 'COMMISSION',
-                            }"
-                          >
-                            <z-icon
-                              [zType]="
-                                isPositiveTransaction(transaction.type)
-                                  ? 'plus'
-                                  : 'minus'
-                              "
+                  @if (isLoadingTransactions() && transactions().length === 0) {
+                    <div class="space-y-2">
+                      @for (i of [1, 2, 3]; track i) {
+                        <z-skeleton class="h-14 w-full" />
+                      }
+                    </div>
+                  } @else if (transactions().length === 0) {
+                    <div class="text-center py-8 text-muted-foreground">
+                      <z-icon zType="file-text" class="mx-auto h-10 w-10" />
+                      <p class="mt-2 text-sm">Aucune transaction</p>
+                    </div>
+                  } @else {
+                    <div class="space-y-2">
+                      @for (
+                        transaction of transactions();
+                        track transaction._id
+                      ) {
+                        <div
+                          class="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                        >
+                          <div class="flex items-center gap-3">
+                            <div
+                              class="w-8 h-8 rounded-full flex items-center justify-center"
                               [ngClass]="{
-                                'text-green-600': isPositiveTransaction(
-                                  transaction.type
-                                ),
-                                'text-red-600':
-                                  !isPositiveTransaction(transaction.type) &&
-                                  transaction.type !== 'COMMISSION',
-                                'text-purple-600':
-                                  transaction.type === 'COMMISSION',
+                                'bg-green-100 dark:bg-green-900':
+                                  isPositiveTransaction(transaction.type),
+                                'bg-red-100 dark:bg-red-900':
+                                  !isPositiveTransaction(transaction.type),
                               }"
-                            />
-                          </div>
-                          <div>
-                            <p class="font-medium text-foreground">
-                              {{ getTransactionLabel(transaction.type) }}
-                            </p>
-                            <p class="text-sm text-muted-foreground">
-                              {{
-                                transaction.createdAt | date: 'dd/MM/yyyy HH:mm'
-                              }}
-                            </p>
-                            @if (transaction.description) {
-                              <p class="text-xs text-muted-foreground">
-                                {{ transaction.description }}
+                            >
+                              <z-icon
+                                [zType]="
+                                  isPositiveTransaction(transaction.type)
+                                    ? 'plus'
+                                    : 'minus'
+                                "
+                                class="h-4 w-4"
+                                [ngClass]="{
+                                  'text-green-600': isPositiveTransaction(
+                                    transaction.type
+                                  ),
+                                  'text-red-600': !isPositiveTransaction(
+                                    transaction.type
+                                  ),
+                                }"
+                              />
+                            </div>
+                            <div>
+                              <p class="font-medium text-sm text-foreground">
+                                {{ getTransactionLabel(transaction.type) }}
                               </p>
-                            }
+                              <p class="text-xs text-muted-foreground">
+                                {{
+                                  transaction.createdAt
+                                    | date: 'dd/MM/yyyy HH:mm'
+                                }}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                        <div class="text-right">
                           <p
-                            class="font-semibold"
+                            class="font-semibold text-sm"
                             [ngClass]="{
                               'text-green-600': isPositiveTransaction(
                                 transaction.type
@@ -581,54 +390,102 @@ import { ZardSpinnerComponent } from '@/shared/components/spinner';
                               isPositiveTransaction(transaction.type)
                                 ? '+'
                                 : '-'
-                            }}
-                            {{ transaction.amount | number: '1.0-0' }} MGA
+                            }}{{ transaction.amount | number: '1.0-0' }} MGA
                           </p>
-                          <span
-                            class="text-xs px-2 py-0.5 rounded-md font-medium"
-                            [ngClass]="{
-                              'bg-green-600 text-white':
-                                transaction.status === 'COMPLETED',
-                              'bg-yellow-500 text-white':
-                                transaction.status === 'PENDING',
-                              'bg-destructive text-white':
-                                transaction.status === 'FAILED',
-                              'bg-secondary text-secondary-foreground':
-                                transaction.status === 'CANCELLED',
-                            }"
-                          >
-                            {{ getStatusLabel(transaction.status) }}
-                          </span>
                         </div>
+                      }
+                    </div>
+                    @if (hasMoreTransactions()) {
+                      <div class="mt-4 text-center">
+                        <button
+                          z-button
+                          zType="ghost"
+                          zSize="sm"
+                          (click)="loadMoreTransactions()"
+                          [disabled]="isLoadingTransactions()"
+                        >
+                          Voir plus
+                        </button>
                       </div>
                     }
-                  </div>
-                  @if (hasMoreTransactions()) {
-                    <div class="mt-4 text-center">
-                      <button
-                        z-button
-                        zType="ghost"
-                        (click)="loadMoreTransactions()"
-                        [disabled]="isLoadingTransactions()"
-                      >
-                        Voir plus
-                      </button>
-                    </div>
                   }
-                }
-              </z-card>
+                </div>
+              </z-tab>
             }
-          </div>
+
+            <!-- Tab Accès rapide -->
+            <z-tab label="Accès rapide">
+              <div class="p-6">
+                <div
+                  class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+                >
+                  @if (userData.role === 'BUYER') {
+                    <a
+                      routerLink="/buyer/products"
+                      class="flex items-center p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors group"
+                    >
+                      <div
+                        class="p-2 rounded-full bg-primary/10 text-primary mr-3 group-hover:bg-primary group-hover:text-white transition-colors"
+                      >
+                        <z-icon zType="search" class="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p class="font-medium text-foreground text-sm">
+                          Produits
+                        </p>
+                        <p class="text-xs text-muted-foreground">
+                          Parcourir le catalogue
+                        </p>
+                      </div>
+                    </a>
+                    <a
+                      routerLink="/buyer/cart"
+                      class="flex items-center p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors group"
+                    >
+                      <div
+                        class="p-2 rounded-full bg-green-100 text-green-600 mr-3 group-hover:bg-green-600 group-hover:text-white transition-colors"
+                      >
+                        <z-icon zType="shopping-cart" class="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p class="font-medium text-foreground text-sm">
+                          Panier
+                        </p>
+                        <p class="text-xs text-muted-foreground">
+                          Gérer vos articles
+                        </p>
+                      </div>
+                    </a>
+                  }
+                  @if (userData.role === 'ADMIN') {
+                    <a
+                      routerLink="/admin"
+                      class="flex items-center p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors group"
+                    >
+                      <div
+                        class="p-2 rounded-full bg-red-100 text-red-600 mr-3 group-hover:bg-red-600 group-hover:text-white transition-colors"
+                      >
+                        <z-icon zType="layout-dashboard" class="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p class="font-medium text-foreground text-sm">
+                          Dashboard
+                        </p>
+                        <p class="text-xs text-muted-foreground">
+                          Administration
+                        </p>
+                      </div>
+                    </a>
+                  }
+                </div>
+              </div>
+            </z-tab>
+          </z-tab-group>
         } @else {
           <!-- Loading state -->
-          <div class="space-y-6">
-            <z-card class="p-6">
-              <div class="space-y-4">
-                <z-skeleton class="h-4 w-1/4" />
-                <z-skeleton class="h-8 w-1/2" />
-                <z-skeleton class="h-4 w-3/4" />
-              </div>
-            </z-card>
+          <div class="space-y-4">
+            <z-skeleton class="h-24 w-full" />
+            <z-skeleton class="h-64 w-full" />
           </div>
         }
       </div>

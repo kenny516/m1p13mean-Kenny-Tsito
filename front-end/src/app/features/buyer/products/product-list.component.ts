@@ -47,7 +47,6 @@ import { ZardBadgeComponent } from '../../../shared/components/badge';
     ZardIconComponent,
     ZardSkeletonComponent,
     ZardPaginationComponent,
-    ZardCheckboxComponent,
     ZardLabelComponent,
     ZardSeparatorComponent,
     ZardBadgeComponent,
@@ -190,21 +189,6 @@ import { ZardBadgeComponent } from '../../../shared/components/badge';
                     </button>
                   }
                 </div>
-              </div>
-
-              <z-separator class="my-4" />
-
-              <!-- Disponibilité -->
-              <div class="mb-4">
-                <z-label class="text-sm font-medium mb-2 block"
-                  >Disponibilité</z-label
-                >
-                <z-checkbox
-                  [(ngModel)]="inStockOnly"
-                  (ngModelChange)="applyFilters()"
-                >
-                  En stock uniquement
-                </z-checkbox>
               </div>
             </div>
           </aside>
@@ -357,9 +341,9 @@ export class ProductListComponent implements OnInit {
   showMobileFilters = signal(false);
   addingToCartId = signal<string | null>(null);
 
-  // Computed pour les produits
-  products = computed(() => this.productService.products());
-  categories = computed(() => this.productService.categories());
+  // Computed pour les produits avec fallback pour éviter undefined
+  products = computed(() => this.productService.products() ?? []);
+  categories = computed(() => this.productService.categories() ?? []);
 
   ngOnInit(): void {
     // Charger les catégories

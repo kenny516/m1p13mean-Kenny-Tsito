@@ -14,10 +14,11 @@ import { ZardInputDirective } from '@/shared/components/input';
 import { ZardCardComponent } from '@/shared/components/card';
 import { ZardLabelComponent } from '@/shared/components/label';
 import { ZardSpinnerComponent } from '@/shared/components/spinner';
+import { ZardIconComponent } from '@/shared/components/icon';
 
 /**
  * Composant de connexion utilisant ZardUI
- * Permet aux utilisateurs (BUYER, SELLER, ADMIN) de se connecter
+ * Design : Logo + formulaire dans une seule card, pas de navbar
  */
 @Component({
   selector: 'app-login',
@@ -30,46 +31,58 @@ import { ZardSpinnerComponent } from '@/shared/components/spinner';
     ZardCardComponent,
     ZardLabelComponent,
     ZardSpinnerComponent,
+    ZardIconComponent,
   ],
   template: `
     <div
-      class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 py-12 px-4 sm:px-6 lg:px-8"
+      class="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-muted/30 p-4"
     >
-      <div class="max-w-md w-full space-y-8">
-        <!-- Header -->
-        <div class="text-center">
-          <div class="flex justify-center mb-4">
+      <z-card class="w-full max-w-md overflow-hidden">
+        <!-- Header avec logo dans la card -->
+        <div class="bg-primary/5 border-b border-border px-8 py-6 text-center">
+          <div class="flex justify-center mb-3">
             <div
-              class="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-white text-3xl"
+              class="w-14 h-14 bg-primary rounded-xl flex items-center justify-center text-white text-2xl shadow-lg"
             >
               🏬
             </div>
           </div>
-          <h1 class="text-4xl font-bold text-slate-900">MEAN Mall</h1>
-          <p class="mt-2 text-sm text-slate-600">Votre marketplace en ligne</p>
-          <h2 class="mt-6 text-2xl font-semibold text-slate-800">Connexion</h2>
+          <h1 class="text-2xl font-bold text-foreground">MEAN Mall</h1>
+          <p class="text-sm text-muted-foreground mt-1">
+            Votre marketplace en ligne
+          </p>
         </div>
 
         <!-- Formulaire -->
-        <z-card class="p-8">
+        <div class="p-8">
+          <h2 class="text-xl font-semibold text-foreground mb-6 text-center">
+            Connexion
+          </h2>
+
           <form
             [formGroup]="loginForm"
             (ngSubmit)="onSubmit()"
-            class="space-y-6"
+            class="space-y-5"
           >
             <!-- Email -->
             <div class="space-y-2">
               <z-label for="email">Adresse email</z-label>
-              <input
-                z-input
-                id="email"
-                type="email"
-                formControlName="email"
-                placeholder="votre@email.com"
-                class="w-full"
-              />
+              <div class="relative">
+                <z-icon
+                  zType="mail"
+                  class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
+                />
+                <input
+                  z-input
+                  id="email"
+                  type="email"
+                  formControlName="email"
+                  placeholder="votre@email.com"
+                  class="w-full pl-10"
+                />
+              </div>
               @if (isFieldInvalid('email')) {
-                <p class="text-sm text-destructive mt-1">
+                <p class="text-xs text-destructive">
                   @if (getControl('email')?.errors?.['required']) {
                     L'email est requis
                   } @else if (getControl('email')?.errors?.['email']) {
@@ -82,34 +95,38 @@ import { ZardSpinnerComponent } from '@/shared/components/spinner';
             <!-- Password -->
             <div class="space-y-2">
               <z-label for="password">Mot de passe</z-label>
-              <input
-                z-input
-                id="password"
-                type="password"
-                formControlName="password"
-                placeholder="••••••••"
-                class="w-full"
-              />
+              <div class="relative">
+                <z-icon
+                  zType="shield"
+                  class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
+                />
+                <input
+                  z-input
+                  id="password"
+                  type="password"
+                  formControlName="password"
+                  placeholder="••••••••"
+                  class="w-full pl-10"
+                />
+              </div>
               @if (isFieldInvalid('password')) {
-                <p class="text-sm text-destructive mt-1">
-                  @if (getControl('password')?.errors?.['required']) {
-                    Le mot de passe est requis
-                  }
+                <p class="text-xs text-destructive">
+                  Le mot de passe est requis
                 </p>
               }
             </div>
 
-            <!-- Mot de passe oublié -->
-            <div class="flex items-center justify-end">
+            <!-- Forgot password -->
+            <div class="flex justify-end">
               <a
                 href="#"
-                class="text-sm font-medium text-primary hover:underline"
+                class="text-xs text-primary hover:underline"
               >
                 Mot de passe oublié ?
               </a>
             </div>
 
-            <!-- Bouton de connexion -->
+            <!-- Submit -->
             <button
               z-button
               type="submit"
@@ -118,27 +135,38 @@ import { ZardSpinnerComponent } from '@/shared/components/spinner';
             >
               @if (isLoading()) {
                 <z-spinner class="mr-2 h-4 w-4" />
-                Connexion en cours...
+                Connexion...
               } @else {
+                <z-icon zType="log-out" class="mr-2 h-4 w-4" />
                 Se connecter
               }
             </button>
           </form>
-        </z-card>
 
-        <!-- Footer - Lien inscription -->
-        <div class="text-center">
-          <p class="text-sm text-slate-600">
-            Pas encore de compte ?
-            <a
-              routerLink="/auth/register"
-              class="font-medium text-primary hover:underline ml-1"
-            >
-              Créer un compte
-            </a>
-          </p>
+          <!-- Separator -->
+          <div class="relative my-6">
+            <div class="absolute inset-0 flex items-center">
+              <div class="w-full border-t border-border"></div>
+            </div>
+            <div class="relative flex justify-center text-xs">
+              <span class="bg-background px-2 text-muted-foreground">
+                Pas encore inscrit ?
+              </span>
+            </div>
+          </div>
+
+          <!-- Register link -->
+          <a
+            routerLink="/auth/register"
+            z-button
+            zType="outline"
+            class="w-full"
+          >
+            <z-icon zType="user-plus" class="mr-2 h-4 w-4" />
+            Créer un compte
+          </a>
         </div>
-      </div>
+      </z-card>
     </div>
   `,
 })

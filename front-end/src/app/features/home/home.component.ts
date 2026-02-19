@@ -1,6 +1,5 @@
-import { Component, inject } from '@angular/core';
-
-import { RouterLink } from '@angular/router';
+import { Component, inject, OnInit } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core';
 
 @Component({
@@ -31,11 +30,17 @@ import { AuthService } from '../../core';
                 >
                   Commencer maintenant
                 </a>
-                <a routerLink="/products" class="btn-outline px-8 py-3 text-lg">
+                <a
+                  routerLink="/buyer/products"
+                  class="btn-outline px-8 py-3 text-lg"
+                >
                   Voir les produits
                 </a>
               } @else {
-                <a routerLink="/products" class="btn-primary px-8 py-3 text-lg">
+                <a
+                  routerLink="/buyer/products"
+                  class="btn-primary px-8 py-3 text-lg"
+                >
                   Explorer les produits
                 </a>
                 @if (user()?.role === 'SELLER') {
@@ -177,9 +182,28 @@ import { AuthService } from '../../core';
     </div>
   `,
 })
-export class HomeComponent {
+export class HomeComponent implements OnInit {
   private authService = inject(AuthService);
+  private router = inject(Router);
 
   user = this.authService.currentUser;
   isAuthenticated = this.authService.isAuthenticated;
+
+  ngOnInit(): void {
+    // Rediriger selon le rôle si l'utilisateur est connecté
+    if (this.isAuthenticated()) {
+      const role = this.user()?.role;
+      switch (role) {
+        case 'BUYER':
+          this.router.navigate(['/buyer/products']);
+          break;
+        case 'SELLER':
+          this.router.navigate(['/seller']);
+          break;
+        case 'ADMIN':
+          this.router.navigate(['/admin']);
+          break;
+      }
+    }
+  }
 }

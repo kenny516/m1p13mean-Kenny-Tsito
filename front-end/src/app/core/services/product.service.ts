@@ -83,17 +83,17 @@ export class ProductService {
         }
       }
 
-      const response = await this.api.getWithPagination<ProductsResponse>(
+      const response = await this.api.getWithPagination<Product[]>(
         '/products',
         params,
       );
 
       if (response.success && response.data) {
-        this.productsSignal.set(response.data.products);
+        this.productsSignal.set(response.data);
         if (response.pagination) {
           this.paginationSignal.set(response.pagination);
         }
-        return response.data;
+        return { products: response.data, pagination: response.pagination! };
       }
 
       throw new Error('Erreur lors de la récupération des produits');
@@ -131,14 +131,14 @@ export class ProductService {
     try {
       // Récupérer tous les produits pour extraire les catégories
       // Note: idéalement, ce serait un endpoint dédié côté backend
-      const response = await this.api.getWithPagination<ProductsResponse>(
+      const response = await this.api.getWithPagination<Product[]>(
         '/products',
         { limit: '1000', status: 'ACTIVE' },
       );
 
       if (response.success && response.data) {
         const uniqueCategories: string[] = [
-          ...new Set(response.data.products.map((p: Product) => p.category)),
+          ...new Set(response.data.map((p: Product) => p.category)),
         ].filter(Boolean) as string[];
         this.categoriesSignal.set(uniqueCategories);
         return uniqueCategories;
@@ -176,17 +176,17 @@ export class ProductService {
         if (filters.category) params['category'] = filters.category;
       }
 
-      const response = await this.api.getWithPagination<ProductsResponse>(
+      const response = await this.api.getWithPagination<Product[]>(
         '/products/my-products',
         params,
       );
 
       if (response.success && response.data) {
-        this.productsSignal.set(response.data.products);
+        this.productsSignal.set(response.data);
         if (response.pagination) {
           this.paginationSignal.set(response.pagination);
         }
-        return response.data;
+        return { products: response.data, pagination: response.pagination! };
       }
 
       throw new Error('Erreur lors de la récupération des produits');
