@@ -3,9 +3,9 @@ import * as cartController from "../controllers/cart.controller.js";
 import { auth, authorize } from "../middlewares/auth.middleware.js";
 import { validate } from "../middlewares/validate.middleware.js";
 import {
-	addCartItemSchema,
-	updateCartItemSchema,
-	checkoutCartSchema,
+  addCartItemSchema,
+  updateCartItemSchema,
+  checkoutCartSchema,
 } from "../validations/cart.validation.js";
 
 const router = Router();
@@ -33,9 +33,9 @@ router.post("/items", validate(addCartItemSchema), cartController.addItem);
  * @access  Private (BUYER)
  */
 router.put(
-	"/items/:productId",
-	validate(updateCartItemSchema),
-	cartController.updateItem,
+  "/items/:productId",
+  validate(updateCartItemSchema),
+  cartController.updateItem,
 );
 
 /**
@@ -51,6 +51,20 @@ router.delete("/items/:productId", cartController.removeItem);
  * @access  Private (BUYER)
  */
 router.delete("/", cartController.clearCart);
+
+/**
+ * @route   GET /api/cart/orders
+ * @desc    Récupérer les commandes de l'utilisateur
+ * @access  Private (BUYER)
+ */
+router.get("/orders", cartController.getOrders);
+
+/**
+ * @route   GET /api/cart/orders/:orderId
+ * @desc    Récupérer une commande par son ID
+ * @access  Private (BUYER)
+ */
+router.get("/orders/:orderId", cartController.getOrderById);
 
 /**
  * @route   POST /api/cart/checkout

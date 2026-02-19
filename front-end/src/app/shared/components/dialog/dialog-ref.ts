@@ -4,14 +4,17 @@ import { EventEmitter, Inject, PLATFORM_ID } from '@angular/core';
 
 import { filter, fromEvent, Subject, takeUntil } from 'rxjs';
 
-import type { ZardDialogComponent, ZardDialogOptions } from './dialog.component';
+import type {
+  ZardDialogComponent,
+  ZardDialogOptions,
+} from './dialog.component';
 
 const enum eTriggerAction {
   CANCEL = 'cancel',
   OK = 'ok',
 }
 
-export class ZardDialogRef<T = any, R = any, U = any> {
+export class ZardDialogRef<T = unknown, R = unknown, U = unknown> {
   private destroy$ = new Subject<void>();
   private isClosing = false;
   protected result?: R;
@@ -23,10 +26,17 @@ export class ZardDialogRef<T = any, R = any, U = any> {
     private containerInstance: ZardDialogComponent<T, U>,
     @Inject(PLATFORM_ID) private platformId: object,
   ) {
-    this.containerInstance.cancelTriggered.subscribe(() => this.trigger(eTriggerAction.CANCEL));
-    this.containerInstance.okTriggered.subscribe(() => this.trigger(eTriggerAction.OK));
+    this.containerInstance.cancelTriggered.subscribe(() =>
+      this.trigger(eTriggerAction.CANCEL),
+    );
+    this.containerInstance.okTriggered.subscribe(() =>
+      this.trigger(eTriggerAction.OK),
+    );
 
-    if ((this.config.zMaskClosable ?? true) && isPlatformBrowser(this.platformId)) {
+    if (
+      (this.config.zMaskClosable ?? true) &&
+      isPlatformBrowser(this.platformId)
+    ) {
       this.overlayRef
         .outsidePointerEvents()
         .pipe(takeUntil(this.destroy$))
@@ -36,7 +46,7 @@ export class ZardDialogRef<T = any, R = any, U = any> {
     if (isPlatformBrowser(this.platformId)) {
       fromEvent<KeyboardEvent>(document, 'keydown')
         .pipe(
-          filter(event => event.key === 'Escape'),
+          filter((event) => event.key === 'Escape'),
           takeUntil(this.destroy$),
         )
         .subscribe(() => this.close());
@@ -72,7 +82,9 @@ export class ZardDialogRef<T = any, R = any, U = any> {
   }
 
   private trigger(action: eTriggerAction) {
-    const trigger = { ok: this.config.zOnOk, cancel: this.config.zOnCancel }[action];
+    const trigger = { ok: this.config.zOnOk, cancel: this.config.zOnCancel }[
+      action
+    ];
 
     if (trigger instanceof EventEmitter) {
       trigger.emit(this.getContentComponent());

@@ -59,21 +59,42 @@ export class AuthService {
 
   /**
    * Vérifie le statut d'authentification au démarrage
+   * Ne clear pas si on a déjà un user valide en localStorage et que l'erreur n'est pas un 401
    */
   private async checkAuthStatus(): Promise<void> {
     const token = this.getToken();
+    const storedUser = this.getStoredUser();
+
+    // Pas de token = pas d'auth
     if (!token) {
       this.clearAuth();
       return;
     }
 
+    // Si on a un user stocké, on le garde tant que le token n'est pas explicitement invalide
+    if (storedUser) {
+      this.currentUserSignal.set(storedUser);
+    }
+
     try {
-      // Vérifier le token avec l'API
+      // Vérifier le token avec l'API et mettre à jour les données
       const user = await this.api.get<User>('/auth/me');
       this.currentUserSignal.set(user);
       localStorage.setItem(USER_KEY, JSON.stringify(user));
-    } catch {
-      this.clearAuth();
+    } catch (error: unknown) {
+      // Seulement clear si erreur d'authentification (401/403)
+      // Pour les erreurs réseau, on garde la session
+      const errorMsg = error instanceof Error ? error.message : '';
+      const isAuthError =
+        errorMsg.includes('non authentifié') ||
+        errorMsg.includes('Token') ||
+        errorMsg.includes('401') ||
+        errorMsg.includes('403');
+
+      if (isAuthError || !storedUser) {
+        this.clearAuth();
+      }
+      // Sinon on garde le storedUser
     }
   }
 

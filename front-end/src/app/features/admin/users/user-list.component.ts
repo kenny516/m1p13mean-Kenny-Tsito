@@ -2,7 +2,7 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { UserService, ToastService, User } from '../../../core';
+import { UserService, UserFilters, ToastService, User } from '../../../core';
 import { Pagination } from '../../../core/models/api.model';
 import { ZardCardComponent } from '@/shared/components/card';
 import { ZardButtonComponent } from '@/shared/components/button';
@@ -365,25 +365,25 @@ export class UserListComponent implements OnInit {
   async loadUsers(): Promise<void> {
     this.isLoading.set(true);
     try {
-      const filters: Record<string, unknown> = {};
+      const filters: UserFilters = {};
 
-      if (this.searchTerm) filters['search'] = this.searchTerm;
-      if (this.selectedRole) filters['role'] = this.selectedRole;
-      if (this.selectedStatus === 'active') filters['isActive'] = true;
-      if (this.selectedStatus === 'inactive') filters['isActive'] = false;
-      if (this.selectedStatus === 'pending') filters['isValidated'] = false;
+      if (this.searchTerm) filters.search = this.searchTerm;
+      if (this.selectedRole) filters.role = this.selectedRole;
+      if (this.selectedStatus === 'active') filters.isActive = true;
+      if (this.selectedStatus === 'inactive') filters.isActive = false;
+      if (this.selectedStatus === 'pending') filters.isValidated = false;
 
       const response = await this.userService.getUsers(
-        filters as any,
+        filters,
         this.currentPage(),
         10,
       );
 
       this.users.set(response.users);
       this.pagination.set(response.pagination);
-    } catch (error) {
+    } catch (err) {
       this.toastService.error('Erreur lors du chargement des utilisateurs');
-      console.error(error);
+      console.error(err);
     } finally {
       this.isLoading.set(false);
     }
@@ -443,7 +443,7 @@ export class UserListComponent implements OnInit {
       await this.userService.validateUser(user._id);
       this.toastService.success('Utilisateur validé avec succès');
       await this.loadUsers();
-    } catch (error) {
+    } catch {
       this.toastService.error("Erreur lors de la validation de l'utilisateur");
     }
   }
@@ -453,7 +453,7 @@ export class UserListComponent implements OnInit {
       await this.userService.activateUser(user._id);
       this.toastService.success('Utilisateur activé avec succès');
       await this.loadUsers();
-    } catch (error) {
+    } catch {
       this.toastService.error("Erreur lors de l'activation de l'utilisateur");
     }
   }
@@ -464,7 +464,7 @@ export class UserListComponent implements OnInit {
         await this.userService.deactivateUser(user._id);
         this.toastService.success('Utilisateur désactivé avec succès');
         await this.loadUsers();
-      } catch (error) {
+      } catch {
         this.toastService.error(
           "Erreur lors de la désactivation de l'utilisateur",
         );

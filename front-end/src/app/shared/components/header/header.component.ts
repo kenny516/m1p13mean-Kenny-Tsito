@@ -1,7 +1,7 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 
 import { RouterLink, RouterLinkActive } from '@angular/router';
-import { AuthService } from '../../../core';
+import { AuthService, CartService } from '../../../core';
 
 @Component({
   selector: 'app-header',
@@ -28,18 +28,11 @@ import { AuthService } from '../../../core';
               Accueil
             </a>
             <a
-              routerLink="/products"
+              routerLink="/buyer/products"
               routerLinkActive="text-primary"
               class="text-gray-600 hover:text-gray-900 transition-colors"
             >
               Produits
-            </a>
-            <a
-              routerLink="/shops"
-              routerLinkActive="text-primary"
-              class="text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              Boutiques
             </a>
           </nav>
 
@@ -50,7 +43,7 @@ import { AuthService } from '../../../core';
                 <!-- Panier (pour les acheteurs) -->
                 @if (userData.role === 'BUYER') {
                   <a
-                    routerLink="/cart"
+                    routerLink="/buyer/cart"
                     class="relative p-2 text-gray-600 hover:text-gray-900 transition-colors"
                   >
                     <svg
@@ -67,6 +60,13 @@ import { AuthService } from '../../../core';
                         d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
                       />
                     </svg>
+                    @if (cartItemCount() > 0) {
+                      <span
+                        class="absolute -top-1 -right-1 bg-primary text-white text-xs font-bold rounded-full h-5 min-w-5 flex items-center justify-center px-1"
+                      >
+                        {{ cartItemCount() > 99 ? '99+' : cartItemCount() }}
+                      </span>
+                    }
                   </a>
                 }
 
@@ -133,10 +133,17 @@ import { AuthService } from '../../../core';
 
                       @if (userData.role === 'BUYER') {
                         <a
-                          routerLink="/orders"
+                          routerLink="/buyer/cart"
                           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         >
-                          Mes commandes
+                          Mon panier
+                          @if (cartItemCount() > 0) {
+                            <span
+                              class="ml-2 bg-primary text-white text-xs rounded-full px-2 py-0.5"
+                            >
+                              {{ cartItemCount() }}
+                            </span>
+                          }
                         </a>
                       }
 
@@ -162,11 +169,22 @@ import { AuthService } from '../../../core';
     </header>
   `,
 })
-export class HeaderComponent {
+export class HeaderComponent implements OnInit {
   private authService = inject(AuthService);
+  private cartService = inject(CartService);
 
   user = this.authService.currentUser;
   isAuthenticated = this.authService.isAuthenticated;
+  cartItemCount = this.cartService.cartItemCount;
+
+  ngOnInit(): void {
+    // Charger le panier si l'utilisateur est un BUYER connecté
+    if (this.isAuthenticated() && this.user()?.role === 'BUYER') {
+      this.cartService.getCart().catch(() => {
+        // Ignorer si le panier n'existe pas encore
+      });
+    }
+  }
 
   getInitials(user: {
     profile?: { firstName?: string; lastName?: string };
@@ -177,6 +195,7 @@ export class HeaderComponent {
   }
 
   logout(): void {
+    this.cartService.resetCart();
     this.authService.logout();
   }
 }

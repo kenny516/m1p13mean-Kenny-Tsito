@@ -20,6 +20,28 @@ export const routes: Routes = [
     loadChildren: () =>
       import('./features/profile/profile.routes').then((m) => m.PROFILE_ROUTES),
   },
+  // Produits publics (accessible sans auth)
+  {
+    path: 'buyer/products',
+    loadComponent: () =>
+      import('./features/buyer/products/product-list.component').then(
+        (m) => m.ProductListComponent,
+      ),
+  },
+  {
+    path: 'buyer/products/:id',
+    loadComponent: () =>
+      import('./features/buyer/products/product-detail.component').then(
+        (m) => m.ProductDetailComponent,
+      ),
+  },
+  // Routes Acheteur protégées (panier, commandes)
+  {
+    path: 'buyer',
+    loadChildren: () =>
+      import('./features/buyer/buyer.routes').then((m) => m.BUYER_ROUTES),
+    canActivate: [authGuard, roleGuard(['BUYER'])],
+  },
   // Routes d'administration
   {
     path: 'admin',

@@ -372,7 +372,7 @@ export class UserFormComponent implements OnInit {
     try {
       const user = await this.userService.getUserById(userId);
       this.patchForm(user);
-    } catch (error) {
+    } catch {
       this.toastService.error("Erreur lors du chargement de l'utilisateur");
       this.router.navigate(['/admin/users']);
     } finally {

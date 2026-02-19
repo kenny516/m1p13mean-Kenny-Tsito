@@ -144,15 +144,16 @@ uploads/
 
 
 #backend
-/backend/dist
-/backend/build
-/backend/.env
+/back-end/dist
+/back-end/build
+/back-end/.env
+/back-end/migrations/
 
 
 
 #frontend
-/frontend/dist
-/frontend/build
-/frontend/.angular
-/frontend/.cache
+/front-end/dist
+/front-end/build
+/front-end/.angular
+/front-end/.cache
 
