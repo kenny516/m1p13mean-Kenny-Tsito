@@ -70,7 +70,7 @@ import { ZardIconComponent } from '@/shared/components/icon';
               <div class="relative">
                 <z-icon
                   zType="mail"
-                  class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
+                  class="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
                 />
                 <input
                   z-input
@@ -98,7 +98,7 @@ import { ZardIconComponent } from '@/shared/components/icon';
               <div class="relative">
                 <z-icon
                   zType="shield"
-                  class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
+                  class="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
                 />
                 <input
                   z-input
@@ -118,10 +118,7 @@ import { ZardIconComponent } from '@/shared/components/icon';
 
             <!-- Forgot password -->
             <div class="flex justify-end">
-              <a
-                href="#"
-                class="text-xs text-primary hover:underline"
-              >
+              <a href="#" class="text-xs text-primary hover:underline">
                 Mot de passe oublié ?
               </a>
             </div>

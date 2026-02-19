@@ -76,9 +76,7 @@ interface RegisterFormData {
 
         <!-- Formulaire -->
         <div class="p-6">
-          <h2
-            class="text-lg font-semibold text-foreground mb-5 text-center"
-          >
+          <h2 class="text-lg font-semibold text-foreground mb-5 text-center">
             Créer un compte
           </h2>
 
@@ -102,7 +100,9 @@ interface RegisterFormData {
                   <div class="flex items-center gap-2">
                     <span class="text-xl">🛍️</span>
                     <div>
-                      <p class="font-medium text-sm text-foreground">Acheteur</p>
+                      <p class="font-medium text-sm text-foreground">
+                        Acheteur
+                      </p>
                       <p class="text-xs text-muted-foreground">
                         Acheter des produits
                       </p>
@@ -140,7 +140,7 @@ interface RegisterFormData {
               <div class="relative">
                 <z-icon
                   zType="mail"
-                  class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
+                  class="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
                 />
                 <input
                   z-input
@@ -228,7 +228,7 @@ interface RegisterFormData {
                 <div class="relative">
                   <z-icon
                     zType="shield"
-                    class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
+                    class="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
                   />
                   <input
                     z-input
@@ -240,7 +240,9 @@ interface RegisterFormData {
                   />
                 </div>
                 @if (isFieldInvalid('password')) {
-                  <p class="text-xs text-destructive">Min. 8 car. + Maj + min + chiffre</p>
+                  <p class="text-xs text-destructive">
+                    Min. 8 car. + Maj + min + chiffre
+                  </p>
                 }
               </div>
               <div class="space-y-1.5">

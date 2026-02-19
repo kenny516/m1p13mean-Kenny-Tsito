@@ -9,6 +9,7 @@ import {
 import { updateSaleStatus } from "./stockMovement.service.js";
 import { debitWallet } from "./wallet.service.js";
 import { requireActiveProduct } from "./product.service.js";
+import { createOptionalSession } from "../utils/transaction.util.js";
 
 const CART_TTL_MINUTES = 30;
 
@@ -62,12 +63,10 @@ export const addItem = async (
   { productId, quantity },
   options = {},
 ) => {
-  const ownsSession = !options.session;
-  const session = options.session || (await mongoose.startSession());
-  if (ownsSession) session.startTransaction();
+  const txn = await createOptionalSession(options.session);
 
   try {
-    const cart = options.cart || (await getCart(userId, session));
+    const cart = options.cart || (await getCart(userId, txn.session));
     const itemIndex =
       options.itemIndex !== undefined
         ? options.itemIndex
@@ -75,7 +74,8 @@ export const addItem = async (
             (cartItem) => cartItem.productId.toString() === productId,
           );
     const product =
-      options.product || (await requireActiveProduct(productId, null, session));
+      options.product ||
+      (await requireActiveProduct(productId, null, txn.session));
 
     await createCartMovementLine(
       {
@@ -88,7 +88,7 @@ export const addItem = async (
         date: new Date(),
       },
       userId,
-      { session, product, cache: true },
+      { session: txn.session, product, cache: true },
     );
 
     const snapshot = buildItemSnapshot(product);
@@ -111,30 +111,29 @@ export const addItem = async (
     cart.totalAmount = computeTotal(cart.items);
     cart.expiresAt = getExpiresAt();
 
-    const updatedCart = await cart.save({ session });
-    if (ownsSession) await session.commitTransaction();
+    const saveOptions = txn.session ? { session: txn.session } : {};
+    const updatedCart = await cart.save(saveOptions);
+    if (txn.ownsSession) await txn.commit();
     return updatedCart;
   } catch (error) {
-    if (ownsSession) await session.abortTransaction();
+    if (txn.ownsSession) await txn.abort();
     throw error;
   } finally {
-    if (ownsSession) await session.endSession();
+    if (txn.ownsSession) await txn.end();
   }
 };
 
 export const updateItem = async (userId, productId, quantity) => {
-  const session = await mongoose.startSession();
-  const ownsSession = true;
-  session.startTransaction();
+  const txn = await createOptionalSession();
 
   try {
     let newCart = null;
 
-    const cart = await getCart(userId, session);
+    const cart = await getCart(userId, txn.session);
     const itemIndex = cart.items.findIndex(
       (cartItem) => cartItem.productId.toString() === productId,
     );
-    const product = await requireActiveProduct(productId, null, session);
+    const product = await requireActiveProduct(productId, null, txn.session);
 
     // Calculate delta: (Target Quantity) - (Current Quantity)
     // If item doesn't exist, delta is the full target quantity
@@ -150,13 +149,13 @@ export const updateItem = async (userId, productId, quantity) => {
       newCart = await addItem(
         userId,
         { productId, quantity: delta },
-        { cart, itemIndex, product, session },
+        { cart, itemIndex, product, session: txn.session },
       );
     } else if (isRemove) {
       newCart = await removeItem(
         userId,
         { productId, quantity: Math.abs(delta) },
-        { cart, itemIndex, product, session },
+        { cart, itemIndex, product, session: txn.session },
       );
     } else {
       if (itemIndex === -1) {
@@ -169,13 +168,13 @@ export const updateItem = async (userId, productId, quantity) => {
       newCart = cart;
     }
 
-    if (ownsSession) await session.commitTransaction();
+    if (txn.ownsSession) await txn.commit();
     return newCart;
   } catch (error) {
-    if (ownsSession) await session.abortTransaction();
+    if (txn.ownsSession) await txn.abort();
     throw error;
   } finally {
-    if (ownsSession) await session.endSession();
+    if (txn.ownsSession) await txn.end();
   }
 };
 
@@ -184,12 +183,11 @@ export const removeItem = async (
   { productId, quantity },
   options = {},
 ) => {
-  const ownsSession = !options.session;
-  const session = options.session || (await mongoose.startSession());
-  if (ownsSession) session.startTransaction();
+  const txn = await createOptionalSession(options.session);
 
   try {
-    const cart = options.cart || (await findActiveCartByUser(userId, session));
+    const cart =
+      options.cart || (await findActiveCartByUser(userId, txn.session));
     if (!cart) {
       throw new ApiError(404, "CART_NOT_FOUND", "Panier non trouvé");
     }
@@ -211,7 +209,8 @@ export const removeItem = async (
     const effectiveQuantity =
       quantity === -1 ? cart.items[itemIndex].quantity : quantity;
     const product =
-      options.product || (await requireActiveProduct(productId, null, session));
+      options.product ||
+      (await requireActiveProduct(productId, null, txn.session));
 
     await createCartMovementLine(
       {
@@ -224,7 +223,7 @@ export const removeItem = async (
         date: new Date(),
       },
       userId,
-      { session, product, cache: true },
+      { session: txn.session, product, cache: true },
     );
 
     const snapshot = buildItemSnapshot(product);
@@ -241,43 +240,44 @@ export const removeItem = async (
     cart.totalAmount = computeTotal(cart.items);
     cart.expiresAt = getExpiresAt();
 
-    const updatedCart = await cart.save({ session });
-    if (ownsSession) await session.commitTransaction();
+    const saveOptions = txn.session ? { session: txn.session } : {};
+    const updatedCart = await cart.save(saveOptions);
+    if (txn.ownsSession) await txn.commit();
 
     return updatedCart;
   } catch (error) {
-    if (ownsSession) await session.abortTransaction();
+    if (txn.ownsSession) await txn.abort();
     throw error;
   } finally {
-    if (ownsSession) await session.endSession();
+    if (txn.ownsSession) await txn.end();
   }
 };
 
 export const clearCart = async (userId) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  const txn = await createOptionalSession();
 
   try {
-    const cart = await findActiveCartByUser(userId, session);
+    const cart = await findActiveCartByUser(userId, txn.session);
     if (!cart) {
-      const [emptyCart] = await Cart.create(
-        [
-          {
-            userId,
-            items: [],
-            status: "CART",
-            totalAmount: 0,
-            expiresAt: getExpiresAt(),
-          },
-        ],
-        { session },
+      const createOptions = txn.session ? { session: txn.session } : {};
+      const emptyCart = await Cart.create(
+        {
+          userId,
+          items: [],
+          status: "CART",
+          totalAmount: 0,
+          expiresAt: getExpiresAt(),
+        },
+        createOptions,
       );
-      await session.commitTransaction();
+      if (txn.ownsSession) await txn.commit();
       return emptyCart;
     }
 
     for (const item of cart.items) {
-      const product = await Product.findById(item.productId).session(session);
+      const productQuery = Product.findById(item.productId);
+      if (txn.session) productQuery.session(txn.session);
+      const product = await productQuery;
       if (!product) {
         throw new ApiError(404, "NOT_FOUND", "Produit non trouvé");
       }
@@ -292,7 +292,7 @@ export const clearCart = async (userId) => {
           date: new Date(),
         },
         userId,
-        { session, product, cache: true },
+        { session: txn.session, product, cache: true },
       );
     }
 
@@ -300,24 +300,24 @@ export const clearCart = async (userId) => {
     cart.totalAmount = 0;
     cart.expiresAt = getExpiresAt();
 
-    const updatedCart = await cart.save({ session });
-    await session.commitTransaction();
+    const saveOptions = txn.session ? { session: txn.session } : {};
+    const updatedCart = await cart.save(saveOptions);
+    if (txn.ownsSession) await txn.commit();
 
     return updatedCart;
   } catch (error) {
-    await session.abortTransaction();
+    if (txn.ownsSession) await txn.abort();
     throw error;
   } finally {
-    await session.endSession();
+    if (txn.ownsSession) await txn.end();
   }
 };
 
 export const checkoutCart = async (userId, payload) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  const txn = await createOptionalSession();
 
   try {
-    const cart = await findActiveCartByUser(userId, session);
+    const cart = await findActiveCartByUser(userId, txn.session);
     if (!cart || cart.items.length === 0) {
       throw new ApiError(400, "CART_EMPTY", "Le panier est vide");
     }
@@ -340,7 +340,11 @@ export const checkoutCart = async (userId, payload) => {
 
     const saleItems = [];
     for (const item of cart.items) {
-      const product = await requireActiveProduct(item.productId, null, session);
+      const product = await requireActiveProduct(
+        item.productId,
+        null,
+        txn.session,
+      );
       saleItems.push({
         productId: item.productId.toString(),
         shopId: item.shopId.toString(),
@@ -363,7 +367,7 @@ export const checkoutCart = async (userId, payload) => {
         items: saleItems,
       },
       userId,
-      { session, cache: true },
+      { session: txn.session, cache: true },
     );
 
     cart.status = "ORDER";
@@ -375,22 +379,22 @@ export const checkoutCart = async (userId, payload) => {
     cart.order.paymentTransaction = paymentTransaction?._id.toString();
 
     cart.expiresAt = new Date();
-    await cart.save({ session });
+    const saveOptions = txn.session ? { session: txn.session } : {};
+    await cart.save(saveOptions);
 
-    const [nextCart] = await Cart.create(
-      [
-        {
-          userId,
-          items: [],
-          status: "CART",
-          totalAmount: 0,
-          expiresAt: getExpiresAt(),
-        },
-      ],
-      { session },
+    const createOptions = txn.session ? { session: txn.session } : {};
+    const nextCart = await Cart.create(
+      {
+        userId,
+        items: [],
+        status: "CART",
+        totalAmount: 0,
+        expiresAt: getExpiresAt(),
+      },
+      createOptions,
     );
 
-    await session.commitTransaction();
+    if (txn.ownsSession) await txn.commit();
 
     return {
       cart: nextCart,
@@ -398,19 +402,20 @@ export const checkoutCart = async (userId, payload) => {
       paymentTransaction,
     };
   } catch (error) {
-    await session.abortTransaction();
+    if (txn.ownsSession) await txn.abort();
     throw error;
   } finally {
-    await session.endSession();
+    if (txn.ownsSession) await txn.end();
   }
 };
 
 export const confirmDelivery = async (userId, cartId) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  const txn = await createOptionalSession();
 
   try {
-    const cart = await Cart.findOne({ _id: cartId, userId }).session(session);
+    const cartQuery = Cart.findOne({ _id: cartId, userId });
+    if (txn.session) cartQuery.session(txn.session);
+    const cart = await cartQuery;
     if (!cart) {
       throw new ApiError(404, "NOT_FOUND", "Panier non trouvé");
     }
@@ -425,15 +430,16 @@ export const confirmDelivery = async (userId, cartId) => {
     await updateSaleStatus(cart.order.saleId, { status: "DELIVERED" }, userId);
 
     cart.status = "DELIVERED";
-    await cart.save({ session });
+    const saveOptions = txn.session ? { session: txn.session } : {};
+    await cart.save(saveOptions);
 
-    await session.commitTransaction();
+    if (txn.ownsSession) await txn.commit();
     return cart;
   } catch (error) {
-    await session.abortTransaction();
+    if (txn.ownsSession) await txn.abort();
     throw error;
   } finally {
-    await session.endSession();
+    if (txn.ownsSession) await txn.end();
   }
 };
 

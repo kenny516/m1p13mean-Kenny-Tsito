@@ -138,13 +138,13 @@ export const listProductsQuerySchema = Joi.object({
   limit: Joi.number()
     .integer()
     .min(1)
-    .max(100)
+    .max(1000)
     .optional()
     .default(10)
     .messages({
       "number.base": "La limite doit être un nombre",
       "number.min": "La limite doit être au moins 1",
-      "number.max": "La limite ne doit pas dépasser 100",
+      "number.max": "La limite ne doit pas dépasser 1000",
     }),
 
   search: Joi.string().trim().optional().messages({
@@ -185,6 +185,14 @@ export const listProductsQuerySchema = Joi.object({
     .messages({
       "string.pattern.base":
         "L'ID du vendeur doit être un ObjectId MongoDB valide",
+    }),
+
+  status: Joi.string()
+    .valid("DRAFT", "PENDING", "ACTIVE", "REJECTED", "ARCHIVED", "ALL")
+    .optional()
+    .messages({
+      "any.only":
+        "Le statut doit être DRAFT, PENDING, ACTIVE, REJECTED, ARCHIVED ou ALL",
     }),
 
   sort: Joi.string()

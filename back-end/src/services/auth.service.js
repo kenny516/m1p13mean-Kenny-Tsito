@@ -7,6 +7,7 @@ import {
   comparePassword,
   formatUserResponse,
 } from "../utils/auth.utils.js";
+import { createOptionalSession } from "../utils/transaction.util.js";
 
 /**
  * Service d'authentification
@@ -17,42 +18,46 @@ import {
  * Enregistre un nouvel utilisateur et crée son wallet
  */
 export const registerUser = async ({ email, password, role, profile }) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  const txn = await createOptionalSession();
 
   try {
     // Vérifier si l'email existe déjà
-    const existingUser = await User.findOne({ email }).session(session);
+    const userQuery = User.findOne({ email });
+    if (txn.session) userQuery.session(txn.session);
+    const existingUser = await userQuery;
     if (existingUser) {
       throw new ApiError(409, "CONFLICT", "Cet email est déjà utilisé");
     }
 
     // Hasher le mot de passe et créer l'utilisateur
     const passwordHash = await hashPassword(password);
+    const createUserOptions = txn.session ? { session: txn.session } : {};
     const [user] = await User.create(
       [{ email, passwordHash, role, profile, isValidated: role === "BUYER" }],
-      { session },
+      createUserOptions,
     );
 
     // Créer le wallet associé
+    const createWalletOptions = txn.session ? { session: txn.session } : {};
     const [wallet] = await Wallet.create(
       [{ ownerId: user._id, ownerModel: "User" }],
-      { session },
+      createWalletOptions,
     );
 
     // Associer le wallet à l'utilisateur
     user.walletId = wallet._id;
-    await user.save({ session });
+    const saveOptions = txn.session ? { session: txn.session } : {};
+    await user.save(saveOptions);
 
-    await session.commitTransaction();
+    if (txn.ownsSession) await txn.commit();
 
     const token = generateToken(user._id);
     return { user: formatUserResponse(user), token };
   } catch (error) {
-    await session.abortTransaction();
+    if (txn.ownsSession) await txn.abort();
     throw error;
   } finally {
-    await session.endSession();
+    if (txn.ownsSession) await txn.end();
   }
 };
 

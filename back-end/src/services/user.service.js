@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { User, Wallet } from "../models/index.js";
 import { ApiError } from "../middlewares/error.middleware.js";
 import { hashPassword, formatUserResponse } from "../utils/auth.utils.js";
+import { createOptionalSession } from "../utils/transaction.util.js";
 
 /**
  * Service de gestion des utilisateurs (Admin)
@@ -71,18 +72,20 @@ export const getUserById = async (userId) => {
  * Crée un nouvel utilisateur (par l'admin)
  */
 export const createUser = async (userData) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  const txn = await createOptionalSession();
 
   try {
     // Vérifier si l'email existe déjà
-    const existingUser = await User.findOne({ email: userData.email });
+    const userQuery = User.findOne({ email: userData.email });
+    if (txn.session) userQuery.session(txn.session);
+    const existingUser = await userQuery;
     if (existingUser) {
       throw new ApiError(409, "CONFLICT", "Cet email est déjà utilisé");
     }
 
     // Hasher le mot de passe et créer l'utilisateur
     const passwordHash = await hashPassword(userData.password);
+    const createUserOptions = txn.session ? { session: txn.session } : {};
     const [user] = await User.create(
       [
         {
@@ -94,25 +97,27 @@ export const createUser = async (userData) => {
           isActive: userData.isActive ?? true,
         },
       ],
-      { session },
+      createUserOptions,
     );
 
     // Créer le wallet associé
+    const createWalletOptions = txn.session ? { session: txn.session } : {};
     const [wallet] = await Wallet.create(
       [{ ownerId: user._id, ownerModel: "User" }],
-      { session },
+      createWalletOptions,
     );
 
     user.walletId = wallet._id;
-    await user.save({ session });
+    const saveOptions = txn.session ? { session: txn.session } : {};
+    await user.save(saveOptions);
 
-    await session.commitTransaction();
+    if (txn.ownsSession) await txn.commit();
     return formatUserResponse(user);
   } catch (error) {
-    await session.abortTransaction();
+    if (txn.ownsSession) await txn.abort();
     throw error;
   } finally {
-    await session.endSession();
+    if (txn.ownsSession) await txn.end();
   }
 };
 
