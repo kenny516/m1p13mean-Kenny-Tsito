@@ -4,6 +4,14 @@ import Joi from "joi";
  * Schéma de validation pour la création d'un produit
  */
 export const createProductSchema = Joi.object({
+  shopId: Joi.string()
+    .pattern(/^[0-9a-fA-F]{24}$/)
+    .required()
+    .messages({
+      "any.required": "La boutique est requise",
+      "string.pattern.base": "L'identifiant de boutique est invalide",
+    }),
+
   // === IDENTIFICATION & INFORMATIONS ===
   title: Joi.string().trim().min(3).max(100).required().messages({
     "string.empty": "Le titre est requis",
