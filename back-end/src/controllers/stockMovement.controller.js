@@ -1,5 +1,26 @@
 import * as stockMovementService from "../services/stockMovement.service.js";
 import { listMovementLines } from "../services/stockMovementLine.service.js";
+import Shop from "../models/Shop.js";
+import { ApiError } from "../middlewares/error.middleware.js";
+
+const resolveSellerShopFilter = async (user, requestedShopId) => {
+	if (user.role !== "SELLER") {
+		return requestedShopId ? { shopId: requestedShopId } : {};
+	}
+
+	const shops = await Shop.find({ sellerId: user._id }, "_id").lean();
+	const ownedShopIds = shops.map((shop) => shop._id.toString());
+
+	if (requestedShopId) {
+		const isOwnedShop = ownedShopIds.includes(requestedShopId.toString());
+		if (!isOwnedShop) {
+			throw new ApiError(403, "FORBIDDEN", "Accès interdit à cette boutique");
+		}
+		return { shopId: requestedShopId };
+	}
+
+	return { shopId: { $in: ownedShopIds } };
+};
 
 // ==========================================
 // Créer un mouvement de stock
@@ -33,6 +54,19 @@ export const getOne = async (req, res, next) => {
 		const movement = await stockMovementService.getMovementById(
 			req.params.id,
 		);
+
+		if (req.user.role === "SELLER") {
+			const shops = await Shop.find({ sellerId: req.user._id }, "_id").lean();
+			const ownedShopIds = new Set(shops.map((shop) => shop._id.toString()));
+			const lineShopIds = (movement.lineIds || [])
+				.map((line) => line?.shopId?.toString?.())
+				.filter(Boolean);
+
+			const hasForeignShop = lineShopIds.some((shopId) => !ownedShopIds.has(shopId));
+			if (hasForeignShop) {
+				throw new ApiError(403, "FORBIDDEN", "Accès interdit à ce mouvement");
+			}
+		}
 
 		res.json({
 			success: true,
@@ -78,9 +112,10 @@ export const list = async (req, res, next) => {
 
 export const listSales = async (req, res, next) => {
 	try {
-		// Trouver les shops du vendeur pour filtrer
+		const shopScope = await resolveSellerShopFilter(req.user, req.query.shopId);
+		const filters = { ...req.query, ...shopScope };
 		const { sales, total, page, limit } =
-			await stockMovementService.listSales(req.query);
+			await stockMovementService.listSales(filters);
 
 		res.json({
 			success: true,
@@ -104,8 +139,10 @@ export const listSales = async (req, res, next) => {
 
 export const listSupplies = async (req, res, next) => {
 	try {
+		const shopScope = await resolveSellerShopFilter(req.user, req.query.shopId);
+		const filters = { ...req.query, ...shopScope };
 		const { supplies, total, page, limit } =
-			await stockMovementService.listSupplies(req.query);
+			await stockMovementService.listSupplies(filters);
 
 		res.json({
 			success: true,
@@ -218,7 +255,9 @@ export const reconcile = async (req, res, next) => {
 
 export const listLines = async (req, res, next) => {
 	try {
-		const { lines, total, page, limit } = await listMovementLines(req.query);
+		const shopScope = await resolveSellerShopFilter(req.user, req.query.shopId);
+		const filters = { ...req.query, ...shopScope };
+		const { lines, total, page, limit } = await listMovementLines(filters);
 
 		res.json({
 			success: true,

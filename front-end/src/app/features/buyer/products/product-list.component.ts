@@ -24,7 +24,6 @@ import { ZardButtonComponent } from '../../../shared/components/button';
 import { ZardIconComponent } from '../../../shared/components/icon';
 import { ZardSkeletonComponent } from '../../../shared/components/skeleton';
 import { ZardPaginationComponent } from '../../../shared/components/pagination';
-import { ZardCheckboxComponent } from '../../../shared/components/checkbox';
 import { ZardLabelComponent } from '../../../shared/components/label';
 import { ZardSeparatorComponent } from '../../../shared/components/separator';
 import { ZardBadgeComponent } from '../../../shared/components/badge';

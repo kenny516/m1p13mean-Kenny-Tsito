@@ -34,6 +34,15 @@ import { AuthService, CartService } from '../../../core';
             >
               Produits
             </a>
+            @if (user()?.role === 'SELLER') {
+              <a
+                routerLink="/seller"
+                routerLinkActive="text-primary"
+                class="text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                Espace vendeur
+              </a>
+            }
           </nav>
 
           <!-- Actions utilisateur -->
