@@ -11,7 +11,7 @@ import { CommonModule } from '@angular/common';
   imports: [CommonModule],
   template: `
     <label
-      [for]="for"
+      [attr.for]="for || null"
       class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
     >
       <ng-content></ng-content>
