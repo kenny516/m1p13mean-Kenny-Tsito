@@ -285,3 +285,25 @@ coverage/
 *.tmp
 *.temp
 ```
+
+---
+
+## Backend - Règles spécifiques (Express.js)
+
+- **Langage & modules**: Le dossier `back-end/` doit rester en **JavaScript** pur et utiliser **ES Modules** (`import` / `export`). **Ne jamais** ajouter TypeScript dans `back-end/`.
+- **package.json**: Assurez-vous que `"type": "module"` est présent pour le backend.
+- **Structure**: Respecter l'architecture `controllers/`, `services/`, `models/`, `routes/`, `middlewares/` et `config/`.
+- **Validation & sécurité**: Toujours valider les entrées (Joi ou équivalent), sanitize pour éviter les injections NoSQL, utiliser `helmet`, rate limiting et sanitize les payloads.
+- **Transactions**: Pour les opérations critiques (paiements, commandes), utiliser les transactions MongoDB (sessions) et vérifier l'intégrité avant commit.
+- **Secrets**: Ne **jamais** committer `.env` ou secrets. Fournir un fichier `.env.example` et stocker les secrets dans le CI/infra.
+- **Tests & build**: Avant d'ouvrir une PR, exécuter `npm install` puis `npm run build` (ou `npm test` si présent) dans `back-end/` et corriger les erreurs.
+- **Commit messages**: Utiliser le scope `backend`, p.ex. `fix(backend/auth): corriger validation token` ou `feat(backend/orders): ajouter transaction`.
+- **PR checklist (backend)**:
+  - [ ] Le code est en JavaScript ES Modules
+  - [ ] Les entrées sont validées (Joi/validation)
+  - [ ] Les opérations critiques sont en transaction
+  - [ ] `.env` n'est pas commité et `.env.example` est mis à jour
+  - [ ] Les logs et erreurs sont gérés (error.middleware)
+  - [ ] Build/tests locaux réalisés
+
+Ces règles complètent les conventions générales de Git et le workflow présentés ci-dessus.
