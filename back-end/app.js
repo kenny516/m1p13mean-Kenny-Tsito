@@ -19,6 +19,7 @@ const app = express();
 
 // Helmet pour les headers de sécurité
 app.use(helmet());
+app.set("trust proxy", 1); // nécessaire si derrière un proxy (ex: Heroku) pour que rateLimit fonctionne correctement avec les IPs réelles
 
 // CORS configuration
 app.use(
