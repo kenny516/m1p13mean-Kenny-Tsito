@@ -22,6 +22,11 @@ export const SELLER_ROUTES: Routes = [
           import('./shops/shop-form.component').then((m) => m.ShopFormComponent),
       },
       {
+        path: 'shops/:id',
+        loadComponent: () =>
+          import('./shops/shop-detail.component').then((m) => m.ShopDetailComponent),
+      },
+      {
         path: 'shops/:id/edit',
         loadComponent: () =>
           import('./shops/shop-form.component').then((m) => m.ShopFormComponent),
@@ -38,6 +43,13 @@ export const SELLER_ROUTES: Routes = [
         loadComponent: () =>
           import('./products/seller-product-form.component').then(
             (m) => m.SellerProductFormComponent,
+          ),
+      },
+      {
+        path: 'products/:id',
+        loadComponent: () =>
+          import('./products/seller-product-detail.component').then(
+            (m) => m.SellerProductDetailComponent,
           ),
       },
       {

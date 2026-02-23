@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Product, ProductService, Shop, ShopService, ToastService } from '@/core';
 import { ZardButtonComponent } from '@/shared/components/button';
@@ -29,7 +29,7 @@ import { ZardSelectImports } from '@/shared/components/select';
           <h1 class="text-2xl font-bold text-foreground">Produits vendeur</h1>
           <p class="text-muted-foreground">Créez, modifiez, archivez et supprimez vos produits.</p>
         </div>
-        <a z-button routerLink="/seller/products/new">Nouveau produit</a>
+        <button z-button type="button" (click)="goToCreateProduct()">Nouveau produit</button>
       </div>
 
       <z-card class="p-4">
@@ -85,6 +85,9 @@ import { ZardSelectImports } from '@/shared/components/select';
 
       <ng-template #actionsTpl let-product>
         <div class="flex flex-wrap justify-end gap-2">
+          <a z-button zType="outline" zSize="sm" [routerLink]="['/seller/products', product._id]">
+            Détails
+          </a>
           <a z-button zType="outline" zSize="sm" [routerLink]="['/seller/products', product._id, 'edit']">
             Modifier
           </a>
@@ -127,6 +130,7 @@ import { ZardSelectImports } from '@/shared/components/select';
 })
 export class SellerProductListComponent implements OnInit {
   readonly productService = inject(ProductService);
+  private readonly router = inject(Router);
   private readonly shopService = inject(ShopService);
   private readonly toast = inject(ToastService);
 
@@ -214,6 +218,10 @@ export class SellerProductListComponent implements OnInit {
     this.selectedShopId = '';
     this.currentPage.set(1);
     void this.loadProducts();
+  }
+
+  goToCreateProduct(): void {
+    void this.router.navigate(['/seller/products/new']);
   }
 
   async archive(product: Product): Promise<void> {

@@ -78,6 +78,9 @@ import { ZardSelectImports } from '@/shared/components/select';
 
       <ng-template #actionsTpl let-shop>
         <div class="flex flex-wrap justify-end gap-2">
+          <a z-button zType="outline" zSize="sm" [routerLink]="['/seller/shops', shop._id]">
+            Détails
+          </a>
           <a z-button zType="outline" zSize="sm" [routerLink]="['/seller/shops', shop._id, 'edit']">
             Modifier
           </a>
