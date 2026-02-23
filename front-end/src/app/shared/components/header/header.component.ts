@@ -12,7 +12,7 @@ import { AuthService, CartService } from '../../../core';
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center h-16">
           <!-- Logo -->
-          <a routerLink="/" class="flex items-center space-x-2">
+          <a [routerLink]="getHomeRoute()" class="flex items-center space-x-2">
             <span class="text-2xl">🛒</span>
             <span class="text-xl font-bold text-gray-900">MEAN Mall</span>
           </a>
@@ -20,27 +20,20 @@ import { AuthService, CartService } from '../../../core';
           <!-- Navigation -->
           <nav class="hidden md:flex items-center space-x-8">
             <a
-              routerLink="/"
+              [routerLink]="getHomeRoute()"
               routerLinkActive="text-primary"
               [routerLinkActiveOptions]="{ exact: true }"
               class="text-gray-600 hover:text-gray-900 transition-colors"
             >
               Accueil
             </a>
-            <a
-              routerLink="/buyer/products"
-              routerLinkActive="text-primary"
-              class="text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              Produits
-            </a>
-            @if (user()?.role === 'SELLER') {
+            @if (showProductsMenu()) {
               <a
-                routerLink="/seller"
+                routerLink="/buyer/products"
                 routerLinkActive="text-primary"
                 class="text-gray-600 hover:text-gray-900 transition-colors"
               >
-                Espace vendeur
+                Produits
               </a>
             }
           </nav>
@@ -206,5 +199,20 @@ export class HeaderComponent implements OnInit {
   logout(): void {
     this.cartService.resetCart();
     this.authService.logout();
+  }
+
+  getHomeRoute(): string {
+    if (!this.isAuthenticated()) return '/';
+
+    const role = this.user()?.role;
+    if (role === 'SELLER') return '/seller';
+    if (role === 'BUYER') return '/buyer/products';
+    if (role === 'ADMIN') return '/admin';
+    return '/';
+  }
+
+  showProductsMenu(): boolean {
+    if (!this.isAuthenticated()) return true;
+    return this.user()?.role !== 'BUYER';
   }
 }
