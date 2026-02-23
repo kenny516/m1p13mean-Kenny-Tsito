@@ -168,6 +168,7 @@ export class SellerProductFormComponent implements OnInit {
   async onSubmit(): Promise<void> {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      this.toast.error('Veuillez compléter tous les champs obligatoires avant de créer le produit');
       return;
     }
 
