@@ -131,9 +131,20 @@ export class StockMovementLinesComponent implements OnInit {
     { accessorKey: 'quantity', header: 'Qté' },
     {
       accessorFn: (line: unknown) =>
+        `${(line as StockMovementLine).unitPrice.toLocaleString('fr-FR')} MGA`,
+      id: 'unitPrice',
+      header: 'Prix unitaire',
+    },
+    {
+      accessorFn: (line: unknown) =>
         `${(line as StockMovementLine).totalAmount.toLocaleString('fr-FR')} MGA`,
       id: 'totalAmount',
       header: 'Montant',
+    },
+    {
+      accessorFn: (line: unknown) => this.displayActor((line as StockMovementLine).performedBy),
+      id: 'performedBy',
+      header: 'Effectué par',
     },
     {
       accessorFn: (line: unknown) =>
@@ -209,5 +220,17 @@ export class StockMovementLinesComponent implements OnInit {
       return namedShop.name || '-';
     }
     return String(line.shopId || '-');
+  }
+
+  private displayActor(actor: unknown): string {
+    if (actor && typeof actor === 'object') {
+      const user = actor as {
+        email?: string;
+        profile?: { firstName?: string; lastName?: string };
+      };
+      const fullName = `${user.profile?.firstName || ''} ${user.profile?.lastName || ''}`.trim();
+      return fullName || user.email || '-';
+    }
+    return actor ? String(actor) : '-';
   }
 }

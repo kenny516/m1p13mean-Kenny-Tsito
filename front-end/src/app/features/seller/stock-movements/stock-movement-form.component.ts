@@ -10,12 +10,18 @@ import { Router, RouterLink } from '@angular/router';
 import {
   Product,
   ProductService,
-  Shop,
-  ShopService,
   StockMovementService,
   ToastService,
 } from '@/core';
-import { StockMovementPaymentMethod } from '@/core/models/stock-movement.model';
+import {
+  MovementType,
+  StockMovementPaymentMethod,
+} from '@/core/models/stock-movement.model';
+import {
+  ADJUSTMENT_REASONS,
+  MOVEMENT_TYPES,
+  PAYMENT_METHODS,
+} from '@/core/models/stock-movement.constants';
 import { ZardButtonComponent } from '@/shared/components/button';
 import { ZardCardComponent } from '@/shared/components/card';
 import { ZardInputDirective } from '@/shared/components/input';
@@ -49,8 +55,9 @@ import { ZardSelectImports } from '@/shared/components/select';
             <div>
               <p class="mb-1 text-sm text-muted-foreground">Type *</p>
               <z-select formControlName="movementType" class="w-full">
-                <z-select-item zValue="SUPPLY">SUPPLY</z-select-item>
-                <z-select-item zValue="SALE">SALE</z-select-item>
+                @for (type of movementTypeOptions; track type) {
+                  <z-select-item [zValue]="type">{{ type }}</z-select-item>
+                }
               </z-select>
             </div>
             <div>
@@ -73,6 +80,30 @@ import { ZardSelectImports } from '@/shared/components/select';
                 <p class="mb-1 text-sm text-muted-foreground">Contact fournisseur</p>
                 <input z-input formControlName="supplierContact" placeholder="Téléphone / email" />
               </div>
+            </div>
+          }
+
+          @if (form.value.movementType === 'ADJUSTMENT_PLUS' || form.value.movementType === 'ADJUSTMENT_MINUS') {
+            <div class="grid gap-4 md:grid-cols-2">
+              <div>
+                <p class="mb-1 text-sm text-muted-foreground">Raison d'ajustement *</p>
+                <z-select formControlName="adjustmentReason" class="w-full">
+                  @for (reason of adjustmentReasons; track reason) {
+                    <z-select-item [zValue]="reason">{{ reason }}</z-select-item>
+                  }
+                </z-select>
+              </div>
+              <div>
+                <p class="mb-1 text-sm text-muted-foreground">Notes d'ajustement</p>
+                <input z-input formControlName="adjustmentNotes" placeholder="Note optionnelle" />
+              </div>
+            </div>
+          }
+
+          @if (form.value.movementType === 'RESERVATION' || form.value.movementType === 'RESERVATION_CANCEL') {
+            <div>
+              <p class="mb-1 text-sm text-muted-foreground">Cart ID *</p>
+              <input z-input formControlName="cartId" placeholder="ObjectId du panier" />
             </div>
           }
 
@@ -126,12 +157,6 @@ import { ZardSelectImports } from '@/shared/components/select';
 
             @for (item of items.controls; track $index) {
               <div class="grid gap-3 rounded-md border border-border p-3 md:grid-cols-5" [formGroup]="$any(item)">
-                <z-select formControlName="shopId" class="w-full">
-                  <z-select-item zValue="">Boutique</z-select-item>
-                  @for (shop of shops(); track shop._id) {
-                    <z-select-item [zValue]="shop._id">{{ shop.name }}</z-select-item>
-                  }
-                </z-select>
 
                 <z-select formControlName="productId" class="w-full">
                   <z-select-item zValue="">Produit</z-select-item>
@@ -139,6 +164,13 @@ import { ZardSelectImports } from '@/shared/components/select';
                     <z-select-item [zValue]="product._id">{{ product.title }}</z-select-item>
                   }
                 </z-select>
+
+                <input
+                  z-input
+                  [value]="getShopNameByProductId(item.get('productId')?.value || '')"
+                  placeholder="Boutique auto"
+                  readonly
+                />
 
                 <input z-input type="number" min="1" formControlName="quantity" placeholder="Quantité" />
                 <input z-input type="number" min="0" formControlName="unitPrice" placeholder="Prix unitaire" />
@@ -164,28 +196,28 @@ import { ZardSelectImports } from '@/shared/components/select';
 export class StockMovementFormComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
-  private readonly shopService = inject(ShopService);
   private readonly productService = inject(ProductService);
   private readonly stockMovementService = inject(StockMovementService);
   private readonly toast = inject(ToastService);
 
   readonly isSubmitting = signal(false);
-  readonly shops = signal<Shop[]>([]);
   readonly products = signal<Product[]>([]);
 
-  readonly paymentMethods: StockMovementPaymentMethod[] = [
-    'WALLET',
-    'CARD',
-    'MOBILE_MONEY',
-    'CASH_ON_DELIVERY',
-  ];
+  readonly paymentMethods: readonly StockMovementPaymentMethod[] = PAYMENT_METHODS;
+
+  readonly movementTypeOptions: readonly MovementType[] = MOVEMENT_TYPES;
+
+  readonly adjustmentReasons = ADJUSTMENT_REASONS;
 
   readonly form = this.fb.group({
     movementType: ['SUPPLY', [Validators.required]],
     date: ['', [Validators.required]],
     note: [''],
+    cartId: [''],
     supplierName: [''],
     supplierContact: [''],
+    adjustmentReason: [''],
+    adjustmentNotes: [''],
     saleCartId: [''],
     paymentMethod: ['WALLET'],
     deliveryStreet: [''],
@@ -201,17 +233,7 @@ export class StockMovementFormComponent implements OnInit {
 
   ngOnInit(): void {
     this.addItem();
-    void this.loadShops();
     void this.loadProducts();
-  }
-
-  async loadShops(): Promise<void> {
-    try {
-      const response = await this.shopService.getMyShops(undefined, 1, 100);
-      this.shops.set(response.shops);
-    } catch {
-      this.toast.error('Impossible de charger les boutiques');
-    }
   }
 
   async loadProducts(): Promise<void> {
@@ -225,7 +247,6 @@ export class StockMovementFormComponent implements OnInit {
 
   addItem(): void {
     const group = this.fb.group({
-      shopId: ['', [Validators.required]],
       productId: ['', [Validators.required]],
       quantity: [1, [Validators.required, Validators.min(1)]],
       unitPrice: [0, [Validators.required, Validators.min(0)]],
@@ -246,15 +267,31 @@ export class StockMovementFormComponent implements OnInit {
 
     this.isSubmitting.set(true);
     const value = this.form.getRawValue();
+    const conditionalError = this.getConditionalValidationError();
+    if (conditionalError) {
+      this.toast.error(conditionalError);
+      this.isSubmitting.set(false);
+      return;
+    }
 
     const payload: Record<string, unknown> = {
       movementType: value.movementType,
       date: value.date,
       note: value.note || undefined,
-      items: this.items.controls.map((group) => {
-        const row = group.getRawValue();
+      items: this.items.controls.map((group, index) => {
+        const row = group.getRawValue() as {
+          productId: string;
+          quantity: number;
+          unitPrice: number;
+        };
+
+        const shopId = this.resolveShopIdFromProductId(row.productId);
+        if (!shopId) {
+          throw new Error(`Ligne ${index + 1}: boutique introuvable pour le produit sélectionné`);
+        }
+
         return {
-          shopId: row.shopId,
+          shopId,
           productId: row.productId,
           quantity: Number(row.quantity),
           unitPrice: Number(row.unitPrice),
@@ -269,6 +306,17 @@ export class StockMovementFormComponent implements OnInit {
           contact: value.supplierContact || undefined,
         },
       };
+    }
+
+    if (value.movementType === 'ADJUSTMENT_PLUS' || value.movementType === 'ADJUSTMENT_MINUS') {
+      payload['adjustment'] = {
+        reason: value.adjustmentReason,
+        notes: value.adjustmentNotes || undefined,
+      };
+    }
+
+    if (value.movementType === 'RESERVATION' || value.movementType === 'RESERVATION_CANCEL') {
+      payload['cartId'] = value.cartId;
     }
 
     if (value.movementType === 'SALE') {
@@ -288,10 +336,62 @@ export class StockMovementFormComponent implements OnInit {
       await this.stockMovementService.createMovement(payload as never);
       this.toast.success('Mouvement créé avec succès');
       await this.router.navigate(['/seller/stock-movements']);
-    } catch {
-      this.toast.error('Erreur lors de la création du mouvement');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erreur lors de la création du mouvement';
+      this.toast.error(message);
     } finally {
       this.isSubmitting.set(false);
     }
+  }
+
+  getShopNameByProductId(productId: string): string {
+    if (!productId) return '';
+
+    const product = this.products().find((entry) => entry._id === productId);
+    if (!product) return '';
+
+    const shop = product.shopId;
+    if (typeof shop === 'string') return shop;
+    return shop.name || '';
+  }
+
+  private resolveShopIdFromProductId(productId: string): string | null {
+    const product = this.products().find((entry) => entry._id === productId);
+    if (!product) return null;
+
+    const shop = product.shopId;
+    return typeof shop === 'string' ? shop : shop._id;
+  }
+
+  private getConditionalValidationError(): string | null {
+    const values = this.form.getRawValue();
+    const movementType = values.movementType;
+
+    if (movementType === 'SUPPLY' && !values.supplierName) {
+      return 'Le nom du fournisseur est requis pour un mouvement SUPPLY';
+    }
+
+    if (movementType === 'SALE') {
+      if (!values.saleCartId) return 'Le Cart ID est requis pour un mouvement SALE';
+      if (!values.deliveryStreet || !values.deliveryCity) {
+        return 'L\'adresse de livraison (rue et ville) est requise pour un mouvement SALE';
+      }
+    }
+
+    if (
+      (movementType === 'ADJUSTMENT_PLUS' || movementType === 'ADJUSTMENT_MINUS') &&
+      !values.adjustmentReason
+    ) {
+      return 'La raison d\'ajustement est requise pour ce type de mouvement';
+    }
+
+    if (
+      (movementType === 'RESERVATION' || movementType === 'RESERVATION_CANCEL') &&
+      !values.cartId
+    ) {
+      return 'Le Cart ID est requis pour ce type de réservation';
+    }
+
+    return null;
   }
 }

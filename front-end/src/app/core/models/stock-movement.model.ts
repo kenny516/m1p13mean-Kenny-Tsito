@@ -1,22 +1,17 @@
-export type MovementType =
-  | 'SUPPLY'
-  | 'SALE'
-  | 'RETURN_CUSTOMER'
-  | 'RETURN_SUPPLIER'
-  | 'ADJUSTMENT_PLUS'
-  | 'ADJUSTMENT_MINUS'
-  | 'RESERVATION'
-  | 'RESERVATION_CANCEL';
+import {
+  ADJUSTMENT_REASONS,
+  MOVEMENT_TYPES,
+  PAYMENT_METHODS,
+  SALE_STATUSES,
+} from './stock-movement.constants';
+
+export type MovementType = (typeof MOVEMENT_TYPES)[number];
 
 export type MovementDirection = 'IN' | 'OUT';
 
-export type SaleStatus = 'CONFIRMED' | 'DELIVERED' | 'CANCELLED';
+export type SaleStatus = (typeof SALE_STATUSES)[number];
 
-export type StockMovementPaymentMethod =
-  | 'WALLET'
-  | 'CARD'
-  | 'MOBILE_MONEY'
-  | 'CASH_ON_DELIVERY';
+export type StockMovementPaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 export interface StockMovementSaleInfo {
   cartId: string;
@@ -44,7 +39,7 @@ export interface StockMovementSupplyInfo {
 }
 
 export interface StockMovementAdjustmentInfo {
-  reason: 'INVENTORY_COUNT' | 'DAMAGED' | 'LOST' | 'STOLEN' | 'EXPIRED' | 'OTHER';
+  reason: (typeof ADJUSTMENT_REASONS)[number];
   notes?: string;
 }
 
@@ -59,6 +54,16 @@ export interface StockMovement {
   sale?: StockMovementSaleInfo;
   supply?: StockMovementSupplyInfo;
   adjustment?: StockMovementAdjustmentInfo;
+  performedBy?:
+    | string
+    | {
+        _id: string;
+        email?: string;
+        profile?: {
+          firstName?: string;
+          lastName?: string;
+        };
+      };
   note?: string;
   date?: string;
   createdAt: string;
@@ -69,15 +74,39 @@ export interface StockMovementLine {
   _id: string;
   reference: string;
   moveId: string;
-  productId: string;
-  shopId: string;
+  productId:
+    | string
+    | {
+        _id: string;
+        title?: string;
+        sku?: string;
+        images?: string[];
+        price?: number;
+      };
+  shopId:
+    | string
+    | {
+        _id: string;
+        name?: string;
+      };
   movementType: MovementType;
   direction: MovementDirection;
+  cartId?: string;
   quantity: number;
   unitPrice: number;
   totalAmount: number;
   stockBefore: number;
   stockAfter: number;
+  performedBy?:
+    | string
+    | {
+        _id: string;
+        email?: string;
+        profile?: {
+          firstName?: string;
+          lastName?: string;
+        };
+      };
   date: string;
   createdAt: string;
   updatedAt?: string;
