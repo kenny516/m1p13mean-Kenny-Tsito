@@ -255,31 +255,6 @@ export const moderateShop = async (id, status, rejectionReason) => {
 };
 
 /**
- * Met à jour les statistiques d'une boutique (usage interne)
- * Utilisé par d'autres services (commandes, produits, avis)
- */
-/* export const updateShopStats = async (shopId, statUpdates) => {
-	const shop = await Shop.findById(shopId);
-	if (!shop) {
-		throw new ApiError(404, "NOT_FOUND", "Boutique non trouvée");
-	}
-
-	// Mise à jour incrémentale des stats
-	if (statUpdates.totalSales !== undefined) {
-		shop.stats.totalSales += statUpdates.totalSales;
-	}
-	if (statUpdates.totalProducts !== undefined) {
-		shop.stats.totalProducts += statUpdates.totalProducts;
-	}
-	if (statUpdates.rating !== undefined) {
-		shop.stats.rating = statUpdates.rating;
-	}
-
-	await shop.save();
-	return shop;
-}; */
-
-/**
  * Mise à jour admin d'une boutique (commissionRate, etc.)
  */
 export const adminUpdateShop = async (id, updateData) => {

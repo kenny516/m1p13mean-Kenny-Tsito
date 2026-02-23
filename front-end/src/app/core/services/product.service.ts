@@ -174,6 +174,7 @@ export class ProductService {
         if (filters.status && filters.status !== 'ALL')
           params['status'] = filters.status;
         if (filters.category) params['category'] = filters.category;
+        if (filters.shopId) params['shopId'] = filters.shopId;
       }
 
       const response = await this.api.getWithPagination<Product[]>(

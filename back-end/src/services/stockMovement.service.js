@@ -112,9 +112,28 @@ export const listMyShopMovements = async (sellerId, filters = {}) => {
 		return { movements: [], total: 0, page: 1, limit: filters.limit || 10 };
 	}
 
+	let scopedShopFilter = { $in: shopIds };
+	if (filters.shopId) {
+		const requestedShopId = filters.shopId.toString();
+		const ownsRequestedShop = shopIds.some(
+			(shopId) => shopId.toString() === requestedShopId,
+		);
+
+		if (!ownsRequestedShop) {
+			return {
+				movements: [],
+				total: 0,
+				page: Number(filters.page) || 1,
+				limit: Number(filters.limit) || 10,
+			};
+		}
+
+		scopedShopFilter = requestedShopId;
+	}
+
 	const moveIds = await _resolveMoveIdsFromLineFilters({
 		...filters,
-		shopId: { $in: shopIds },
+		shopId: scopedShopFilter,
 	});
 
 	return _listMovementsByIds(moveIds, filters);

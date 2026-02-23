@@ -24,7 +24,6 @@ import { ZardButtonComponent } from '../../../shared/components/button';
 import { ZardIconComponent } from '../../../shared/components/icon';
 import { ZardSkeletonComponent } from '../../../shared/components/skeleton';
 import { ZardPaginationComponent } from '../../../shared/components/pagination';
-import { ZardCheckboxComponent } from '../../../shared/components/checkbox';
 import { ZardLabelComponent } from '../../../shared/components/label';
 import { ZardSeparatorComponent } from '../../../shared/components/separator';
 import { ZardBadgeComponent } from '../../../shared/components/badge';
@@ -55,7 +54,7 @@ import { ZardBadgeComponent } from '../../../shared/components/badge';
     <div class="min-h-screen bg-muted/30">
       <!-- Header avec recherche -->
       <div class="bg-background border-b border-border sticky top-0 z-10">
-        <div class="max-w-7xl mx-auto px-4 py-4">
+        <div class="max-w-screen-2xl mx-auto px-4 py-4">
           <div class="flex items-center gap-4">
             <!-- Recherche -->
             <div class="flex-1 relative">
@@ -101,7 +100,7 @@ import { ZardBadgeComponent } from '../../../shared/components/badge';
         </div>
       </div>
 
-      <div class="max-w-7xl mx-auto px-4 py-6">
+      <div class="max-w-screen-2xl mx-auto px-4 py-6">
         <div class="flex gap-6">
           <!-- Sidebar Filtres -->
           <aside

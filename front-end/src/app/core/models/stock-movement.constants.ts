@@ -1,0 +1,25 @@
+export const MOVEMENT_TYPES = [
+  'SUPPLY',
+  'SALE',
+  'RETURN_CUSTOMER',
+  'RETURN_SUPPLIER',
+  'ADJUSTMENT_PLUS',
+  'ADJUSTMENT_MINUS',
+  'RESERVATION',
+  'RESERVATION_CANCEL',
+] as const;
+
+export const RESERVATION_MOVEMENT_TYPES = ['RESERVATION', 'RESERVATION_CANCEL'] as const;
+
+export const SALE_STATUSES = ['CONFIRMED', 'DELIVERED', 'CANCELLED'] as const;
+
+export const PAYMENT_METHODS = ['WALLET', 'CARD', 'MOBILE_MONEY', 'CASH_ON_DELIVERY'] as const;
+
+export const ADJUSTMENT_REASONS = [
+  'INVENTORY_COUNT',
+  'DAMAGED',
+  'LOST',
+  'STOLEN',
+  'EXPIRED',
+  'OTHER',
+] as const;

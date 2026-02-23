@@ -31,7 +31,16 @@ export type ShopStatus =
  */
 export interface Shop {
   _id: string;
-  sellerId: string;
+  sellerId:
+    | string
+    | {
+        _id: string;
+        email?: string;
+        profile?: {
+          firstName?: string;
+          lastName?: string;
+        };
+      };
   name: string;
   description?: string;
   logo?: string;

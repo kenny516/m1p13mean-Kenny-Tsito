@@ -8,13 +8,21 @@ import { ApiError } from "../middlewares/error.middleware.js";
  */
 export const create = async (req, res, next) => {
 	try {
-		const productData = req.body;
+		const { shopId, ...productData } = req.body;
 		const sellerId = req.user._id;
 
-		// Récupérer la boutique du vendeur (seulement _id et isActive)
-		const shop = await Shop.findOne({ sellerId }).select("_id isActive").lean();
+		const shop = await Shop.findOne({
+			_id: shopId,
+			sellerId,
+		})
+			.select("_id isActive")
+			.lean();
 		if (!shop) {
-			throw new ApiError(404, "NOT_FOUND", "Vous devez d'abord créer une boutique");
+			throw new ApiError(
+				404,
+				"NOT_FOUND",
+				"Boutique introuvable ou non autorisée pour ce vendeur",
+			);
 		}
 		if (!shop.isActive) {
 			throw new ApiError(403, "FORBIDDEN", "Votre boutique n'est pas encore active");

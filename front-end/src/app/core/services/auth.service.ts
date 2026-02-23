@@ -231,7 +231,7 @@ export class AuthService {
         break;
       case 'BUYER':
       default:
-        this.router.navigate(['/']);
+        this.router.navigate(['/buyer/products']);
         break;
     }
   }

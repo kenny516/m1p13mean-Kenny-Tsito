@@ -5,3 +5,5 @@ export * from './user.service';
 export * from './wallet.service';
 export * from './product.service';
 export * from './cart.service';
+export * from './shop.service';
+export * from './stock-movement.service';

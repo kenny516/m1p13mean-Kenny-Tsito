@@ -110,10 +110,10 @@ export const listShopsQuerySchema = Joi.object({
 	}),
 
 	status: Joi.string()
-		.valid("DRAFT", "PENDING", "ACTIVE", "REJECTED", "ARCHIVED")
+		.valid("DRAFT", "PENDING", "ACTIVE", "REJECTED", "ARCHIVED", "ALL")
 		.optional()
 		.messages({
-			"any.only": "Le statut doit être DRAFT, PENDING, ACTIVE, REJECTED ou ARCHIVED",
+			"any.only": "Le statut doit être DRAFT, PENDING, ACTIVE, REJECTED, ARCHIVED ou ALL",
 		}),
 
 	sellerId: Joi.string().optional(),

@@ -91,6 +91,7 @@ export interface ProductFilters {
  * Interface pour créer un produit
  */
 export interface CreateProductRequest {
+  shopId: string;
   title: string;
   description: string;
   category: string;
