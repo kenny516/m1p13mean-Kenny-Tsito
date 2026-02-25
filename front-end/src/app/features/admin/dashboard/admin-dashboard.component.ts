@@ -241,6 +241,25 @@ import { UserService, ToastService, UserStats } from '../../../core';
                   </svg>
                 </a>
                 <a
+                  routerLink="/admin/shops"
+                  class="flex items-center justify-between p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
+                >
+                  <span class="text-purple-700">Gérer les boutiques</span>
+                  <svg
+                    class="w-5 h-5 text-purple-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </a>
+                <a
                   routerLink="/admin/users/new"
                   class="flex items-center justify-between p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
                 >
