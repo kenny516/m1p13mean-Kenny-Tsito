@@ -30,4 +30,16 @@ export const ADMIN_ROUTES: Routes = [
     loadComponent: () =>
       import('./users/user-form.component').then((m) => m.UserFormComponent),
   },
+  {
+    path: 'shops',
+    loadComponent: () =>
+      import('./shops/shop-list.component').then((m) => m.ShopListComponent),
+  },
+  {
+    path: 'products',
+    loadComponent: () =>
+      import('./products/product-list.component').then(
+        (m) => m.ProductListComponent,
+      ),
+  },
 ];
