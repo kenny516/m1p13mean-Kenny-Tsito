@@ -34,12 +34,14 @@ export const requireActiveProduct = async (productId, shopId = null, session = n
 
 /**
  * Crée un nouveau produit
+ * Le statut est forcé à PENDING pour validation admin
  */
 export const createProduct = async (productData, sellerId, shopId) => {
 	const product = new Product({
 		...productData,
 		sellerId,
 		shopId,
+		status: "PENDING", // Toujours en attente de validation admin
 	});
 
 	await product.save();
@@ -142,6 +144,7 @@ export const getProductById = async (id, session = null) => {
 
 /**
  * Met à jour un produit
+ * Si le produit était ACTIVE et qu'un vendeur le modifie, il repasse en PENDING
  */
 export const updateProduct = async (id, updateData, userId, userRole) => {
 	const product = await getProductById(id);
@@ -160,15 +163,17 @@ export const updateProduct = async (id, updateData, userId, userRole) => {
 		delete updateData.stock;
 	}
 
-	if (updateData.status) {
+	// Si vendeur modifie un produit ACTIVE, repasser en PENDING pour re-validation
+	// Sauf si c'est juste un changement de statut vers ARCHIVED
+	const isStatusChangeOnly = Object.keys(updateData).length === 1 && updateData.status;
+	const isArchiving = updateData.status === "ARCHIVED";
+	
+	if (userRole !== "ADMIN" && product.status === "ACTIVE" && !isStatusChangeOnly) {
+		product.status = "PENDING";
+	} else if (updateData.status) {
 		product.status = updateData.status;
 		delete updateData.status;
 	}
-
-	// Si modif par vendeur, potentiellement remettre en PENDING si c'était ACTIVE
-	// if (userRole !== 'ADMIN' && product.moderation.status === 'ACTIVE') {
-	//   product.moderation.status = 'PENDING';
-	// }
 
 	// Mise à jour des champs directs
 	Object.assign(product, updateData);

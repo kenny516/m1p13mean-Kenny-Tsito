@@ -35,4 +35,11 @@ export const ADMIN_ROUTES: Routes = [
     loadComponent: () =>
       import('./shops/shop-list.component').then((m) => m.ShopListComponent),
   },
+  {
+    path: 'products',
+    loadComponent: () =>
+      import('./products/product-list.component').then(
+        (m) => m.ProductListComponent,
+      ),
+  },
 ];

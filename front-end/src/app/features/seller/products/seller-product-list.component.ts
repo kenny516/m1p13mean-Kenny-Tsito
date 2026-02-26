@@ -2,9 +2,11 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { Product, ProductService, Shop, ShopService, ToastService } from '@/core';
+import { Product, ProductService, ProductStatus, Shop, ShopService, ToastService } from '@/core';
 import { ZardButtonComponent } from '@/shared/components/button';
 import { ZardCardComponent } from '@/shared/components/card';
+import { ZardBadgeComponent } from '@/shared/components/badge';
+import { ZardIconComponent } from '@/shared/components/icon';
 import { DataTableColumn, DataTableComponent } from '@/shared/components/data-table';
 import { ZardInputDirective } from '@/shared/components/input';
 import { ZardSelectImports } from '@/shared/components/select';
@@ -18,6 +20,8 @@ import { ZardSelectImports } from '@/shared/components/select';
     RouterLink,
     ZardCardComponent,
     ZardButtonComponent,
+    ZardBadgeComponent,
+    ZardIconComponent,
     ZardInputDirective,
     ...ZardSelectImports,
     DataTableComponent,
@@ -84,17 +88,46 @@ import { ZardSelectImports } from '@/shared/components/select';
       />
 
       <ng-template #actionsTpl let-product>
-        <div class="flex flex-wrap justify-end gap-2">
-          <a z-button zType="outline" zSize="sm" [routerLink]="['/seller/products', product._id]">
-            Détails
-          </a>
-          <a z-button zType="outline" zSize="sm" [routerLink]="['/seller/products', product._id, 'edit']">
-            Modifier
-          </a>
-          @if (product.status !== 'ARCHIVED') {
-            <button z-button zType="outline" zSize="sm" (click)="archive(product)">Archiver</button>
+        <div class="space-y-2">
+          <!-- Badge de statut avec message explicatif -->
+          <div class="flex items-center gap-2 mb-2">
+            <z-badge [zType]="getStatusBadgeType(product.status)" zShape="pill">
+              {{ getStatusLabel(product.status) }}
+            </z-badge>
+            @if (product.status === 'PENDING') {
+              <span class="text-xs text-muted-foreground flex items-center gap-1">
+                <z-icon zType="clock" class="h-3 w-3" />
+                En attente de validation
+              </span>
+            }
+            @if (product.status === 'REJECTED') {
+              <span class="text-xs text-destructive flex items-center gap-1" [title]="product.rejectionReason || 'Aucune raison spécifiée'">
+                <z-icon zType="circle-alert" class="h-3 w-3" />
+                Rejeté
+              </span>
+            }
+          </div>
+          
+          <!-- Raison du rejet si applicable -->
+          @if (product.status === 'REJECTED' && product.rejectionReason) {
+            <div class="text-xs text-destructive/80 bg-destructive/10 p-2 rounded mb-2 max-w-xs">
+              <strong>Raison:</strong> {{ product.rejectionReason }}
+            </div>
           }
-          <button z-button zType="destructive" zSize="sm" (click)="remove(product)">Supprimer</button>
+          
+          <!-- Actions -->
+          <div class="flex flex-wrap justify-end gap-2">
+            <a z-button zType="outline" zSize="sm" [routerLink]="['/seller/products', product._id]">
+              Détails
+            </a>
+            <a z-button zType="outline" zSize="sm" [routerLink]="['/seller/products', product._id, 'edit']">
+              Modifier
+            </a>
+            @if (product.status !== 'ARCHIVED') {
+              <button z-button zType="outline" zSize="sm" (click)="archive(product)">Archiver</button>
+            }
+            <button z-button zType="destructive" zSize="sm" (click)="remove(product)">Supprimer</button>
+          </div>
         </div>
       </ng-template>
 
@@ -163,10 +196,6 @@ export class SellerProductListComponent implements OnInit {
       },
       id: 'shop',
       header: 'Boutique',
-    },
-    {
-      accessorKey: 'status',
-      header: 'Statut',
     },
   ];
 
@@ -245,5 +274,34 @@ export class SellerProductListComponent implements OnInit {
     } catch {
       this.toast.error('Échec de suppression');
     }
+  }
+
+  // === Helpers pour le statut ===
+
+  getStatusLabel(status: ProductStatus): string {
+    const labels: Record<ProductStatus, string> = {
+      DRAFT: 'Brouillon',
+      PENDING: 'En attente',
+      ACTIVE: 'Actif',
+      REJECTED: 'Rejeté',
+      ARCHIVED: 'Archivé',
+    };
+    return labels[status] || status;
+  }
+
+  getStatusBadgeType(
+    status: ProductStatus,
+  ): 'default' | 'secondary' | 'destructive' | 'outline' {
+    const types: Record<
+      ProductStatus,
+      'default' | 'secondary' | 'destructive' | 'outline'
+    > = {
+      DRAFT: 'secondary',
+      PENDING: 'outline',
+      ACTIVE: 'default',
+      REJECTED: 'destructive',
+      ARCHIVED: 'secondary',
+    };
+    return types[status] || 'secondary';
   }
 }

@@ -118,6 +118,14 @@ export interface UpdateProductRequest {
 }
 
 /**
+ * Interface pour modérer un produit (admin)
+ */
+export interface ModerateProductRequest {
+  status: 'ACTIVE' | 'REJECTED';
+  rejectionReason?: string;
+}
+
+/**
  * Options de tri pour les produits
  */
 export type ProductSortOption =
