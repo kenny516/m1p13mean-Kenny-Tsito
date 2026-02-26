@@ -5,3 +5,4 @@ export * from "./shop.validation.js";
 export * from "./stockMovement.validation.js";
 export * from "./stockMovementLine.validation.js";
 export * from "./cart.validation.js";
+export * from "./settings.validation.js";

@@ -5,3 +5,4 @@ export * as walletController from "./wallet.controller.js";
 export * as shopController from "./shop.controller.js";
 export * as stockMovementController from "./stockMovement.controller.js";
 export * as cartController from "./cart.controller.js";
+export * as settingsController from "./settings.controller.js";
