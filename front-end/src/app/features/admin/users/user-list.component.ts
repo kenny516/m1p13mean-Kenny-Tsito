@@ -374,7 +374,7 @@ export class UserListComponent implements OnInit {
     {
       id: 'user',
       header: 'Utilisateur',
-      accessorKey: 'profile.firstName',
+      accessorKey: 'email',
       enableSorting: true,
     },
     {

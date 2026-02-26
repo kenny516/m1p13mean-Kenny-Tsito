@@ -1,6 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ZardIconComponent, IconType } from '../icon';
+import { ZardIconComponent, ZardIcon } from '../icon';
 import { ZardButtonComponent } from '../button';
 
 /**
@@ -39,7 +39,7 @@ import { ZardButtonComponent } from '../button';
   `,
 })
 export class EmptyStateComponent {
-  @Input() icon: IconType = 'file-question';
+  @Input() icon: ZardIcon = 'file';
   @Input() title = 'Aucun résultat';
   @Input() description?: string;
   @Input() actionLabel?: string;

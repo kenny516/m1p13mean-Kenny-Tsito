@@ -1,7 +1,6 @@
 import { Component, Input, TemplateRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ZardCardComponent } from '../card';
-import { ZardIconComponent } from '../icon';
 
 /**
  * Composant de layout de page uniforme
@@ -19,7 +18,7 @@ import { ZardIconComponent } from '../icon';
 @Component({
   selector: 'app-page-layout',
   standalone: true,
-  imports: [CommonModule, ZardCardComponent, ZardIconComponent],
+  imports: [CommonModule, ZardCardComponent],
   template: `
     <div class="min-h-screen bg-muted/30 py-8">
       <div [class]="containerClass">

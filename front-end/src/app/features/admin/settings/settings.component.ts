@@ -11,7 +11,6 @@ import { ZardIconComponent } from '@/shared/components/icon';
 import { ZardSkeletonComponent } from '@/shared/components/skeleton';
 import { ZardSpinnerComponent } from '@/shared/components/spinner';
 import { ZardSwitchComponent } from '@/shared/components/switch';
-import { ZardSeparatorComponent } from '@/shared/components/separator';
 
 @Component({
   selector: 'app-admin-settings',
@@ -27,7 +26,6 @@ import { ZardSeparatorComponent } from '@/shared/components/separator';
     ZardSkeletonComponent,
     ZardSpinnerComponent,
     ZardSwitchComponent,
-    ZardSeparatorComponent,
   ],
   template: `
     <div class="min-h-screen bg-muted/30 py-8">
@@ -62,7 +60,7 @@ import { ZardSeparatorComponent } from '@/shared/components/separator';
               <div class="px-6 py-4 bg-muted/50 border-b border-border">
                 <div class="flex items-center gap-3">
                   <div class="p-2 rounded-lg bg-primary/10">
-                    <z-icon zType="percent" class="h-5 w-5 text-primary" />
+                    <z-icon zType="dollar-sign" class="h-5 w-5 text-primary" />
                   </div>
                   <div>
                     <h2 class="text-lg font-semibold text-foreground">
@@ -357,7 +355,7 @@ import { ZardSeparatorComponent } from '@/shared/components/separator';
               <div class="px-6 py-4 bg-muted/50 border-b border-border">
                 <div class="flex items-center gap-3">
                   <div class="p-2 rounded-lg bg-red-500/10">
-                    <z-icon zType="tool" class="h-5 w-5 text-red-500" />
+                    <z-icon zType="settings" class="h-5 w-5 text-red-500" />
                   </div>
                   <div>
                     <h2 class="text-lg font-semibold text-foreground">

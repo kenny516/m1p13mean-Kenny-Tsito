@@ -61,22 +61,22 @@ export interface UserDetailDialogData {
           Informations du profil
         </h4>
         <div class="grid grid-cols-2 gap-4 text-sm">
-          @if (user.profile.phone) {
+          @if (user.profile?.phone) {
             <div class="flex items-center gap-2 text-muted-foreground">
               <z-icon zType="user" class="h-4 w-4" />
-              <span>{{ user.profile.phone }}</span>
+              <span>{{ user.profile?.phone }}</span>
             </div>
           }
-          @if (user.profile.address?.street) {
+          @if (user.profile?.address?.street) {
             <div class="flex items-center gap-2 text-muted-foreground col-span-2">
               <z-icon zType="store" class="h-4 w-4" />
               <span>
-                {{ user.profile.address.street }}
-                @if (user.profile.address.city) {
-                  , {{ user.profile.address.city }}
+                {{ user.profile?.address?.street }}
+                @if (user.profile?.address?.city) {
+                  , {{ user.profile?.address?.city }}
                 }
-                @if (user.profile.address.postalCode) {
-                  {{ user.profile.address.postalCode }}
+                @if (user.profile?.address?.postalCode) {
+                  {{ user.profile?.address?.postalCode }}
                 }
               </span>
             </div>
