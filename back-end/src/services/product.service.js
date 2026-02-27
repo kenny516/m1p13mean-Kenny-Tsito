@@ -2,6 +2,39 @@ import mongoose from "mongoose";
 import Product from "../models/Product.js";
 import { ApiError } from "../middlewares/error.middleware.js";
 import { parseSortOption } from "../utils/request.util.js";
+import {
+	uploadProductImageAtIndex,
+	deleteByFileId,
+} from "./imagekit.service.js";
+
+const uploadAndAppendProductImages = async (product, files = []) => {
+	if (!Array.isArray(files) || files.length === 0) return;
+
+	const resolvedShopId =
+		typeof product.shopId === "string"
+			? product.shopId
+			: product.shopId?._id?.toString?.() || product.shopId?.toString?.();
+
+	if (!resolvedShopId || resolvedShopId === "[object Object]") {
+		throw new ApiError(400, "INVALID_SHOP", "Identifiant de boutique invalide pour l'upload d'image produit");
+	}
+
+	const startIndex = Array.isArray(product.images) ? product.images.length : 0;
+	const uploadedImages = [];
+
+	for (let index = 0; index < files.length; index += 1) {
+		const uploaded = await uploadProductImageAtIndex({
+			shopId: resolvedShopId,
+			productId: product._id.toString(),
+			index: startIndex + index,
+			file: files[index],
+		});
+
+		uploadedImages.push(uploaded);
+	}
+
+	product.images = [...(product.images || []), ...uploadedImages];
+};
 
 /**
  * Vérifie que le produit existe, est ACTIVE, et appartient au shop donné.
@@ -36,15 +69,22 @@ export const requireActiveProduct = async (productId, shopId = null, session = n
  * Crée un nouveau produit
  * Le statut est forcé à PENDING pour validation admin
  */
-export const createProduct = async (productData, sellerId, shopId) => {
+export const createProduct = async (productData, sellerId, shopId, imageFiles = []) => {
 	const product = new Product({
 		...productData,
 		sellerId,
 		shopId,
 		status: "PENDING", // Toujours en attente de validation admin
+		images: [],
 	});
 
 	await product.save();
+	await uploadAndAppendProductImages(product, imageFiles);
+
+	if (Array.isArray(imageFiles) && imageFiles.length > 0) {
+		await product.save();
+	}
+
 	return product;
 };
 
@@ -146,7 +186,7 @@ export const getProductById = async (id, session = null) => {
  * Met à jour un produit
  * Si le produit était ACTIVE et qu'un vendeur le modifie, il repasse en PENDING
  */
-export const updateProduct = async (id, updateData, userId, userRole) => {
+export const updateProduct = async (id, updateData, userId, userRole, imageFiles = []) => {
 	const product = await getProductById(id);
 
 	// Vérification des droits (Propriétaire ou Admin)
@@ -178,7 +218,47 @@ export const updateProduct = async (id, updateData, userId, userRole) => {
 	// Mise à jour des champs directs
 	Object.assign(product, updateData);
 
+	await uploadAndAppendProductImages(product, imageFiles);
+
 	await product.save();
+	return product;
+};
+
+export const addProductImages = async (id, userId, userRole, imageFiles = []) => {
+	if (!Array.isArray(imageFiles) || imageFiles.length === 0) {
+		throw new ApiError(400, "INVALID_FILE", "Aucune image fournie");
+	}
+
+	const product = await getProductById(id);
+
+	if (userRole !== "ADMIN" && product.sellerId.toString() !== userId) {
+		throw new ApiError(403, "FORBIDDEN", "Vous n'êtes pas autorisé à modifier ce produit");
+	}
+
+	await uploadAndAppendProductImages(product, imageFiles);
+	await product.save();
+
+	return product;
+};
+
+export const deleteProductImageByIndex = async (id, imageIndex, userId, userRole) => {
+	const product = await getProductById(id);
+
+	if (userRole !== "ADMIN" && product.sellerId.toString() !== userId) {
+		throw new ApiError(403, "FORBIDDEN", "Vous n'êtes pas autorisé à modifier ce produit");
+	}
+
+	if (!Number.isInteger(imageIndex) || imageIndex < 0 || imageIndex >= product.images.length) {
+		throw new ApiError(400, "INVALID_INDEX", "Index d'image invalide");
+	}
+
+	const [deletedImage] = product.images.splice(imageIndex, 1);
+	await product.save();
+
+	if (deletedImage?.fileId) {
+		await deleteByFileId(deletedImage.fileId);
+	}
+
 	return product;
 };
 

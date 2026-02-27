@@ -8,6 +8,10 @@ import {
   formatUserResponse,
 } from "../utils/auth.utils.js";
 import { createOptionalSession } from "../utils/transaction.util.js";
+import {
+  uploadUserAvatar as uploadUserAvatarImage,
+  deleteByFileId,
+} from "./imagekit.service.js";
 
 /**
  * Service d'authentification
@@ -17,7 +21,7 @@ import { createOptionalSession } from "../utils/transaction.util.js";
 /**
  * Enregistre un nouvel utilisateur et crée son wallet
  */
-export const registerUser = async ({ email, password, role, profile }) => {
+export const registerUser = async ({ email, password, role, profile, avatarFile }) => {
   const txn = await createOptionalSession();
 
   try {
@@ -46,6 +50,13 @@ export const registerUser = async ({ email, password, role, profile }) => {
 
     // Associer le wallet à l'utilisateur
     user.walletId = wallet._id;
+
+    if (avatarFile) {
+      const uploadedAvatar = await uploadUserAvatarImage(user._id.toString(), avatarFile);
+      user.profile = user.profile || {};
+      user.profile.avatar = uploadedAvatar;
+    }
+
     const saveOptions = txn.session ? { session: txn.session } : {};
     await user.save(saveOptions);
 
@@ -102,13 +113,15 @@ export const getUserProfile = async (userId) => {
     throw new ApiError(404, "NOT_FOUND", "Utilisateur non trouvé");
   }
 
+  const serializedUser = user.toJSON();
+
   return {
-    _id: user._id,
-    email: user.email,
-    role: user.role,
-    profile: user.profile,
-    isValidated: user.isValidated,
-    isActive: user.isActive,
+    _id: serializedUser._id,
+    email: serializedUser.email,
+    role: serializedUser.role,
+    profile: serializedUser.profile,
+    isValidated: serializedUser.isValidated,
+    isActive: serializedUser.isActive,
     wallet: user.walletId
       ? {
           _id: user.walletId._id,
@@ -119,40 +132,81 @@ export const getUserProfile = async (userId) => {
           totalSpent: user.walletId.totalSpent,
         }
       : null,
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt,
+    createdAt: serializedUser.createdAt,
+    updatedAt: serializedUser.updatedAt,
   };
 };
 
 /**
  * Met à jour le profil d'un utilisateur
  */
-export const updateUserProfile = async (userId, profile) => {
-  const updateData = {};
-
-  if (profile.firstName !== undefined)
-    updateData["profile.firstName"] = profile.firstName;
-  if (profile.lastName !== undefined)
-    updateData["profile.lastName"] = profile.lastName;
-  if (profile.phone !== undefined) updateData["profile.phone"] = profile.phone;
-  if (profile.avatar !== undefined)
-    updateData["profile.avatar"] = profile.avatar;
-
-  if (profile.address) {
-    if (profile.address.street !== undefined)
-      updateData["profile.address.street"] = profile.address.street;
-    if (profile.address.city !== undefined)
-      updateData["profile.address.city"] = profile.address.city;
-    if (profile.address.postalCode !== undefined)
-      updateData["profile.address.postalCode"] = profile.address.postalCode;
-    if (profile.address.country !== undefined)
-      updateData["profile.address.country"] = profile.address.country;
-  }
-
-  const user = await User.findByIdAndUpdate(userId, updateData, { new: true });
+export const updateUserProfile = async (userId, profile = {}, avatarFile = null) => {
+  const user = await User.findById(userId);
 
   if (!user) {
     throw new ApiError(404, "NOT_FOUND", "Utilisateur non trouvé");
+  }
+
+  user.profile = user.profile || {};
+
+  if (profile.firstName !== undefined) user.profile.firstName = profile.firstName;
+  if (profile.lastName !== undefined) user.profile.lastName = profile.lastName;
+  if (profile.phone !== undefined) user.profile.phone = profile.phone;
+
+  if (profile.address) {
+    user.profile.address = user.profile.address || {};
+    if (profile.address.street !== undefined)
+      user.profile.address.street = profile.address.street;
+    if (profile.address.city !== undefined)
+      user.profile.address.city = profile.address.city;
+    if (profile.address.postalCode !== undefined)
+      user.profile.address.postalCode = profile.address.postalCode;
+    if (profile.address.country !== undefined)
+      user.profile.address.country = profile.address.country;
+  }
+
+  const previousFileId = user.profile.avatar?.fileId;
+
+  if (profile.avatar !== undefined) {
+      delete profile.avatar;
+  }
+
+  if (avatarFile) {
+    const uploadedAvatar = await uploadUserAvatarImage(user._id.toString(), avatarFile);
+    user.profile.avatar = uploadedAvatar;
+  }
+
+  await user.save();
+
+  if (avatarFile && previousFileId) {
+    await deleteByFileId(previousFileId);
+  }
+
+  return formatUserResponse(user);
+};
+
+export const uploadUserAvatar = async (userId, avatarFile) => {
+  if (!avatarFile) {
+    throw new ApiError(400, "INVALID_FILE", "Aucun fichier avatar fourni");
+  }
+
+  return updateUserProfile(userId, {}, avatarFile);
+};
+
+export const deleteUserAvatar = async (userId) => {
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new ApiError(404, "NOT_FOUND", "Utilisateur non trouvé");
+  }
+
+  const previousFileId = user.profile?.avatar?.fileId;
+  user.profile = user.profile || {};
+  user.profile.avatar = null;
+  await user.save();
+
+  if (previousFileId) {
+    await deleteByFileId(previousFileId);
   }
 
   return formatUserResponse(user);
@@ -187,10 +241,18 @@ export const changeUserPassword = async (
   return true;
 };
 
+export const checkEmailExists = async (email) => {
+  const existingUser = await User.exists({ email });
+  return !!existingUser;
+};
+
 export default {
   registerUser,
   loginUser,
   getUserProfile,
   updateUserProfile,
+  uploadUserAvatar,
+  deleteUserAvatar,
   changeUserPassword,
+  checkEmailExists,
 };

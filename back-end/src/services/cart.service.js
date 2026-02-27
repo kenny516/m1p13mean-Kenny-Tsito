@@ -37,10 +37,17 @@ const computeTotal = (items = []) =>
 
 const buildItemSnapshot = (product) => {
   const unitPrice = product.price || 0;
+  const images = (product.images || [])
+    .map((image) => {
+      if (typeof image === "string") return image;
+      return image?.url || null;
+    })
+    .filter(Boolean);
+
   return {
     title: product.title,
     description: product.description,
-    images: product.images || [],
+    images,
     unitPrice,
     availableStock: product.stock?.cache?.available || 0,
   };
@@ -448,7 +455,7 @@ export const confirmDelivery = async (userId, cartId) => {
     }
 
     await updateSaleStatus(cart.order.saleId, { status: "DELIVERED" }, userId);
-
+ 
     cart.status = "DELIVERED";
     const saveOptions = txn.session ? { session: txn.session } : {};
     await cart.save(saveOptions);

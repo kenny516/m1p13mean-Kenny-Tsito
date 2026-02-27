@@ -1,5 +1,26 @@
 import * as shopService from "../services/shop.service.js";
 
+const serializeShopMedia = (shop) => {
+	if (!shop) return shop;
+
+	const serialized =
+		typeof shop.toJSON === "function"
+			? shop.toJSON()
+			: { ...shop };
+
+	if (serialized.logo && typeof serialized.logo === "object") {
+		serialized.logo = serialized.logo.url || null;
+	}
+
+	if (serialized.banner && typeof serialized.banner === "object") {
+		serialized.banner = serialized.banner.url || null;
+	}
+
+	return serialized;
+};
+
+const serializeShopsMedia = (shops = []) => shops.map((shop) => serializeShopMedia(shop));
+
 /**
  * Créer une nouvelle boutique
  * POST /api/shops
@@ -8,12 +29,16 @@ export const create = async (req, res, next) => {
 	try {
 		const shopData = req.body;
 		const sellerId = req.user._id;
+		const mediaFiles = {
+			logoFile: req.files?.logo?.[0] || null,
+			bannerFile: req.files?.banner?.[0] || null,
+		};
 
-		const shop = await shopService.createShop(shopData, sellerId);
+		const shop = await shopService.createShop(shopData, sellerId, mediaFiles);
 
 		res.status(201).json({
 			success: true,
-			data: shop,
+			data: serializeShopMedia(shop),
 			message: "Boutique créée avec succès (statut: DRAFT)",
 		});
 	} catch (error) {
@@ -32,7 +57,7 @@ export const list = async (req, res, next) => {
 
 		res.json({
 			success: true,
-			data: shops,
+			data: serializeShopsMedia(shops),
 			pagination: {
 				page,
 				limit,
@@ -56,7 +81,7 @@ export const listMyShops = async (req, res, next) => {
 
 		res.json({
 			success: true,
-			data: shops,
+			data: serializeShopsMedia(shops),
 			pagination: {
 				page,
 				limit,
@@ -80,7 +105,7 @@ export const getOne = async (req, res, next) => {
 
 		res.json({
 			success: true,
-			data: shop,
+			data: serializeShopMedia(shop),
 		});
 	} catch (error) {
 		next(error);
@@ -97,12 +122,16 @@ export const update = async (req, res, next) => {
 		const updateData = req.body;
 		const userId = req.user._id.toString();
 		const userRole = req.user.role;
+		const mediaFiles = {
+			logoFile: req.files?.logo?.[0] || null,
+			bannerFile: req.files?.banner?.[0] || null,
+		};
 
-		const shop = await shopService.updateShop(id, updateData, userId, userRole);
+		const shop = await shopService.updateShop(id, updateData, userId, userRole, mediaFiles);
 
 		res.json({
 			success: true,
-			data: shop,
+			data: serializeShopMedia(shop),
 			message: "Boutique mise à jour avec succès",
 		});
 	} catch (error) {
@@ -123,7 +152,7 @@ export const submitForReview = async (req, res, next) => {
 
 		res.json({
 			success: true,
-			data: shop,
+			data: serializeShopMedia(shop),
 			message: "Boutique soumise pour validation",
 		});
 	} catch (error) {
@@ -145,7 +174,7 @@ export const archive = async (req, res, next) => {
 
 		res.json({
 			success: true,
-			data: shop,
+			data: serializeShopMedia(shop),
 			message: "Boutique archivée avec succès",
 		});
 	} catch (error) {
@@ -167,7 +196,7 @@ export const activate = async (req, res, next) => {
 
 		res.json({
 			success: true,
-			data: shop,
+			data: serializeShopMedia(shop),
 			message: "Boutique activée avec succès",
 		});
 	} catch (error) {
@@ -211,7 +240,7 @@ export const moderate = async (req, res, next) => {
 
 		res.json({
 			success: true,
-			data: shop,
+			data: serializeShopMedia(shop),
 			message: `Boutique ${action} avec succès`,
 		});
 	} catch (error) {
@@ -230,7 +259,7 @@ export const getPendingShops = async (req, res, next) => {
 
 		res.json({
 			success: true,
-			data: shops,
+			data: serializeShopsMedia(shops),
 			pagination: {
 				page,
 				limit,
@@ -258,7 +287,7 @@ export const listAllShops = async (req, res, next) => {
 
 		res.json({
 			success: true,
-			data: shops,
+			data: serializeShopsMedia(shops),
 			pagination: {
 				page,
 				limit,
@@ -284,8 +313,96 @@ export const adminUpdate = async (req, res, next) => {
 
 		res.json({
 			success: true,
-			data: shop,
+			data: serializeShopMedia(shop),
 			message: "Boutique mise à jour par l'admin",
+		});
+	} catch (error) {
+		next(error);
+	}
+};
+
+/**
+ * Upload ou remplace le logo d'une boutique
+ * PUT /api/shops/:id/logo
+ */
+export const uploadLogo = async (req, res, next) => {
+	try {
+		const { id } = req.params;
+		const userId = req.user._id.toString();
+		const userRole = req.user.role;
+
+		const shop = await shopService.uploadShopLogo(id, userId, userRole, req.file);
+
+		res.json({
+			success: true,
+			data: serializeShopMedia(shop),
+			message: "Logo boutique mis à jour avec succès",
+		});
+	} catch (error) {
+		next(error);
+	}
+};
+
+/**
+ * Supprime le logo d'une boutique
+ * DELETE /api/shops/:id/logo
+ */
+export const deleteLogo = async (req, res, next) => {
+	try {
+		const { id } = req.params;
+		const userId = req.user._id.toString();
+		const userRole = req.user.role;
+
+		const shop = await shopService.deleteShopLogo(id, userId, userRole);
+
+		res.json({
+			success: true,
+			data: serializeShopMedia(shop),
+			message: "Logo boutique supprimé avec succès",
+		});
+	} catch (error) {
+		next(error);
+	}
+};
+
+/**
+ * Upload ou remplace la bannière d'une boutique
+ * PUT /api/shops/:id/banner
+ */
+export const uploadBanner = async (req, res, next) => {
+	try {
+		const { id } = req.params;
+		const userId = req.user._id.toString();
+		const userRole = req.user.role;
+
+		const shop = await shopService.uploadShopBanner(id, userId, userRole, req.file);
+
+		res.json({
+			success: true,
+			data: serializeShopMedia(shop),
+			message: "Bannière boutique mise à jour avec succès",
+		});
+	} catch (error) {
+		next(error);
+	}
+};
+
+/**
+ * Supprime la bannière d'une boutique
+ * DELETE /api/shops/:id/banner
+ */
+export const deleteBanner = async (req, res, next) => {
+	try {
+		const { id } = req.params;
+		const userId = req.user._id.toString();
+		const userRole = req.user.role;
+
+		const shop = await shopService.deleteShopBanner(id, userId, userRole);
+
+		res.json({
+			success: true,
+			data: serializeShopMedia(shop),
+			message: "Bannière boutique supprimée avec succès",
 		});
 	} catch (error) {
 		next(error);

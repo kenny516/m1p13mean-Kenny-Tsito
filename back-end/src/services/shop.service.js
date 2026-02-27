@@ -2,6 +2,11 @@ import Shop from "../models/Shop.js";
 import { ApiError } from "../middlewares/error.middleware.js";
 import { parseSortOption } from "../utils/request.util.js";
 import * as settingsService from "./settings.service.js";
+import {
+	uploadShopLogo as uploadShopLogoToImageKit,
+	uploadShopBanner as uploadShopBannerToImageKit,
+	deleteByFileId,
+} from "./imagekit.service.js";
 
 /**
  * Vérifie que la boutique existe et est active.
@@ -29,9 +34,10 @@ export const requireActiveShop = async (shopId, session = null) => {
  * Crée une nouvelle boutique (status DRAFT, isActive false)
  * Utilise le taux de commission par défaut des paramètres globaux
  */
-export const createShop = async (shopData, sellerId) => {
-	// Récupérer le taux de commission par défaut depuis les paramètres
+
+export const createShop = async (shopData, sellerId, mediaFiles = {}) => {
 	const defaultCommissionRate = await settingsService.getDefaultCommissionRate();
+	const { logoFile = null, bannerFile = null } = mediaFiles;
 
 	const shop = new Shop({
 		...shopData,
@@ -39,9 +45,26 @@ export const createShop = async (shopData, sellerId) => {
 		status: "DRAFT",
 		isActive: false,
 		commissionRate: shopData.commissionRate ?? defaultCommissionRate,
+		logo: null,
+		banner: null,
 	});
 
 	await shop.save();
+
+	if (logoFile) {
+		const uploadedLogo = await uploadShopLogoToImageKit(shop._id.toString(), logoFile);
+		shop.logo = uploadedLogo;
+	}
+
+	if (bannerFile) {
+		const uploadedBanner = await uploadShopBannerToImageKit(shop._id.toString(), bannerFile);
+		shop.banner = uploadedBanner;
+	}
+
+	if (logoFile || bannerFile) {
+		await shop.save();
+	}
+
 	return shop;
 };
 
@@ -123,7 +146,8 @@ export const getMyShops = async (sellerId, filters = {}) => {
  * Met à jour une boutique
  * Le vendeur ne peut modifier que les champs de contenu
  */
-export const updateShop = async (id, updateData, userId, userRole) => {
+export const updateShop = async (id, updateData, userId, userRole, mediaFiles = {}) => {
+	const { logoFile = null, bannerFile = null } = mediaFiles;
 	const shop = await getShopById(id);
 
 	// Vérification des droits (Propriétaire ou Admin)
@@ -138,8 +162,91 @@ export const updateShop = async (id, updateData, userId, userRole) => {
 	delete updateData.stats;
 	delete updateData.sellerId;
 
+	const previousLogoFileId = shop.logo?.fileId;
+	const previousBannerFileId = shop.banner?.fileId;
+
+	if (updateData.logo !== undefined) {
+		delete updateData.logo;
+	}
+
+	if (updateData.banner !== undefined) {
+		delete updateData.banner;
+	}
+
 	Object.assign(shop, updateData);
+
+	if (logoFile) {
+		const uploadedLogo = await uploadShopLogoToImageKit(shop._id.toString(), logoFile);
+		shop.logo = uploadedLogo;
+	}
+
+	if (bannerFile) {
+		const uploadedBanner = await uploadShopBannerToImageKit(shop._id.toString(), bannerFile);
+		shop.banner = uploadedBanner;
+	}
+
 	await shop.save();
+
+	if (logoFile && previousLogoFileId) {
+		await deleteByFileId(previousLogoFileId);
+	}
+
+	if (bannerFile && previousBannerFileId) {
+		await deleteByFileId(previousBannerFileId);
+	}
+
+	return shop;
+};
+
+export const uploadShopLogo = async (id, userId, userRole, logoFile) => {
+	if (!logoFile) {
+		throw new ApiError(400, "INVALID_FILE", "Aucun fichier logo boutique fourni");
+	}
+
+	return updateShop(id, {}, userId, userRole, { logoFile });
+};
+
+export const deleteShopLogo = async (id, userId, userRole) => {
+	const shop = await getShopById(id);
+
+	if (userRole !== "ADMIN" && shop.sellerId._id.toString() !== userId) {
+		throw new ApiError(403, "FORBIDDEN", "Vous n'êtes pas autorisé à modifier cette boutique");
+	}
+
+	const previousFileId = shop.logo?.fileId;
+	shop.logo = null;
+	await shop.save();
+
+	if (previousFileId) {
+		await deleteByFileId(previousFileId);
+	}
+
+	return shop;
+};
+
+export const uploadShopBanner = async (id, userId, userRole, bannerFile) => {
+	if (!bannerFile) {
+		throw new ApiError(400, "INVALID_FILE", "Aucun fichier bannière boutique fourni");
+	}
+
+	return updateShop(id, {}, userId, userRole, { bannerFile });
+};
+
+export const deleteShopBanner = async (id, userId, userRole) => {
+	const shop = await getShopById(id);
+
+	if (userRole !== "ADMIN" && shop.sellerId._id.toString() !== userId) {
+		throw new ApiError(403, "FORBIDDEN", "Vous n'êtes pas autorisé à modifier cette boutique");
+	}
+
+	const previousFileId = shop.banner?.fileId;
+	shop.banner = null;
+	await shop.save();
+
+	if (previousFileId) {
+		await deleteByFileId(previousFileId);
+	}
+
 	return shop;
 };
 

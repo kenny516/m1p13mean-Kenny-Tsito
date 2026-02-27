@@ -34,7 +34,10 @@ const userSchema = new mongoose.Schema(
         postalCode: String,
         country: { type: String, default: "Madagascar" },
       },
-      avatar: String,
+      avatar: {
+        url: { type: String, trim: true },
+        fileId: { type: String, trim: true },
+      },
     },
     walletId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -51,6 +54,17 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true },
 );
+
+const serializeAvatar = (_doc, ret) => {
+  if (ret?.profile?.avatar && typeof ret.profile.avatar === "object") {
+    ret.profile.avatar = ret.profile.avatar.url || null;
+  }
+
+  return ret;
+};
+
+userSchema.set("toJSON", { transform: serializeAvatar });
+userSchema.set("toObject", { transform: serializeAvatar });
 
 // Index pour optimiser les recherches
 userSchema.index({ role: 1, isActive: 1 });
