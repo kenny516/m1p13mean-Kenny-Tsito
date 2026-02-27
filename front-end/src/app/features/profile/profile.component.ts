@@ -11,6 +11,7 @@ import {
 } from '@angular/forms';
 import {
   AuthService,
+  ImageManagementService,
   ToastService,
   User,
   WalletService,
@@ -27,6 +28,8 @@ import {
   ZardTabGroupComponent,
   ZardTabComponent,
 } from '@/shared/components/tabs';
+import { FilePickerComponent } from '@/shared/components/file-picker/file-picker.component';
+import { IKImageDirective } from '@imagekit/angular';
 
 @Component({
   selector: 'app-profile',
@@ -44,6 +47,8 @@ import {
     ZardSpinnerComponent,
     ZardTabGroupComponent,
     ZardTabComponent,
+    FilePickerComponent,
+    IKImageDirective,
   ],
   template: `
     <div class="min-h-screen bg-muted/30 py-6">
@@ -54,13 +59,57 @@ import {
             <!-- Carte utilisateur -->
             <z-card class="p-4 lg:col-span-2">
               <div class="flex items-center gap-4">
-                <div
-                  class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary text-2xl font-bold"
-                >
-                  {{
-                    userData.profile.firstName?.[0] || userData.email[0]
-                      | uppercase
-                  }}
+                <div class="group flex flex-col items-center gap-2">
+                  <div class="relative h-20 w-20">
+                    @if (userData.profile.avatar) {
+                      <img
+                        [ikSrc]="userData.profile.avatar"
+                        [transformation]="[{ width: 400, height: 400, quality: 90 }]"
+                        [responsive]="false"
+                        loading="lazy"
+                        class="h-20 w-20 rounded-full border border-border object-cover"
+                        alt="Avatar utilisateur"
+                      />
+                    } @else {
+                      <div
+                        class="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center text-primary text-2xl font-bold"
+                      >
+                        {{
+                          userData.profile.firstName?.[0] || userData.email[0]
+                            | uppercase
+                        }}
+                      </div>
+                    }
+                  </div>
+
+                  <div class="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                    <button
+                      z-button
+                      zType="outline"
+                      zSize="sm"
+                      type="button"
+                      [disabled]="!userData.profile.avatar"
+                      (click)="openMediaPreview(userData.profile.avatar)"
+                    >
+                      Voir
+                    </button>
+                    <app-file-picker
+                      [label]="userData.profile.avatar ? 'Modifier' : 'Ajouter'"
+                      buttonType="outline"
+                      [disabled]="isAvatarBusy()"
+                      (fileSelected)="onUserAvatarSelected($event)"
+                    />
+                    <button
+                      z-button
+                      zType="destructive"
+                      zSize="sm"
+                      type="button"
+                      [disabled]="!userData.profile.avatar || isAvatarBusy()"
+                      (click)="deleteUserAvatar()"
+                    >
+                      Supprimer
+                    </button>
+                  </div>
                 </div>
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2 flex-wrap">
@@ -495,6 +544,7 @@ import {
 export class ProfileComponent implements OnInit {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
+  private imageManagementService = inject(ImageManagementService);
   private toastService = inject(ToastService);
   private walletService = inject(WalletService);
 
@@ -504,6 +554,7 @@ export class ProfileComponent implements OnInit {
   // Transactions
   transactions = signal<WalletTransaction[]>([]);
   isLoadingTransactions = signal(false);
+  isAvatarBusy = signal(false);
   hasMoreTransactions = signal(false);
   transactionPage = 1;
 
@@ -634,6 +685,46 @@ export class ProfileComponent implements OnInit {
     } catch (error) {
       console.error('Erreur lors du changement de mot de passe:', error);
     }
+  }
+
+  async onUserAvatarSelected(file: File): Promise<void> {
+    const currentUser = this.user();
+    if (!currentUser) return;
+
+    this.isAvatarBusy.set(true);
+    try {
+      const updatedUser = await this.imageManagementService.uploadUserAvatar(currentUser._id, file);
+      this.authService.setCurrentUser(updatedUser);
+      this.toastService.success('Avatar mis à jour avec succès');
+    } catch {
+      this.toastService.error('Impossible de mettre à jour l\'avatar');
+    } finally {
+      this.isAvatarBusy.set(false);
+    }
+  }
+
+  async deleteUserAvatar(): Promise<void> {
+    const currentUser = this.user();
+    if (!currentUser?.profile?.avatar) return;
+
+    this.isAvatarBusy.set(true);
+    try {
+      const updatedUser = await this.imageManagementService.deleteAvatar('user', currentUser._id);
+      this.authService.setCurrentUser(updatedUser as User);
+      this.toastService.success('Avatar supprimé avec succès');
+    } catch {
+      this.toastService.error('Impossible de supprimer l\'avatar');
+    } finally {
+      this.isAvatarBusy.set(false);
+    }
+  }
+
+  openMediaPreview(url?: string | null): void {
+    if (!url) {
+      return;
+    }
+
+    window.open(url, '_blank', 'noopener,noreferrer');
   }
 
   logout(): void {

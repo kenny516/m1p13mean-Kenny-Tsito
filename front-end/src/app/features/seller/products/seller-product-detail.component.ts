@@ -12,26 +12,37 @@ import { DataTableColumn, DataTableComponent } from '@/shared/components/data-ta
   standalone: true,
   imports: [CommonModule, RouterLink, ZardCardComponent, ZardButtonComponent, DataTableComponent],
   template: `
-    <div class="space-y-6">
-      <div class="flex items-center justify-between">
-        <div>
-          <h1 class="text-2xl font-bold text-foreground">Détail produit</h1>
-          @if (product(); as currentProduct) {
-            <p class="text-muted-foreground">{{ currentProduct.title }} · {{ currentProduct.category }}</p>
-          }
+    <div class="min-h-screen bg-muted/30 py-6">
+      <div class="mx-auto max-w-6xl space-y-6 px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-2xl font-bold text-foreground">Détail produit</h1>
+            @if (product(); as currentProduct) {
+              <p class="text-muted-foreground">{{ currentProduct.title }} · {{ currentProduct.category }}</p>
+            }
+          </div>
+          <div class="flex gap-2">
+            @if (product(); as currentProduct) {
+              <a z-button zType="outline" [routerLink]="['/seller/products', currentProduct._id, 'edit']">
+                Modifier
+              </a>
+            }
+            <a z-button zType="outline" routerLink="/seller/products">Retour</a>
+          </div>
         </div>
-        <div class="flex gap-2">
-          @if (product(); as currentProduct) {
-            <a z-button zType="outline" [routerLink]="['/seller/products', currentProduct._id, 'edit']">
-              Modifier
-            </a>
-          }
-          <a z-button zType="outline" routerLink="/seller/products">Retour</a>
-        </div>
-      </div>
 
-      @if (product(); as currentProduct) {
-        <z-card class="p-6">
+        @if (product(); as currentProduct) {
+          <z-card class="p-6">
+            <div class="mb-6 flex items-start justify-between gap-4">
+              <div>
+                <h2 class="text-xl font-bold text-foreground">{{ currentProduct.title }}</h2>
+                <p class="text-sm text-muted-foreground">{{ currentProduct.description }}</p>
+              </div>
+              <span class="rounded-md bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground">
+                {{ currentProduct.status }}
+              </span>
+            </div>
+
           <div class="grid gap-4 md:grid-cols-4">
             <div>
               <p class="text-sm text-muted-foreground">SKU</p>
@@ -213,7 +224,8 @@ import { DataTableColumn, DataTableComponent } from '@/shared/components/data-ta
             emptyMessage="Aucune ligne de mouvement non-réservation pour ce produit"
           />
         </z-card>
-      }
+        }
+      </div>
     </div>
   `,
 })

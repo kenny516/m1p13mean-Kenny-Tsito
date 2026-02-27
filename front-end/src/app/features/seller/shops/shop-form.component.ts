@@ -66,17 +66,6 @@ import { ZardInputDirective } from '@/shared/components/input';
             </div>
           </div>
 
-          <div class="grid gap-4 md:grid-cols-2">
-            <div>
-              <p class="mb-1 text-sm text-muted-foreground">Logo URL</p>
-              <input z-input formControlName="logo" placeholder="https://..." />
-            </div>
-            <div>
-              <p class="mb-1 text-sm text-muted-foreground">Banner URL</p>
-              <input z-input formControlName="banner" placeholder="https://..." />
-            </div>
-          </div>
-
           <div>
             <p class="mb-1 text-sm text-muted-foreground">Catégories (séparées par virgule)</p>
             <input z-input formControlName="categories" placeholder="Informatique, Maison, Beauté" />
@@ -107,8 +96,6 @@ export class ShopFormComponent implements OnInit {
   readonly form = this.fb.group({
     name: ['', [Validators.required, Validators.minLength(3)]],
     description: [''],
-    logo: [''],
-    banner: [''],
     contactEmail: [''],
     contactPhone: [''],
     contactAddress: [''],
@@ -129,8 +116,6 @@ export class ShopFormComponent implements OnInit {
       this.form.patchValue({
         name: shop.name,
         description: shop.description || '',
-        logo: shop.logo || '',
-        banner: shop.banner || '',
         contactEmail: shop.contact?.email || '',
         contactPhone: shop.contact?.phone || '',
         contactAddress: shop.contact?.address || '',
@@ -154,8 +139,6 @@ export class ShopFormComponent implements OnInit {
     const payload = {
       name: value.name || '',
       description: value.description || undefined,
-      logo: value.logo || undefined,
-      banner: value.banner || undefined,
       contact: {
         email: value.contactEmail || undefined,
         phone: value.contactPhone || undefined,
