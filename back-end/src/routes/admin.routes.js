@@ -3,6 +3,7 @@ import * as userController from "../controllers/user.controller.js";
 import adminShopRoutes from "./admin.shop.routes.js";
 import adminProductRoutes from "./admin.product.routes.js";
 import adminStockMovementRoutes from "./admin.stockMovement.routes.js";
+import adminSettingsRoutes from "./admin.settings.routes.js";
 import { auth, authorize } from "../middlewares/auth.middleware.js";
 import { validate } from "../middlewares/validate.middleware.js";
 import {
@@ -105,5 +106,10 @@ router.use("/products", adminProductRoutes);
  * Routes de gestion des mouvements de stock (admin)
  */
 router.use("/stock-movements", adminStockMovementRoutes);
+
+/**
+ * Routes de gestion des paramètres de la plateforme (admin)
+ */
+router.use("/settings", adminSettingsRoutes);
 
 export default router;

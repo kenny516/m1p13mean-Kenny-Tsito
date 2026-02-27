@@ -204,7 +204,7 @@ export const listProductsQuerySchema = Joi.object({
     }),
 
   sort: Joi.string()
-    .pattern(/^(-?[a-zA-Z]+|[a-zA-Z]+_(asc|desc))$/)
+    .pattern(/^(-?[a-zA-Z0-9.]+|[a-zA-Z0-9.]+_(asc|desc))$/)
     .default("createdAt_desc")
     .optional()
     .messages({

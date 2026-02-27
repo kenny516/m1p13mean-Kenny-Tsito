@@ -65,6 +65,33 @@ export const list = async (req, res, next) => {
 };
 
 /**
+ * Lister TOUS les produits pour l'admin (tous statuts)
+ * GET /api/admin/products
+ */
+export const listAll = async (req, res, next) => {
+	try {
+		const filters = {
+			...req.query,
+			status: req.query.status || "ALL", // Par défaut tous les statuts
+		};
+		const { products, total, page, limit } = await productService.getProducts(filters);
+
+		res.json({
+			success: true,
+			data: products,
+			pagination: {
+				page,
+				limit,
+				total,
+				pages: Math.ceil(total / limit),
+			},
+		});
+	} catch (error) {
+		next(error);
+	}
+};
+
+/**
  * Lister les produits du vendeur connecté
  * GET /api/products/my-products
  */

@@ -1,6 +1,7 @@
 import Shop from "../models/Shop.js";
 import { ApiError } from "../middlewares/error.middleware.js";
 import { parseSortOption } from "../utils/request.util.js";
+import * as settingsService from "./settings.service.js";
 
 /**
  * Vérifie que la boutique existe et est active.
@@ -26,13 +27,18 @@ export const requireActiveShop = async (shopId, session = null) => {
 
 /**
  * Crée une nouvelle boutique (status DRAFT, isActive false)
+ * Utilise le taux de commission par défaut des paramètres globaux
  */
 export const createShop = async (shopData, sellerId) => {
+	// Récupérer le taux de commission par défaut depuis les paramètres
+	const defaultCommissionRate = await settingsService.getDefaultCommissionRate();
+
 	const shop = new Shop({
 		...shopData,
 		sellerId,
 		status: "DRAFT",
 		isActive: false,
+		commissionRate: shopData.commissionRate ?? defaultCommissionRate,
 	});
 
 	await shop.save();

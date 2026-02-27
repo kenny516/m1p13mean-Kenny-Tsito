@@ -159,7 +159,7 @@ export const listStockMovementsQuerySchema = Joi.object({
 	startDate: Joi.date().iso(),
 	endDate: Joi.date().iso().min(Joi.ref("startDate")),
 	sort: Joi.string()
-		.pattern(/^[a-zA-Z]+_(asc|desc)$/)
+		.pattern(/^[a-zA-Z0-9.]+_(asc|desc)$/)
 		.default("createdAt_desc")
 		.messages({
 			"string.pattern.base": "Le tri doit être au format champ_asc ou champ_desc",
@@ -178,7 +178,7 @@ export const listSalesQuerySchema = Joi.object({
 	startDate: Joi.date().iso(),
 	endDate: Joi.date().iso().min(Joi.ref("startDate")),
 	sort: Joi.string()
-		.pattern(/^[a-zA-Z]+_(asc|desc)$/)
+		.pattern(/^[a-zA-Z0-9.]+_(asc|desc)$/)
 		.default("createdAt_desc")
 		.messages({
 			"string.pattern.base": "Le tri doit être au format champ_asc ou champ_desc",
@@ -196,7 +196,7 @@ export const listSuppliesQuerySchema = Joi.object({
 	startDate: Joi.date().iso(),
 	endDate: Joi.date().iso().min(Joi.ref("startDate")),
 	sort: Joi.string()
-		.pattern(/^[a-zA-Z]+_(asc|desc)$/)
+		.pattern(/^[a-zA-Z0-9.]+_(asc|desc)$/)
 		.default("createdAt_desc")
 		.messages({
 			"string.pattern.base": "Le tri doit être au format champ_asc ou champ_desc",
