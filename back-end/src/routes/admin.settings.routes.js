@@ -1,9 +1,13 @@
 import { Router } from "express";
 import * as settingsController from "../controllers/settings.controller.js";
+import { auth, authorize } from "../middlewares/auth.middleware.js";
 import { validate } from "../middlewares/validate.middleware.js";
 import { updateSettingsSchema } from "../validations/settings.validation.js";
 
 const router = Router();
+
+// Protection explicite - toutes les routes nécessitent ADMIN
+router.use(auth, authorize("ADMIN"));
 
 /**
  * @route   GET /api/admin/settings

@@ -1,9 +1,13 @@
 import { Router } from "express";
 import * as productController from "../controllers/product.controller.js";
+import { auth, authorize } from "../middlewares/auth.middleware.js";
 import { validate } from "../middlewares/validate.middleware.js";
 import { moderateProductSchema } from "../validations/product.validation.js";
 
 const router = Router();
+
+// Protection explicite - toutes les routes nécessitent ADMIN
+router.use(auth, authorize("ADMIN"));
 
 /**
  * @route   GET /api/admin/products
