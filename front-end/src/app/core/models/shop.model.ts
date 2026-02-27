@@ -62,8 +62,8 @@ export interface Shop {
 export interface CreateShopRequest {
   name: string;
   description?: string;
-  logo?: string;
-  banner?: string;
+  logo?: string | null;
+  banner?: string | null;
   contact?: ShopContact;
   categories?: string[];
 }
@@ -74,8 +74,8 @@ export interface CreateShopRequest {
 export interface UpdateShopRequest {
   name?: string;
   description?: string;
-  logo?: string;
-  banner?: string;
+  logo?: string | null;
+  banner?: string | null;
   contact?: ShopContact;
   categories?: string[];
 }

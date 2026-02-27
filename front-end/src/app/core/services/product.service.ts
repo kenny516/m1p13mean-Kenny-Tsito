@@ -24,6 +24,30 @@ export interface ProductsResponse {
 export class ProductService {
   private api = inject(ApiService);
 
+  private buildProductFormData(
+    data: CreateProductRequest | UpdateProductRequest,
+    files: File[] = [],
+  ): FormData {
+    const formData = new FormData();
+
+    Object.entries(data).forEach(([key, value]) => {
+      if (value === undefined || value === null) return;
+
+      if (Array.isArray(value) || typeof value === 'object') {
+        formData.append(key, JSON.stringify(value));
+        return;
+      }
+
+      formData.append(key, String(value));
+    });
+
+    files.forEach((file) => {
+      formData.append('images', file);
+    });
+
+    return formData;
+  }
+
   // Signals pour l'état réactif
   private productsSignal = signal<Product[]>([]);
   private selectedProductSignal = signal<Product | null>(null);
@@ -209,6 +233,19 @@ export class ProductService {
     }
   }
 
+  async createProductWithImages(
+    data: CreateProductRequest,
+    files: File[] = [],
+  ): Promise<Product> {
+    this.isLoadingSignal.set(true);
+    try {
+      const formData = this.buildProductFormData(data, files);
+      return await this.api.post<Product>('/products', formData);
+    } finally {
+      this.isLoadingSignal.set(false);
+    }
+  }
+
   /**
    * Met à jour un produit
    * @param id - Identifiant du produit
@@ -221,6 +258,22 @@ export class ProductService {
     this.isLoadingSignal.set(true);
     try {
       const product = await this.api.put<Product>(`/products/${id}`, data);
+      this.selectedProductSignal.set(product);
+      return product;
+    } finally {
+      this.isLoadingSignal.set(false);
+    }
+  }
+
+  async updateProductWithImages(
+    id: string,
+    data: UpdateProductRequest,
+    files: File[] = [],
+  ): Promise<Product> {
+    this.isLoadingSignal.set(true);
+    try {
+      const formData = this.buildProductFormData(data, files);
+      const product = await this.api.put<Product>(`/products/${id}`, formData);
       this.selectedProductSignal.set(product);
       return product;
     } finally {

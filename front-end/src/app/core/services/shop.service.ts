@@ -15,9 +15,42 @@ export interface ShopsResponse {
   pagination: Pagination;
 }
 
+interface ShopMediaFiles {
+  logoFile?: File;
+  bannerFile?: File;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ShopService {
   private api = inject(ApiService);
+
+  private buildShopFormData(
+    data: CreateShopRequest | UpdateShopRequest,
+    mediaFiles: ShopMediaFiles = {},
+  ): FormData {
+    const formData = new FormData();
+
+    Object.entries(data).forEach(([key, value]) => {
+      if (value === undefined || value === null) return;
+
+      if (Array.isArray(value) || typeof value === 'object') {
+        formData.append(key, JSON.stringify(value));
+        return;
+      }
+
+      formData.append(key, String(value));
+    });
+
+    if (mediaFiles.logoFile) {
+      formData.append('logo', mediaFiles.logoFile);
+    }
+
+    if (mediaFiles.bannerFile) {
+      formData.append('banner', mediaFiles.bannerFile);
+    }
+
+    return formData;
+  }
 
   private shopsSignal = signal<Shop[]>([]);
   private selectedShopSignal = signal<Shop | null>(null);
@@ -91,6 +124,16 @@ export class ShopService {
     }
   }
 
+  async createShopWithMedia(data: CreateShopRequest, mediaFiles: ShopMediaFiles = {}): Promise<Shop> {
+    this.isLoadingSignal.set(true);
+    try {
+      const formData = this.buildShopFormData(data, mediaFiles);
+      return await this.api.post<Shop>('/shops', formData);
+    } finally {
+      this.isLoadingSignal.set(false);
+    }
+  }
+
   async updateShop(id: string, data: UpdateShopRequest): Promise<Shop> {
     this.isLoadingSignal.set(true);
     try {
@@ -100,6 +143,29 @@ export class ShopService {
     } finally {
       this.isLoadingSignal.set(false);
     }
+  }
+
+  async updateShopWithMedia(
+    id: string,
+    data: UpdateShopRequest,
+    mediaFiles: ShopMediaFiles = {},
+  ): Promise<Shop> {
+    this.isLoadingSignal.set(true);
+    try {
+      const formData = this.buildShopFormData(data, mediaFiles);
+      const shop = await this.api.put<Shop>(`/shops/${id}`, formData);
+      this.selectedShopSignal.set(shop);
+      return shop;
+    } finally {
+      this.isLoadingSignal.set(false);
+    }
+  }
+
+  setSelectedShop(shop: Shop): void {
+    this.selectedShopSignal.set(shop);
+    this.shopsSignal.update((shops) =>
+      shops.map((current) => (current._id === shop._id ? shop : current)),
+    );
   }
 
   async submitShop(id: string): Promise<Shop> {
