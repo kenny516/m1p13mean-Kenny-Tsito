@@ -5,3 +5,4 @@ export * as shopService from "./shop.service.js";
 export * as stockMovementService from "./stockMovement.service.js";
 export * as stockMovementLineService from "./stockMovementLine.service.js";
 export * as cartService from "./cart.service.js";
+export * as settingsService from "./settings.service.js";

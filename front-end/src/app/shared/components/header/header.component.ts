@@ -129,7 +129,31 @@ import { AuthService, CartService } from '../../../core';
                           routerLink="/admin"
                           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         >
-                          Administration
+                          Dashboard
+                        </a>
+                        <a
+                          routerLink="/admin/users"
+                          class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          Utilisateurs
+                        </a>
+                        <a
+                          routerLink="/admin/shops"
+                          class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          Boutiques
+                        </a>
+                        <a
+                          routerLink="/admin/products"
+                          class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          Produits
+                        </a>
+                        <a
+                          routerLink="/admin/settings"
+                          class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          Paramètres
                         </a>
                       }
 

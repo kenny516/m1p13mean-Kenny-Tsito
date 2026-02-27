@@ -9,3 +9,4 @@ export { default as StockMovementLine } from "./StockMovementLine.js";
 export { default as Cart } from "./Cart.js";
 export { default as Wallet } from "./Wallet.js";
 export { default as WalletTransaction } from "./WalletTransaction.js";
+export { default as Settings } from "./Settings.js";

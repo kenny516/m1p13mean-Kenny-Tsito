@@ -10,10 +10,27 @@ import { updateSaleStatus } from "./stockMovement.service.js";
 import { debitWallet } from "./wallet.service.js";
 import { requireActiveProduct } from "./product.service.js";
 import { createOptionalSession } from "../utils/transaction.util.js";
+import * as settingsService from "./settings.service.js";
 
-const CART_TTL_MINUTES = 30;
+// Fallback si les settings ne sont pas encore initialisés
+const DEFAULT_CART_TTL_MINUTES = 30;
 
-const getExpiresAt = () => new Date(Date.now() + CART_TTL_MINUTES * 60 * 1000);
+/**
+ * Récupère la durée de vie du panier depuis les paramètres globaux
+ * @returns {Promise<number>} La durée de vie du panier en minutes
+ */
+const getCartTTL = async () => {
+  try {
+    return await settingsService.getCartTTLMinutes();
+  } catch {
+    return DEFAULT_CART_TTL_MINUTES;
+  }
+};
+
+const getExpiresAt = async () => {
+  const ttl = await getCartTTL();
+  return new Date(Date.now() + ttl * 60 * 1000);
+};
 
 const computeTotal = (items = []) =>
   items.reduce((sum, item) => sum + (item.totalAmount || 0), 0);
@@ -38,12 +55,13 @@ const findActiveCartByUser = async (userId, session = null) => {
 export const getCart = async (userId) => {
   const cart = await findActiveCartByUser(userId);
   if (!cart) {
+    const expiresAt = await getExpiresAt();
     const created = await Cart.create({
       userId,
       items: [],
       status: "CART",
       totalAmount: 0,
-      expiresAt: getExpiresAt(),
+      expiresAt,
     });
 
     return created;
@@ -109,7 +127,7 @@ export const addItem = async (
     }
 
     cart.totalAmount = computeTotal(cart.items);
-    cart.expiresAt = getExpiresAt();
+    cart.expiresAt = await getExpiresAt();
 
     const saveOptions = txn.session ? { session: txn.session } : {};
     const updatedCart = await cart.save(saveOptions);
@@ -238,7 +256,7 @@ export const removeItem = async (
     }
 
     cart.totalAmount = computeTotal(cart.items);
-    cart.expiresAt = getExpiresAt();
+    cart.expiresAt = await getExpiresAt();
 
     const saveOptions = txn.session ? { session: txn.session } : {};
     const updatedCart = await cart.save(saveOptions);
@@ -260,13 +278,14 @@ export const clearCart = async (userId) => {
     const cart = await findActiveCartByUser(userId, txn.session);
     if (!cart) {
       const createOptions = txn.session ? { session: txn.session } : {};
+      const expiresAt = await getExpiresAt();
       const emptyCart = await Cart.create(
         {
           userId,
           items: [],
           status: "CART",
           totalAmount: 0,
-          expiresAt: getExpiresAt(),
+          expiresAt,
         },
         createOptions,
       );
@@ -298,7 +317,7 @@ export const clearCart = async (userId) => {
 
     cart.items = [];
     cart.totalAmount = 0;
-    cart.expiresAt = getExpiresAt();
+    cart.expiresAt = await getExpiresAt();
 
     const saveOptions = txn.session ? { session: txn.session } : {};
     const updatedCart = await cart.save(saveOptions);
@@ -383,13 +402,14 @@ export const checkoutCart = async (userId, payload) => {
     await cart.save(saveOptions);
 
     const createOptions = txn.session ? { session: txn.session } : {};
+    const nextCartExpiresAt = await getExpiresAt();
     const nextCart = await Cart.create(
       {
         userId,
         items: [],
         status: "CART",
         totalAmount: 0,
-        expiresAt: getExpiresAt(),
+        expiresAt: nextCartExpiresAt,
       },
       createOptions,
     );

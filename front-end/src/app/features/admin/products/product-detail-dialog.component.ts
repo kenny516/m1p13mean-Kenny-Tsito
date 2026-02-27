@@ -4,7 +4,6 @@ import { Product, ProductStatus, Shop } from '@/core/models';
 import { ZardButtonComponent } from '@/shared/components/button';
 import { ZardBadgeComponent } from '@/shared/components/badge';
 import { ZardIconComponent } from '@/shared/components/icon';
-import { ZardAvatarComponent } from '@/shared/components/avatar';
 import { Z_MODAL_DATA, ZardDialogRef } from '@/shared/components/dialog';
 
 type ProductWithShop = Product & {
@@ -24,7 +23,6 @@ export interface ProductDetailDialogData {
     ZardButtonComponent,
     ZardBadgeComponent,
     ZardIconComponent,
-    ZardAvatarComponent,
   ],
   template: `
     <div class="space-y-6">
