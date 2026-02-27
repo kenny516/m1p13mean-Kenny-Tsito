@@ -8,7 +8,7 @@ import { HeaderComponent, FooterComponent, ToastComponent } from './shared';
   imports: [RouterOutlet, HeaderComponent, FooterComponent, ToastComponent],
   template: `
     <div class="flex flex-col min-h-screen">
-      <app-header />
+      <app-header class="sticky top-0 z-50" />
       <main class="flex-1">
         <router-outlet />
       </main>

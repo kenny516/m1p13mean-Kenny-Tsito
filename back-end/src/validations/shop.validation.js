@@ -119,7 +119,7 @@ export const listShopsQuerySchema = Joi.object({
 	sellerId: Joi.string().optional(),
 
 	sort: Joi.string()
-		.pattern(/^[a-zA-Z]+_(asc|desc)$/)
+		.pattern(/^[a-zA-Z0-9.]+_(asc|desc)$/)
 		.default("createdAt_desc")
 		.optional()
 		.messages({

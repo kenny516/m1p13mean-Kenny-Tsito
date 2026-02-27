@@ -129,47 +129,16 @@ import { AuthService, CartService } from '../../../core';
                           routerLink="/admin"
                           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         >
-                          Dashboard
-                        </a>
-                        <a
-                          routerLink="/admin/users"
-                          class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        >
-                          Utilisateurs
-                        </a>
-                        <a
-                          routerLink="/admin/shops"
-                          class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        >
-                          Boutiques
-                        </a>
-                        <a
-                          routerLink="/admin/products"
-                          class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        >
-                          Produits
-                        </a>
-                        <a
-                          routerLink="/admin/settings"
-                          class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        >
-                          Paramètres
+                          Administration
                         </a>
                       }
 
                       @if (userData.role === 'BUYER') {
                         <a
-                          routerLink="/buyer/cart"
+                          routerLink="/buyer/orders"
                           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         >
-                          Mon panier
-                          @if (cartItemCount() > 0) {
-                            <span
-                              class="ml-2 bg-primary text-white text-xs rounded-full px-2 py-0.5"
-                            >
-                              {{ cartItemCount() }}
-                            </span>
-                          }
+                          Mes commandes
                         </a>
                       }
 

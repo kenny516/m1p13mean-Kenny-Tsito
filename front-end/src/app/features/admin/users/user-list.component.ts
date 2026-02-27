@@ -49,171 +49,154 @@ import {
     TanstackDataTableComponent,
   ],
   template: `
-    <div class="min-h-screen bg-muted/30 py-8">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <!-- Header -->
-        <div
-          class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8"
-        >
-          <div>
-            <h1 class="text-2xl font-bold text-foreground">
-              Gestion des utilisateurs
-            </h1>
-            <p class="mt-1 text-muted-foreground">
-              Gérez tous les utilisateurs de la plateforme
-            </p>
-          </div>
-          <div class="mt-4 sm:mt-0 flex items-center gap-4">
-            @if (pendingCount() > 0) {
-              <z-badge
-                zType="destructive"
-                zShape="pill"
-                class="text-sm px-3 py-1"
+    <div class="px-6 lg:px-8">
+      <!-- Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-foreground">
+            Gestion des utilisateurs
+          </h1>
+          <p class="mt-1 text-muted-foreground">
+            Gérez tous les utilisateurs de la plateforme
+          </p>
+        </div>
+        <div class="mt-4 sm:mt-0 flex items-center gap-4">
+          @if (pendingCount() > 0) {
+            <z-badge zType="destructive" zShape="pill" class="text-sm px-3 py-1">
+              {{ pendingCount() }} en attente
+            </z-badge>
+          }
+          <a z-button routerLink="/admin/users/new">
+            <z-icon zType="plus" class="mr-2" />
+            Nouvel utilisateur
+          </a>
+        </div>
+      </div>
+
+      <!-- Filtres -->
+      <z-card class="mb-6">
+        <div class="p-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <!-- Recherche -->
+            <div class="lg:col-span-2">
+              <z-label for="search">Rechercher</z-label>
+              <input
+                z-input
+                id="search"
+                type="text"
+                [(ngModel)]="searchTerm"
+                (input)="onSearch()"
+                placeholder="Nom, prénom ou email..."
+                class="mt-1"
+              />
+            </div>
+
+            <!-- Filtre Rôle -->
+            <div>
+              <z-label>Rôle</z-label>
+              <z-select
+                [(zValue)]="selectedRole"
+                (zSelectionChange)="onFilterChange()"
+                zPlaceholder="Tous les rôles"
+                class="mt-1 w-full"
               >
-                {{ pendingCount() }} en attente
-              </z-badge>
-            }
-            <a z-button routerLink="/admin/users/new">
-              <z-icon zType="plus" class="mr-2" />
-              Nouvel utilisateur
-            </a>
+                <z-select-item zValue="">Tous les rôles</z-select-item>
+                <z-select-item zValue="BUYER">Acheteur</z-select-item>
+                <z-select-item zValue="SELLER">Vendeur</z-select-item>
+                <z-select-item zValue="ADMIN">Administrateur</z-select-item>
+              </z-select>
+            </div>
+
+            <!-- Filtre Statut -->
+            <div>
+              <z-label>Statut</z-label>
+              <z-select
+                [(zValue)]="selectedStatus"
+                (zSelectionChange)="onFilterChange()"
+                zPlaceholder="Tous les statuts"
+                class="mt-1 w-full"
+              >
+                <z-select-item zValue="">Tous les statuts</z-select-item>
+                <z-select-item zValue="active">Actif</z-select-item>
+                <z-select-item zValue="inactive">Inactif</z-select-item>
+                <z-select-item zValue="pending">En attente</z-select-item>
+              </z-select>
+            </div>
+
+            <!-- Tri -->
+            <div>
+              <z-label>Trier par</z-label>
+              <z-select
+                [(zValue)]="selectedSort"
+                (zSelectionChange)="onFilterChange()"
+                zPlaceholder="Date inscription"
+                class="mt-1 w-full"
+              >
+                <z-select-item zValue="createdAt_desc">Plus récent</z-select-item>
+                <z-select-item zValue="createdAt_asc">Plus ancien</z-select-item>
+                <z-select-item zValue="profile.firstName_asc">Prénom A-Z</z-select-item>
+                <z-select-item zValue="profile.firstName_desc">Prénom Z-A</z-select-item>
+                <z-select-item zValue="email_asc">Email A-Z</z-select-item>
+              </z-select>
+            </div>
           </div>
         </div>
+      </z-card>
 
-        <!-- Filtres -->
-        <z-card class="mb-6">
-          <div class="p-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              <!-- Recherche -->
-              <div class="lg:col-span-2">
-                <z-label for="search">Rechercher</z-label>
-                <input
-                  z-input
-                  id="search"
-                  type="text"
-                  [(ngModel)]="searchTerm"
-                  (input)="onSearch()"
-                  placeholder="Nom, prénom ou email..."
-                  class="mt-1"
-                />
-              </div>
+      <!-- Table des utilisateurs -->
+      <z-card class="overflow-hidden">
+        <app-tanstack-data-table
+          [data]="users()"
+          [columnDefs]="columns"
+          [rowActions]="actionsTemplate"
+          [cellTemplates]="cellTemplatesMap()"
+          [isLoading]="isLoading()"
+          [emptyMessage]="'Aucun utilisateur trouvé'"
+          [emptyIcon]="'users'"
+          (sortChange)="onSortChange($event)"
+        />
 
-              <!-- Filtre Rôle -->
-              <div>
-                <z-label>Rôle</z-label>
-                <z-select
-                  [(zValue)]="selectedRole"
-                  (zSelectionChange)="onFilterChange()"
-                  zPlaceholder="Tous les rôles"
-                  class="mt-1 w-full"
-                >
-                  <z-select-item zValue="">Tous les rôles</z-select-item>
-                  <z-select-item zValue="BUYER">Acheteur</z-select-item>
-                  <z-select-item zValue="SELLER">Vendeur</z-select-item>
-                  <z-select-item zValue="ADMIN">Administrateur</z-select-item>
-                </z-select>
-              </div>
-
-              <!-- Filtre Statut -->
-              <div>
-                <z-label>Statut</z-label>
-                <z-select
-                  [(zValue)]="selectedStatus"
-                  (zSelectionChange)="onFilterChange()"
-                  zPlaceholder="Tous les statuts"
-                  class="mt-1 w-full"
-                >
-                  <z-select-item zValue="">Tous les statuts</z-select-item>
-                  <z-select-item zValue="active">Actif</z-select-item>
-                  <z-select-item zValue="inactive">Inactif</z-select-item>
-                  <z-select-item zValue="pending">En attente</z-select-item>
-                </z-select>
-              </div>
-
-              <!-- Tri -->
-              <div>
-                <z-label>Trier par</z-label>
-                <z-select
-                  [(zValue)]="selectedSort"
-                  (zSelectionChange)="onFilterChange()"
-                  zPlaceholder="Date inscription"
-                  class="mt-1 w-full"
-                >
-                  <z-select-item zValue="-createdAt">Plus récent</z-select-item>
-                  <z-select-item zValue="createdAt">Plus ancien</z-select-item>
-                  <z-select-item zValue="profile.firstName">Prénom A-Z</z-select-item>
-                  <z-select-item zValue="-profile.firstName">Prénom Z-A</z-select-item>
-                  <z-select-item zValue="email">Email A-Z</z-select-item>
-                </z-select>
-              </div>
+        <!-- Pagination -->
+        @if (pagination() && !isLoading()) {
+          <div class="px-6 py-4 border-t border-border flex items-center justify-between">
+            <div class="text-sm text-muted-foreground">
+              Affichage de
+              <span class="font-medium text-foreground">
+                {{ (pagination()!.page - 1) * pagination()!.limit + 1 }}
+              </span>
+              à
+              <span class="font-medium text-foreground">
+                {{ Math.min(pagination()!.page * pagination()!.limit, pagination()!.total) }}
+              </span>
+              sur
+              <span class="font-medium text-foreground">{{ pagination()!.total }}</span>
+              résultats
+            </div>
+            <div class="flex space-x-2">
+              <button
+                z-button
+                zType="outline"
+                zSize="sm"
+                (click)="goToPage(currentPage() - 1)"
+                [disabled]="currentPage() === 1"
+              >
+                <z-icon zType="chevron-left" class="mr-1" />
+                Précédent
+              </button>
+              <button
+                z-button
+                zType="outline"
+                zSize="sm"
+                (click)="goToPage(currentPage() + 1)"
+                [disabled]="currentPage() >= pagination()!.pages"
+              >
+                Suivant
+                <z-icon zType="chevron-right" class="ml-1" />
+              </button>
             </div>
           </div>
-        </z-card>
-
-        <!-- Table des utilisateurs -->
-        <z-card class="overflow-hidden">
-          <app-tanstack-data-table
-            [data]="users()"
-            [columnDefs]="columns"
-            [rowActions]="actionsTemplate"
-            [cellTemplates]="cellTemplatesMap()"
-            [isLoading]="isLoading()"
-            [emptyMessage]="'Aucun utilisateur trouvé'"
-            [emptyIcon]="'users'"
-            (sortChange)="onSortChange($event)"
-          />
-
-          <!-- Pagination -->
-          @if (pagination() && !isLoading()) {
-            <div
-              class="px-6 py-4 border-t border-border flex items-center justify-between"
-            >
-              <div class="text-sm text-muted-foreground">
-                Affichage de
-                <span class="font-medium text-foreground">
-                  {{ (pagination()!.page - 1) * pagination()!.limit + 1 }}
-                </span>
-                à
-                <span class="font-medium text-foreground">
-                  {{
-                    Math.min(
-                      pagination()!.page * pagination()!.limit,
-                      pagination()!.total
-                    )
-                  }}
-                </span>
-                sur
-                <span class="font-medium text-foreground">{{
-                  pagination()!.total
-                }}</span>
-                résultats
-              </div>
-              <div class="flex space-x-2">
-                <button
-                  z-button
-                  zType="outline"
-                  zSize="sm"
-                  (click)="goToPage(currentPage() - 1)"
-                  [disabled]="currentPage() === 1"
-                >
-                  <z-icon zType="chevron-left" class="mr-1" />
-                  Précédent
-                </button>
-                <button
-                  z-button
-                  zType="outline"
-                  zSize="sm"
-                  (click)="goToPage(currentPage() + 1)"
-                  [disabled]="currentPage() >= pagination()!.pages"
-                >
-                  Suivant
-                  <z-icon zType="chevron-right" class="ml-1" />
-                </button>
-              </div>
-            </div>
-          }
-        </z-card>
-      </div>
+        }
+      </z-card>
     </div>
 
     <!-- Template pour la colonne Avatar -->
@@ -342,7 +325,7 @@ export class UserListComponent implements OnInit {
   searchTerm = '';
   selectedRole = '';
   selectedStatus = '';
-  selectedSort = '-createdAt';
+  selectedSort = 'createdAt_desc';
 
   private searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -478,10 +461,9 @@ export class UserListComponent implements OnInit {
 
   onSortChange(event: SortChangeEvent): void {
     if (event.direction === null) {
-      this.selectedSort = '-createdAt';
+      this.selectedSort = 'createdAt_desc';
     } else {
-      const prefix = event.direction === 'desc' ? '-' : '';
-      this.selectedSort = `${prefix}${event.column}`;
+      this.selectedSort = `${event.column}_${event.direction}`;
     }
     this.loadUsers();
   }

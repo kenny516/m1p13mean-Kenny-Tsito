@@ -28,54 +28,48 @@ import { ZardSwitchComponent } from '@/shared/components/switch';
     ZardSwitchComponent,
   ],
   template: `
-    <div class="min-h-screen bg-muted/30 py-8">
-      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <!-- Header -->
-        <div class="mb-8">
-          <h1 class="text-2xl font-bold text-foreground">
-            Paramètres de la plateforme
-          </h1>
-          <p class="mt-1 text-muted-foreground">
-            Configurez les paramètres globaux de la marketplace
-          </p>
-        </div>
+    <div class="px-6 lg:px-8">
+      <!-- Header -->
+      <div class="mb-6">
+        <h1 class="text-2xl font-bold text-foreground">
+          Paramètres de la plateforme
+        </h1>
+        <p class="mt-1 text-muted-foreground">
+          Configurez les paramètres globaux de la marketplace
+        </p>
+      </div>
 
-        @if (isLoading()) {
-          <!-- Loading State -->
-          <div class="space-y-6">
-            @for (i of [1, 2, 3, 4]; track i) {
-              <z-card class="p-6">
-                <z-skeleton class="h-6 w-1/3 mb-4" />
-                <div class="space-y-4">
-                  <z-skeleton class="h-10 w-full" />
-                  <z-skeleton class="h-10 w-full" />
-                </div>
-              </z-card>
-            }
-          </div>
-        } @else if (settings()) {
-          <form (ngSubmit)="onSubmit()" class="space-y-6">
-            <!-- Section Commission -->
-            <z-card class="overflow-hidden">
-              <div class="px-6 py-4 bg-muted/50 border-b border-border">
-                <div class="flex items-center gap-3">
-                  <div class="p-2 rounded-lg bg-primary/10">
-                    <z-icon zType="dollar-sign" class="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <h2 class="text-lg font-semibold text-foreground">
-                      Commission
-                    </h2>
-                    <p class="text-sm text-muted-foreground">
-                      Paramètres de commission des boutiques
-                    </p>
-                  </div>
-                </div>
+      @if (isLoading()) {
+        <!-- Loading State -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          @for (i of [1, 2, 3, 4]; track i) {
+            <z-card class="p-6">
+              <z-skeleton class="h-6 w-1/3 mb-4" />
+              <div class="space-y-4">
+                <z-skeleton class="h-10 w-full" />
+                <z-skeleton class="h-10 w-full" />
               </div>
-              <div class="p-6 space-y-4">
-                <div>
+            </z-card>
+          }
+        </div>
+      } @else if (settings()) {
+        <form (ngSubmit)="onSubmit()">
+          <!-- Grille principale 2 colonnes -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <!-- Colonne gauche -->
+            <div class="space-y-6">
+              <!-- Section Commission -->
+              <z-card class="overflow-hidden">
+                <div class="px-4 py-3 bg-muted/50 border-b border-border">
+                  <div class="flex items-center gap-2">
+                    <z-icon zType="dollar-sign" class="h-4 w-4 text-primary" />
+                    <h2 class="font-semibold text-foreground">Commission</h2>
+                  </div>
+                </div>
+                <div class="p-4">
                   <z-label for="defaultCommissionRate">
-                    Taux de commission par défaut (%)
+                    Taux par défaut (%)
                   </z-label>
                   <div class="flex items-center gap-2 mt-1">
                     <input
@@ -87,40 +81,23 @@ import { ZardSwitchComponent } from '@/shared/components/switch';
                       min="0"
                       max="100"
                       step="0.1"
-                      class="w-32"
+                      class="w-24"
                     />
                     <span class="text-muted-foreground">%</span>
                   </div>
-                  <p class="mt-1 text-sm text-muted-foreground">
-                    Ce taux sera appliqué par défaut aux nouvelles boutiques
-                  </p>
                 </div>
-              </div>
-            </z-card>
+              </z-card>
 
-            <!-- Section Panier -->
-            <z-card class="overflow-hidden">
-              <div class="px-6 py-4 bg-muted/50 border-b border-border">
-                <div class="flex items-center gap-3">
-                  <div class="p-2 rounded-lg bg-orange-500/10">
-                    <z-icon
-                      zType="shopping-cart"
-                      class="h-5 w-5 text-orange-500"
-                    />
-                  </div>
-                  <div>
-                    <h2 class="text-lg font-semibold text-foreground">Panier</h2>
-                    <p class="text-sm text-muted-foreground">
-                      Durée de vie et paramètres du panier
-                    </p>
+              <!-- Section Panier -->
+              <z-card class="overflow-hidden">
+                <div class="px-4 py-3 bg-muted/50 border-b border-border">
+                  <div class="flex items-center gap-2">
+                    <z-icon zType="shopping-cart" class="h-4 w-4 text-orange-500" />
+                    <h2 class="font-semibold text-foreground">Panier</h2>
                   </div>
                 </div>
-              </div>
-              <div class="p-6 space-y-4">
-                <div>
-                  <z-label for="cartTTLMinutes">
-                    Durée de vie du panier (minutes)
-                  </z-label>
+                <div class="p-4">
+                  <z-label for="cartTTLMinutes">Durée de vie (minutes)</z-label>
                   <div class="flex items-center gap-2 mt-1">
                     <input
                       z-input
@@ -130,38 +107,24 @@ import { ZardSwitchComponent } from '@/shared/components/switch';
                       name="cartTTLMinutes"
                       min="5"
                       max="1440"
-                      class="w-32"
+                      class="w-24"
                     />
-                    <span class="text-muted-foreground">minutes</span>
+                    <span class="text-muted-foreground text-sm">min</span>
                   </div>
-                  <p class="mt-1 text-sm text-muted-foreground">
-                    Le stock réservé sera libéré après cette durée (5 min - 24h)
-                  </p>
                 </div>
-              </div>
-            </z-card>
+              </z-card>
 
-            <!-- Section Stock -->
-            <z-card class="overflow-hidden">
-              <div class="px-6 py-4 bg-muted/50 border-b border-border">
-                <div class="flex items-center gap-3">
-                  <div class="p-2 rounded-lg bg-blue-500/10">
-                    <z-icon zType="package" class="h-5 w-5 text-blue-500" />
-                  </div>
-                  <div>
-                    <h2 class="text-lg font-semibold text-foreground">Stock</h2>
-                    <p class="text-sm text-muted-foreground">
-                      Seuils d'alerte de stock
-                    </p>
+              <!-- Section Stock -->
+              <z-card class="overflow-hidden">
+                <div class="px-4 py-3 bg-muted/50 border-b border-border">
+                  <div class="flex items-center gap-2">
+                    <z-icon zType="package" class="h-4 w-4 text-blue-500" />
+                    <h2 class="font-semibold text-foreground">Stock</h2>
                   </div>
                 </div>
-              </div>
-              <div class="p-6 space-y-4">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="p-4 grid grid-cols-2 gap-4">
                   <div>
-                    <z-label for="lowStockThreshold">
-                      Seuil d'alerte stock bas
-                    </z-label>
+                    <z-label for="lowStockThreshold">Seuil alerte</z-label>
                     <input
                       z-input
                       type="number"
@@ -171,14 +134,9 @@ import { ZardSwitchComponent } from '@/shared/components/switch';
                       min="0"
                       class="mt-1"
                     />
-                    <p class="mt-1 text-sm text-muted-foreground">
-                      Alerte quand le stock passe sous ce seuil
-                    </p>
                   </div>
                   <div>
-                    <z-label for="outOfStockThreshold">
-                      Seuil de rupture de stock
-                    </z-label>
+                    <z-label for="outOfStockThreshold">Seuil rupture</z-label>
                     <input
                       z-input
                       type="number"
@@ -188,241 +146,180 @@ import { ZardSwitchComponent } from '@/shared/components/switch';
                       min="0"
                       class="mt-1"
                     />
-                    <p class="mt-1 text-sm text-muted-foreground">
-                      Produit considéré en rupture sous ce seuil
-                    </p>
                   </div>
                 </div>
-              </div>
-            </z-card>
-
-            <!-- Section Général -->
-            <z-card class="overflow-hidden">
-              <div class="px-6 py-4 bg-muted/50 border-b border-border">
-                <div class="flex items-center gap-3">
-                  <div class="p-2 rounded-lg bg-gray-500/10">
-                    <z-icon zType="settings" class="h-5 w-5 text-gray-500" />
-                  </div>
-                  <div>
-                    <h2 class="text-lg font-semibold text-foreground">
-                      Général
-                    </h2>
-                    <p class="text-sm text-muted-foreground">
-                      Paramètres généraux de la plateforme
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div class="p-6 space-y-4">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <z-label for="platformName">Nom de la plateforme</z-label>
-                    <input
-                      z-input
-                      type="text"
-                      id="platformName"
-                      [(ngModel)]="formData.platformName"
-                      name="platformName"
-                      class="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <z-label for="currency">Devise</z-label>
-                    <input
-                      z-input
-                      type="text"
-                      id="currency"
-                      [(ngModel)]="formData.currency"
-                      name="currency"
-                      class="mt-1"
-                    />
-                  </div>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <z-label for="contactEmail">Email de contact</z-label>
-                    <input
-                      z-input
-                      type="email"
-                      id="contactEmail"
-                      [(ngModel)]="formData.contactEmail"
-                      name="contactEmail"
-                      class="mt-1"
-                      placeholder="contact@example.com"
-                    />
-                  </div>
-                  <div>
-                    <z-label for="supportEmail">Email de support</z-label>
-                    <input
-                      z-input
-                      type="email"
-                      id="supportEmail"
-                      [(ngModel)]="formData.supportEmail"
-                      name="supportEmail"
-                      class="mt-1"
-                      placeholder="support@example.com"
-                    />
-                  </div>
-                </div>
-              </div>
-            </z-card>
-
-            <!-- Section Paiement -->
-            <z-card class="overflow-hidden">
-              <div class="px-6 py-4 bg-muted/50 border-b border-border">
-                <div class="flex items-center gap-3">
-                  <div class="p-2 rounded-lg bg-green-500/10">
-                    <z-icon zType="credit-card" class="h-5 w-5 text-green-500" />
-                  </div>
-                  <div>
-                    <h2 class="text-lg font-semibold text-foreground">
-                      Paiement
-                    </h2>
-                    <p class="text-sm text-muted-foreground">
-                      Paramètres de paiement et wallet
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div class="p-6 space-y-4">
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <z-label for="minOrderAmount">
-                      Montant minimum commande
-                    </z-label>
-                    <div class="flex items-center gap-2 mt-1">
-                      <input
-                        z-input
-                        type="number"
-                        id="minOrderAmount"
-                        [(ngModel)]="formData.minOrderAmount"
-                        name="minOrderAmount"
-                        min="0"
-                        class="flex-1"
-                      />
-                      <span class="text-muted-foreground text-sm">{{
-                        formData.currency
-                      }}</span>
-                    </div>
-                  </div>
-                  <div>
-                    <z-label for="maxOrderAmount">
-                      Montant maximum commande
-                    </z-label>
-                    <div class="flex items-center gap-2 mt-1">
-                      <input
-                        z-input
-                        type="number"
-                        id="maxOrderAmount"
-                        [(ngModel)]="formData.maxOrderAmount"
-                        name="maxOrderAmount"
-                        min="0"
-                        class="flex-1"
-                      />
-                      <span class="text-muted-foreground text-sm">{{
-                        formData.currency
-                      }}</span>
-                    </div>
-                    <p class="mt-1 text-xs text-muted-foreground">
-                      0 = pas de limite
-                    </p>
-                  </div>
-                  <div>
-                    <z-label for="minWithdrawalAmount">
-                      Retrait minimum wallet
-                    </z-label>
-                    <div class="flex items-center gap-2 mt-1">
-                      <input
-                        z-input
-                        type="number"
-                        id="minWithdrawalAmount"
-                        [(ngModel)]="formData.minWithdrawalAmount"
-                        name="minWithdrawalAmount"
-                        min="0"
-                        class="flex-1"
-                      />
-                      <span class="text-muted-foreground text-sm">{{
-                        formData.currency
-                      }}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </z-card>
-
-            <!-- Section Maintenance -->
-            <z-card class="overflow-hidden">
-              <div class="px-6 py-4 bg-muted/50 border-b border-border">
-                <div class="flex items-center gap-3">
-                  <div class="p-2 rounded-lg bg-red-500/10">
-                    <z-icon zType="settings" class="h-5 w-5 text-red-500" />
-                  </div>
-                  <div>
-                    <h2 class="text-lg font-semibold text-foreground">
-                      Maintenance
-                    </h2>
-                    <p class="text-sm text-muted-foreground">
-                      Mode maintenance de la plateforme
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div class="p-6 space-y-4">
-                <div class="flex items-center justify-between">
-                  <div>
-                    <z-label>Mode maintenance</z-label>
-                    <p class="text-sm text-muted-foreground">
-                      Active le mode maintenance pour tous les utilisateurs
-                    </p>
-                  </div>
-                  <z-switch
-                    [(ngModel)]="formData.maintenanceMode"
-                    name="maintenanceMode"
-                  />
-                </div>
-                @if (formData.maintenanceMode) {
-                  <div>
-                    <z-label for="maintenanceMessage">
-                      Message de maintenance
-                    </z-label>
-                    <textarea
-                      z-input
-                      id="maintenanceMessage"
-                      [(ngModel)]="formData.maintenanceMessage"
-                      name="maintenanceMessage"
-                      rows="3"
-                      class="mt-1 w-full"
-                      placeholder="Message affiché aux utilisateurs..."
-                    ></textarea>
-                  </div>
-                }
-              </div>
-            </z-card>
-
-            <!-- Actions -->
-            <div class="flex justify-end gap-4 pt-4">
-              <button
-                z-button
-                type="button"
-                zType="outline"
-                (click)="resetForm()"
-                [disabled]="isSaving()"
-              >
-                Annuler les modifications
-              </button>
-              <button z-button type="submit" [disabled]="isSaving()">
-                @if (isSaving()) {
-                  <z-spinner class="mr-2 h-4 w-4" />
-                  Enregistrement...
-                } @else {
-                  <z-icon zType="check" class="mr-2" />
-                  Enregistrer
-                }
-              </button>
+              </z-card>
             </div>
-          </form>
-        }
-      </div>
+
+            <!-- Colonne droite -->
+            <div class="space-y-6">
+              <!-- Section Général -->
+              <z-card class="overflow-hidden">
+                <div class="px-4 py-3 bg-muted/50 border-b border-border">
+                  <div class="flex items-center gap-2">
+                    <z-icon zType="settings" class="h-4 w-4 text-gray-500" />
+                    <h2 class="font-semibold text-foreground">Général</h2>
+                  </div>
+                </div>
+                <div class="p-4 space-y-4">
+                  <div class="grid grid-cols-2 gap-4">
+                    <div>
+                      <z-label for="platformName">Nom plateforme</z-label>
+                      <input
+                        z-input
+                        type="text"
+                        id="platformName"
+                        [(ngModel)]="formData.platformName"
+                        name="platformName"
+                        class="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <z-label for="currency">Devise</z-label>
+                      <input
+                        z-input
+                        type="text"
+                        id="currency"
+                        [(ngModel)]="formData.currency"
+                        name="currency"
+                        class="mt-1"
+                      />
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-4">
+                    <div>
+                      <z-label for="contactEmail">Email contact</z-label>
+                      <input
+                        z-input
+                        type="email"
+                        id="contactEmail"
+                        [(ngModel)]="formData.contactEmail"
+                        name="contactEmail"
+                        class="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <z-label for="supportEmail">Email support</z-label>
+                      <input
+                        z-input
+                        type="email"
+                        id="supportEmail"
+                        [(ngModel)]="formData.supportEmail"
+                        name="supportEmail"
+                        class="mt-1"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </z-card>
+
+              <!-- Section Paiement -->
+              <z-card class="overflow-hidden">
+                <div class="px-4 py-3 bg-muted/50 border-b border-border">
+                  <div class="flex items-center gap-2">
+                    <z-icon zType="credit-card" class="h-4 w-4 text-green-500" />
+                    <h2 class="font-semibold text-foreground">Paiement</h2>
+                  </div>
+                </div>
+                <div class="p-4 grid grid-cols-3 gap-3">
+                  <div>
+                    <z-label for="minOrderAmount" class="text-xs">Min commande</z-label>
+                    <input
+                      z-input
+                      type="number"
+                      id="minOrderAmount"
+                      [(ngModel)]="formData.minOrderAmount"
+                      name="minOrderAmount"
+                      min="0"
+                      class="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <z-label for="maxOrderAmount" class="text-xs">Max commande</z-label>
+                    <input
+                      z-input
+                      type="number"
+                      id="maxOrderAmount"
+                      [(ngModel)]="formData.maxOrderAmount"
+                      name="maxOrderAmount"
+                      min="0"
+                      class="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <z-label for="minWithdrawalAmount" class="text-xs">Retrait min</z-label>
+                    <input
+                      z-input
+                      type="number"
+                      id="minWithdrawalAmount"
+                      [(ngModel)]="formData.minWithdrawalAmount"
+                      name="minWithdrawalAmount"
+                      min="0"
+                      class="mt-1"
+                    />
+                  </div>
+                </div>
+              </z-card>
+
+              <!-- Section Maintenance -->
+              <z-card class="overflow-hidden">
+                <div class="px-4 py-3 bg-muted/50 border-b border-border">
+                  <div class="flex items-center gap-2">
+                    <z-icon zType="settings" class="h-4 w-4 text-red-500" />
+                    <h2 class="font-semibold text-foreground">Maintenance</h2>
+                  </div>
+                </div>
+                <div class="p-4 space-y-3">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <span class="font-medium text-sm">Mode maintenance</span>
+                    </div>
+                    <z-switch
+                      [(ngModel)]="formData.maintenanceMode"
+                      name="maintenanceMode"
+                    />
+                  </div>
+                  @if (formData.maintenanceMode) {
+                    <div>
+                      <z-label for="maintenanceMessage">Message</z-label>
+                      <textarea
+                        z-input
+                        id="maintenanceMessage"
+                        [(ngModel)]="formData.maintenanceMessage"
+                        name="maintenanceMessage"
+                        rows="2"
+                        class="mt-1 w-full"
+                      ></textarea>
+                    </div>
+                  }
+                </div>
+              </z-card>
+            </div>
+          </div>
+
+          <!-- Actions - En bas pleine largeur -->
+          <div class="flex justify-end gap-4 mt-6 pt-4 border-t border-border">
+            <button
+              z-button
+              type="button"
+              zType="outline"
+              (click)="resetForm()"
+              [disabled]="isSaving()"
+            >
+              Annuler
+            </button>
+            <button z-button type="submit" [disabled]="isSaving()">
+              @if (isSaving()) {
+                <z-spinner class="mr-2 h-4 w-4" />
+                Enregistrement...
+              } @else {
+                <z-icon zType="check" class="mr-2" />
+                Enregistrer
+              }
+            </button>
+          </div>
+        </form>
+      }
     </div>
   `,
 })

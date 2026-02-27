@@ -4,49 +4,58 @@ export const ADMIN_ROUTES: Routes = [
   {
     path: '',
     loadComponent: () =>
-      import('./dashboard/admin-dashboard.component').then(
-        (m) => m.AdminDashboardComponent,
+      import('./shell/admin-shell.component').then(
+        (m) => m.AdminShellComponent,
       ),
-  },
-  {
-    path: 'users',
-    loadComponent: () =>
-      import('./users/user-list.component').then((m) => m.UserListComponent),
-  },
-  {
-    path: 'users/new',
-    loadComponent: () =>
-      import('./users/user-form.component').then((m) => m.UserFormComponent),
-  },
-  {
-    path: 'users/:id',
-    loadComponent: () =>
-      import('./users/user-detail.component').then(
-        (m) => m.UserDetailComponent,
-      ),
-  },
-  {
-    path: 'users/:id/edit',
-    loadComponent: () =>
-      import('./users/user-form.component').then((m) => m.UserFormComponent),
-  },
-  {
-    path: 'shops',
-    loadComponent: () =>
-      import('./shops/shop-list.component').then((m) => m.ShopListComponent),
-  },
-  {
-    path: 'products',
-    loadComponent: () =>
-      import('./products/product-list.component').then(
-        (m) => m.ProductListComponent,
-      ),
-  },
-  {
-    path: 'settings',
-    loadComponent: () =>
-      import('./settings/settings.component').then(
-        (m) => m.AdminSettingsComponent,
-      ),
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import('./dashboard/admin-dashboard.component').then(
+            (m) => m.AdminDashboardComponent,
+          ),
+      },
+      {
+        path: 'users',
+        loadComponent: () =>
+          import('./users/user-list.component').then((m) => m.UserListComponent),
+      },
+      {
+        path: 'users/new',
+        loadComponent: () =>
+          import('./users/user-form.component').then((m) => m.UserFormComponent),
+      },
+      {
+        path: 'users/:id',
+        loadComponent: () =>
+          import('./users/user-detail.component').then(
+            (m) => m.UserDetailComponent,
+          ),
+      },
+      {
+        path: 'users/:id/edit',
+        loadComponent: () =>
+          import('./users/user-form.component').then((m) => m.UserFormComponent),
+      },
+      {
+        path: 'shops',
+        loadComponent: () =>
+          import('./shops/shop-list.component').then((m) => m.ShopListComponent),
+      },
+      {
+        path: 'products',
+        loadComponent: () =>
+          import('./products/product-list.component').then(
+            (m) => m.ProductListComponent,
+          ),
+      },
+      {
+        path: 'settings',
+        loadComponent: () =>
+          import('./settings/settings.component').then(
+            (m) => m.AdminSettingsComponent,
+          ),
+      },
+    ],
   },
 ];

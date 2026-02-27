@@ -56,172 +56,153 @@ type ProductWithShop = Product & {
     TanstackDataTableComponent,
   ],
   template: `
-    <div class="min-h-screen bg-muted/30 py-8">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <!-- Header -->
-        <div
-          class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8"
-        >
-          <div>
-            <h1 class="text-2xl font-bold text-foreground">
-              Gestion des produits
-            </h1>
-            <p class="mt-1 text-muted-foreground">
-              Validez et gérez les produits de la plateforme
-            </p>
-          </div>
-          <div class="mt-4 sm:mt-0 flex items-center gap-4">
-            @if (pendingCount() > 0) {
-              <z-badge
-                zType="destructive"
-                zShape="pill"
-                class="text-sm px-3 py-1"
+    <div class="px-6 lg:px-8">
+      <!-- Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-foreground">
+            Gestion des produits
+          </h1>
+          <p class="mt-1 text-muted-foreground">
+            Validez et gérez les produits de la plateforme
+          </p>
+        </div>
+        <div class="mt-4 sm:mt-0 flex items-center gap-4">
+          @if (pendingCount() > 0) {
+            <z-badge zType="destructive" zShape="pill" class="text-sm px-3 py-1">
+              {{ pendingCount() }} en attente
+            </z-badge>
+          }
+        </div>
+      </div>
+
+      <!-- Filtres -->
+      <z-card class="mb-6">
+        <div class="p-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <!-- Recherche -->
+            <div class="lg:col-span-2">
+              <z-label for="search">Rechercher</z-label>
+              <input
+                z-input
+                id="search"
+                type="text"
+                [(ngModel)]="searchTerm"
+                (input)="onSearch()"
+                placeholder="Titre du produit..."
+                class="mt-1"
+              />
+            </div>
+
+            <!-- Filtre Status -->
+            <div>
+              <z-label>Statut</z-label>
+              <z-select
+                [(zValue)]="selectedStatus"
+                (zSelectionChange)="onFilterChange()"
+                zPlaceholder="Tous les statuts"
+                class="mt-1 w-full"
               >
-                {{ pendingCount() }} en attente
-              </z-badge>
-            }
+                <z-select-item zValue="ALL">Tous</z-select-item>
+                <z-select-item zValue="PENDING">En attente</z-select-item>
+                <z-select-item zValue="ACTIVE">Actif</z-select-item>
+                <z-select-item zValue="DRAFT">Brouillon</z-select-item>
+                <z-select-item zValue="REJECTED">Rejeté</z-select-item>
+                <z-select-item zValue="ARCHIVED">Archivé</z-select-item>
+              </z-select>
+            </div>
+
+            <!-- Filtre Catégorie -->
+            <div>
+              <z-label>Catégorie</z-label>
+              <z-select
+                [(zValue)]="selectedCategory"
+                (zSelectionChange)="onFilterChange()"
+                zPlaceholder="Toutes"
+                class="mt-1 w-full"
+              >
+                <z-select-item zValue="">Toutes</z-select-item>
+                @for (category of availableCategories(); track category) {
+                  <z-select-item [zValue]="category">{{ category }}</z-select-item>
+                }
+              </z-select>
+            </div>
+
+            <!-- Tri -->
+            <div>
+              <z-label>Trier par</z-label>
+              <z-select
+                [(zValue)]="selectedSort"
+                (zSelectionChange)="onFilterChange()"
+                zPlaceholder="Date création"
+                class="mt-1 w-full"
+              >
+                <z-select-item zValue="createdAt_desc">Plus récent</z-select-item>
+                <z-select-item zValue="createdAt_asc">Plus ancien</z-select-item>
+                <z-select-item zValue="title_asc">Titre A-Z</z-select-item>
+                <z-select-item zValue="title_desc">Titre Z-A</z-select-item>
+                <z-select-item zValue="price_asc">Prix ↑</z-select-item>
+                <z-select-item zValue="price_desc">Prix ↓</z-select-item>
+              </z-select>
+            </div>
           </div>
         </div>
+      </z-card>
 
-        <!-- Filtres -->
-        <z-card class="mb-6">
-          <div class="p-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              <!-- Recherche -->
-              <div class="lg:col-span-2">
-                <z-label for="search">Rechercher</z-label>
-                <input
-                  z-input
-                  id="search"
-                  type="text"
-                  [(ngModel)]="searchTerm"
-                  (input)="onSearch()"
-                  placeholder="Titre du produit..."
-                  class="mt-1"
-                />
-              </div>
+      <!-- Table des produits -->
+      <z-card class="overflow-hidden">
+        <app-tanstack-data-table
+          [data]="products()"
+          [columnDefs]="columns"
+          [rowActions]="actionsTemplate"
+          [cellTemplates]="cellTemplatesMap()"
+          [isLoading]="isLoading()"
+          [emptyMessage]="'Aucun produit trouvé'"
+          [emptyIcon]="'package'"
+          (sortChange)="onSortChange($event)"
+        />
 
-              <!-- Filtre Status -->
-              <div>
-                <z-label>Statut</z-label>
-                <z-select
-                  [(zValue)]="selectedStatus"
-                  (zSelectionChange)="onFilterChange()"
-                  zPlaceholder="Tous les statuts"
-                  class="mt-1 w-full"
-                >
-                  <z-select-item zValue="ALL">Tous</z-select-item>
-                  <z-select-item zValue="PENDING">En attente</z-select-item>
-                  <z-select-item zValue="ACTIVE">Actif</z-select-item>
-                  <z-select-item zValue="DRAFT">Brouillon</z-select-item>
-                  <z-select-item zValue="REJECTED">Rejeté</z-select-item>
-                  <z-select-item zValue="ARCHIVED">Archivé</z-select-item>
-                </z-select>
-              </div>
-
-              <!-- Filtre Catégorie -->
-              <div>
-                <z-label>Catégorie</z-label>
-                <z-select
-                  [(zValue)]="selectedCategory"
-                  (zSelectionChange)="onFilterChange()"
-                  zPlaceholder="Toutes"
-                  class="mt-1 w-full"
-                >
-                  <z-select-item zValue="">Toutes</z-select-item>
-                  @for (category of availableCategories(); track category) {
-                    <z-select-item [zValue]="category">{{
-                      category
-                    }}</z-select-item>
-                  }
-                </z-select>
-              </div>
-
-              <!-- Tri -->
-              <div>
-                <z-label>Trier par</z-label>
-                <z-select
-                  [(zValue)]="selectedSort"
-                  (zSelectionChange)="onFilterChange()"
-                  zPlaceholder="Date création"
-                  class="mt-1 w-full"
-                >
-                  <z-select-item zValue="-createdAt">Plus récent</z-select-item>
-                  <z-select-item zValue="createdAt">Plus ancien</z-select-item>
-                  <z-select-item zValue="title">Titre A-Z</z-select-item>
-                  <z-select-item zValue="-title">Titre Z-A</z-select-item>
-                  <z-select-item zValue="price">Prix ↑</z-select-item>
-                  <z-select-item zValue="-price">Prix ↓</z-select-item>
-                </z-select>
-              </div>
+        <!-- Pagination -->
+        @if (pagination() && !isLoading()) {
+          <div class="px-6 py-4 border-t border-border flex items-center justify-between">
+            <div class="text-sm text-muted-foreground">
+              Affichage de
+              <span class="font-medium text-foreground">
+                {{ (pagination()!.page - 1) * pagination()!.limit + 1 }}
+              </span>
+              à
+              <span class="font-medium text-foreground">
+                {{ Math.min(pagination()!.page * pagination()!.limit, pagination()!.total) }}
+              </span>
+              sur
+              <span class="font-medium text-foreground">{{ pagination()!.total }}</span>
+              résultats
+            </div>
+            <div class="flex space-x-2">
+              <button
+                z-button
+                zType="outline"
+                zSize="sm"
+                (click)="goToPage(currentPage() - 1)"
+                [disabled]="currentPage() === 1"
+              >
+                <z-icon zType="chevron-left" class="mr-1" />
+                Précédent
+              </button>
+              <button
+                z-button
+                zType="outline"
+                zSize="sm"
+                (click)="goToPage(currentPage() + 1)"
+                [disabled]="currentPage() >= pagination()!.pages"
+              >
+                Suivant
+                <z-icon zType="chevron-right" class="ml-1" />
+              </button>
             </div>
           </div>
-        </z-card>
-
-        <!-- Table des produits -->
-        <z-card class="overflow-hidden">
-          <app-tanstack-data-table
-            [data]="products()"
-            [columnDefs]="columns"
-            [rowActions]="actionsTemplate"
-            [cellTemplates]="cellTemplatesMap()"
-            [isLoading]="isLoading()"
-            [emptyMessage]="'Aucun produit trouvé'"
-            [emptyIcon]="'package'"
-            (sortChange)="onSortChange($event)"
-          />
-
-          <!-- Pagination -->
-          @if (pagination() && !isLoading()) {
-            <div
-              class="px-6 py-4 border-t border-border flex items-center justify-between"
-            >
-              <div class="text-sm text-muted-foreground">
-                Affichage de
-                <span class="font-medium text-foreground">
-                  {{ (pagination()!.page - 1) * pagination()!.limit + 1 }}
-                </span>
-                à
-                <span class="font-medium text-foreground">
-                  {{
-                    Math.min(
-                      pagination()!.page * pagination()!.limit,
-                      pagination()!.total
-                    )
-                  }}
-                </span>
-                sur
-                <span class="font-medium text-foreground">{{
-                  pagination()!.total
-                }}</span>
-                résultats
-              </div>
-              <div class="flex space-x-2">
-                <button
-                  z-button
-                  zType="outline"
-                  zSize="sm"
-                  (click)="goToPage(currentPage() - 1)"
-                  [disabled]="currentPage() === 1"
-                >
-                  <z-icon zType="chevron-left" class="mr-1" />
-                  Précédent
-                </button>
-                <button
-                  z-button
-                  zType="outline"
-                  zSize="sm"
-                  (click)="goToPage(currentPage() + 1)"
-                  [disabled]="currentPage() >= pagination()!.pages"
-                >
-                  Suivant
-                  <z-icon zType="chevron-right" class="ml-1" />
-                </button>
-              </div>
-            </div>
-          }
-        </z-card>
-      </div>
+        }
+      </z-card>
     </div>
 
     <!-- Template pour la colonne Image -->
@@ -327,7 +308,7 @@ export class ProductListComponent implements OnInit {
   searchTerm = '';
   selectedStatus: ProductStatus | 'ALL' = 'ALL';
   selectedCategory = '';
-  selectedSort = '-createdAt';
+  selectedSort = 'createdAt_desc';
 
   private searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -480,10 +461,9 @@ export class ProductListComponent implements OnInit {
 
   onSortChange(event: SortChangeEvent): void {
     if (event.direction === null) {
-      this.selectedSort = '-createdAt';
+      this.selectedSort = 'createdAt_desc';
     } else {
-      const prefix = event.direction === 'desc' ? '-' : '';
-      this.selectedSort = `${prefix}${event.column}`;
+      this.selectedSort = `${event.column}_${event.direction}`;
     }
     this.loadProducts();
   }

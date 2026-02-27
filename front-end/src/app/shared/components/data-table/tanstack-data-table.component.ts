@@ -351,13 +351,16 @@ export class TanstackDataTableComponent<T extends { _id?: string }> {
 
   /**
    * Convertir une valeur en chaîne
+   * Pour les objets complexes, retourner un placeholder pour éviter l'affichage JSON
    */
   private stringifyValue(value: unknown): string {
     if (value === null || value === undefined || value === '') return '-';
-    if (typeof value === 'string' || typeof value === 'number')
-      return String(value);
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number') return String(value);
     if (typeof value === 'boolean') return value ? 'Oui' : 'Non';
     if (value instanceof Date) return value.toLocaleDateString('fr-FR');
-    return JSON.stringify(value);
+    // Pour les objets et tableaux, retourner un placeholder au lieu de JSON
+    if (typeof value === 'object') return '...';
+    return '-';
   }
 }
