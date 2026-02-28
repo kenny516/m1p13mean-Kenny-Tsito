@@ -286,7 +286,7 @@ export class SellerProductDetailComponent implements OnInit {
     try {
       const linesResponse = await this.stockMovementService.getLines({ productId }, 1, 100);
       this.movementLines.set(
-        linesResponse.lines.filter((line) => !RESERVATION_MOVEMENT_TYPES.includes(line.movementType as never)),
+        linesResponse.lines.filter((line) => !this.isReservationMovementType(line.movementType)),
       );
     } catch {
       this.toast.error('Impossible de charger les lignes de mouvements du produit');
@@ -339,5 +339,11 @@ export class SellerProductDetailComponent implements OnInit {
       return fullName || user.email || '-';
     }
     return actor ? String(actor) : '-';
+  }
+
+  private isReservationMovementType(type: string): boolean {
+    return RESERVATION_MOVEMENT_TYPES.includes(
+      type as (typeof RESERVATION_MOVEMENT_TYPES)[number],
+    );
   }
 }

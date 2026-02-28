@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ShopService, StockMovementService, ToastService } from '@/core/services';
 import { Shop } from '@/core/models/shop.model';
-import { StockMovementLine } from '@/core/models/stock-movement.model';
+import { MovementType, StockMovementLine } from '@/core/models/stock-movement.model';
 import { ZardCardComponent } from '@/shared/components/card';
 import { DataTableColumn, DataTableComponent } from '@/shared/components/data-table';
 import { ZardSelectImports } from '@/shared/components/select';
@@ -112,7 +112,7 @@ export class StockMovementLinesComponent implements OnInit {
   readonly currentPage = signal(1);
 
   selectedShopId = '';
-  selectedType = '';
+  selectedType: MovementType | '' = '';
 
   readonly columns: DataTableColumn[] = [
     { accessorKey: 'reference', header: 'Référence' },
@@ -173,7 +173,7 @@ export class StockMovementLinesComponent implements OnInit {
       await this.stockMovementService.getLines(
         {
           shopId: this.selectedShopId || undefined,
-          movementType: (this.selectedType || undefined) as never,
+          movementType: this.selectedType || undefined,
         },
         this.currentPage(),
       );

@@ -14,13 +14,12 @@ import {
   ToastService,
 } from '@/core';
 import {
+  CreateStockMovementRequest,
   MovementType,
-  StockMovementPaymentMethod,
 } from '@/core/models/stock-movement.model';
 import {
   ADJUSTMENT_REASONS,
   MOVEMENT_TYPES,
-  PAYMENT_METHODS,
 } from '@/core/models/stock-movement.constants';
 import { ZardButtonComponent } from '@/shared/components/button';
 import { ZardCardComponent } from '@/shared/components/card';
@@ -54,7 +53,7 @@ import { ZardSelectImports } from '@/shared/components/select';
           <div class="grid gap-4 md:grid-cols-3">
             <div>
               <p class="mb-1 text-sm text-muted-foreground">Type *</p>
-              <z-select formControlName="movementType" class="w-full">
+              <z-select formControlName="movementType" class="w-full" (zSelectionChange)="onMovementTypeChange()">
                 @for (type of movementTypeOptions; track type) {
                   <z-select-item [zValue]="type">{{ type }}</z-select-item>
                 }
@@ -107,46 +106,6 @@ import { ZardSelectImports } from '@/shared/components/select';
             </div>
           }
 
-          @if (form.value.movementType === 'SALE') {
-            <div class="space-y-4 rounded-md border border-border p-4">
-              <h3 class="font-medium">Informations de vente</h3>
-              <div class="grid gap-4 md:grid-cols-2">
-                <div>
-                  <p class="mb-1 text-sm text-muted-foreground">Cart ID *</p>
-                  <input z-input formControlName="saleCartId" placeholder="ObjectId du panier" />
-                </div>
-                <div>
-                  <p class="mb-1 text-sm text-muted-foreground">Méthode de paiement *</p>
-                  <z-select formControlName="paymentMethod" class="w-full">
-                    @for (method of paymentMethods; track method) {
-                      <z-select-item [zValue]="method">{{ method }}</z-select-item>
-                    }
-                  </z-select>
-                </div>
-              </div>
-              <div class="grid gap-4 md:grid-cols-2">
-                <div>
-                  <p class="mb-1 text-sm text-muted-foreground">Rue *</p>
-                  <input z-input formControlName="deliveryStreet" />
-                </div>
-                <div>
-                  <p class="mb-1 text-sm text-muted-foreground">Ville *</p>
-                  <input z-input formControlName="deliveryCity" />
-                </div>
-              </div>
-              <div class="grid gap-4 md:grid-cols-2">
-                <div>
-                  <p class="mb-1 text-sm text-muted-foreground">Code postal</p>
-                  <input z-input formControlName="deliveryPostalCode" />
-                </div>
-                <div>
-                  <p class="mb-1 text-sm text-muted-foreground">Pays</p>
-                  <input z-input formControlName="deliveryCountry" />
-                </div>
-              </div>
-            </div>
-          }
-
           <div class="space-y-3">
             <div class="flex items-center justify-between">
               <h3 class="font-medium text-foreground">Lignes du mouvement</h3>
@@ -158,7 +117,7 @@ import { ZardSelectImports } from '@/shared/components/select';
             @for (item of items.controls; track $index) {
               <div class="grid gap-3 rounded-md border border-border p-3 md:grid-cols-5" [formGroup]="$any(item)">
 
-                <z-select formControlName="productId" class="w-full">
+                <z-select formControlName="productId" class="w-full" (zSelectionChange)="onProductChange($index)">
                   <z-select-item zValue="">Produit</z-select-item>
                   @for (product of products(); track product._id) {
                     <z-select-item [zValue]="product._id">{{ product.title }}</z-select-item>
@@ -173,7 +132,14 @@ import { ZardSelectImports } from '@/shared/components/select';
                 />
 
                 <input z-input type="number" min="1" formControlName="quantity" placeholder="Quantité" />
-                <input z-input type="number" min="0" formControlName="unitPrice" placeholder="Prix unitaire" />
+                <input
+                  z-input
+                  type="number"
+                  min="0"
+                  formControlName="unitPrice"
+                  placeholder="Prix unitaire"
+                  [readonly]="!isSupplyMovement()"
+                />
 
                 <button z-button zType="destructive" type="button" (click)="removeItem($index)">
                   Retirer
@@ -203,11 +169,12 @@ export class StockMovementFormComponent implements OnInit {
   readonly isSubmitting = signal(false);
   readonly products = signal<Product[]>([]);
 
-  readonly paymentMethods: readonly StockMovementPaymentMethod[] = PAYMENT_METHODS;
-
-  readonly movementTypeOptions: readonly MovementType[] = MOVEMENT_TYPES;
+  readonly movementTypeOptions = MOVEMENT_TYPES.filter(
+    (type): type is SellerCreatableMovementType => type !== 'SALE',
+  );
 
   readonly adjustmentReasons = ADJUSTMENT_REASONS;
+  readonly isSupplyMovement = signal(true);
 
   readonly form = this.fb.group({
     movementType: ['SUPPLY', [Validators.required]],
@@ -218,12 +185,6 @@ export class StockMovementFormComponent implements OnInit {
     supplierContact: [''],
     adjustmentReason: [''],
     adjustmentNotes: [''],
-    saleCartId: [''],
-    paymentMethod: ['WALLET'],
-    deliveryStreet: [''],
-    deliveryCity: [''],
-    deliveryPostalCode: [''],
-    deliveryCountry: ['Madagascar'],
     items: this.fb.array([]),
   });
 
@@ -233,6 +194,7 @@ export class StockMovementFormComponent implements OnInit {
 
   ngOnInit(): void {
     this.addItem();
+    this.onMovementTypeChange();
     void this.loadProducts();
   }
 
@@ -253,6 +215,7 @@ export class StockMovementFormComponent implements OnInit {
     });
 
     this.items.push(group);
+    this.syncItemPricingMode();
   }
 
   removeItem(index: number): void {
@@ -274,8 +237,20 @@ export class StockMovementFormComponent implements OnInit {
       return;
     }
 
-    const payload: Record<string, unknown> = {
-      movementType: value.movementType,
+    if (!value.movementType || !value.date) {
+      this.toast.error('Le type et la date du mouvement sont requis');
+      this.isSubmitting.set(false);
+      return;
+    }
+
+    if (value.movementType === 'SALE') {
+      this.toast.error('La création de mouvement SALE est désactivée côté vendeur');
+      this.isSubmitting.set(false);
+      return;
+    }
+
+    const payload: CreateStockMovementRequest = {
+      movementType: value.movementType as SellerCreatableMovementType,
       date: value.date,
       note: value.note || undefined,
       items: this.items.controls.map((group, index) => {
@@ -294,46 +269,36 @@ export class StockMovementFormComponent implements OnInit {
           shopId,
           productId: row.productId,
           quantity: Number(row.quantity),
-          unitPrice: Number(row.unitPrice),
+          unitPrice:
+            value.movementType === 'SUPPLY'
+              ? Number(row.unitPrice)
+              : this.getProductUnitPrice(row.productId),
         };
       }),
     };
 
     if (value.movementType === 'SUPPLY') {
-      payload['supply'] = {
+      payload.supply = {
         supplier: {
-          name: value.supplierName,
+          name: value.supplierName || '',
           contact: value.supplierContact || undefined,
         },
       };
     }
 
     if (value.movementType === 'ADJUSTMENT_PLUS' || value.movementType === 'ADJUSTMENT_MINUS') {
-      payload['adjustment'] = {
-        reason: value.adjustmentReason,
+      payload.adjustment = {
+        reason: value.adjustmentReason as (typeof ADJUSTMENT_REASONS)[number],
         notes: value.adjustmentNotes || undefined,
       };
     }
 
     if (value.movementType === 'RESERVATION' || value.movementType === 'RESERVATION_CANCEL') {
-      payload['cartId'] = value.cartId;
-    }
-
-    if (value.movementType === 'SALE') {
-      payload['sale'] = {
-        cartId: value.saleCartId,
-        paymentMethod: value.paymentMethod,
-        deliveryAddress: {
-          street: value.deliveryStreet,
-          city: value.deliveryCity,
-          postalCode: value.deliveryPostalCode || undefined,
-          country: value.deliveryCountry || 'Madagascar',
-        },
-      };
+      payload.cartId = value.cartId || undefined;
     }
 
     try {
-      await this.stockMovementService.createMovement(payload as never);
+      await this.stockMovementService.createMovement(payload);
       this.toast.success('Mouvement créé avec succès');
       await this.router.navigate(['/seller/stock-movements']);
     } catch (error) {
@@ -363,19 +328,63 @@ export class StockMovementFormComponent implements OnInit {
     return typeof shop === 'string' ? shop : shop._id;
   }
 
+  onMovementTypeChange(): void {
+    const movementType = this.form.get('movementType')?.value;
+    this.isSupplyMovement.set(movementType === 'SUPPLY');
+    this.syncItemPricingMode();
+  }
+
+  onProductChange(index: number): void {
+    if (this.isSupplyMovement()) {
+      return;
+    }
+
+    const group = this.items.at(index);
+    if (!group) {
+      return;
+    }
+
+    const productId = group.get('productId')?.value;
+    const unitPriceControl = group.get('unitPrice');
+    if (!unitPriceControl) {
+      return;
+    }
+
+    unitPriceControl.setValue(this.getProductUnitPrice(productId), { emitEvent: false });
+  }
+
+  private syncItemPricingMode(): void {
+    const isSupply = this.isSupplyMovement();
+
+    for (let index = 0; index < this.items.length; index++) {
+      const group = this.items.at(index);
+      const unitPriceControl = group.get('unitPrice');
+      if (!unitPriceControl) continue;
+
+      if (isSupply) {
+        unitPriceControl.enable({ emitEvent: false });
+        continue;
+      }
+
+      const productId = group.get('productId')?.value;
+      unitPriceControl.setValue(this.getProductUnitPrice(productId), { emitEvent: false });
+      unitPriceControl.disable({ emitEvent: false });
+    }
+  }
+
+  private getProductUnitPrice(productId: string): number {
+    if (!productId) return 0;
+
+    const product = this.products().find((entry) => entry._id === productId);
+    return product ? Number(product.price) : 0;
+  }
+
   private getConditionalValidationError(): string | null {
     const values = this.form.getRawValue();
     const movementType = values.movementType;
 
     if (movementType === 'SUPPLY' && !values.supplierName) {
       return 'Le nom du fournisseur est requis pour un mouvement SUPPLY';
-    }
-
-    if (movementType === 'SALE') {
-      if (!values.saleCartId) return 'Le Cart ID est requis pour un mouvement SALE';
-      if (!values.deliveryStreet || !values.deliveryCity) {
-        return 'L\'adresse de livraison (rue et ville) est requise pour un mouvement SALE';
-      }
     }
 
     if (
@@ -395,3 +404,5 @@ export class StockMovementFormComponent implements OnInit {
     return null;
   }
 }
+
+type SellerCreatableMovementType = Exclude<MovementType, 'SALE'>;

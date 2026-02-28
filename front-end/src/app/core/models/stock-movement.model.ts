@@ -123,7 +123,12 @@ export interface CreateStockMovementRequest {
   movementType: MovementType;
   date: string;
   note?: string;
+  cartId?: string;
   items: CreateStockMovementItemRequest[];
+  adjustment?: {
+    reason: (typeof ADJUSTMENT_REASONS)[number];
+    notes?: string;
+  };
   sale?: {
     cartId: string;
     paymentMethod: StockMovementPaymentMethod;

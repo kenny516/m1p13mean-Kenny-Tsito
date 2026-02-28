@@ -8,6 +8,7 @@ import { ZardCardComponent } from '@/shared/components/card';
 import { DataTableColumn, DataTableComponent } from '@/shared/components/data-table';
 import { ZardInputDirective } from '@/shared/components/input';
 import { ZardSelectImports } from '@/shared/components/select';
+import { SHOP_STATUS_LABELS, getStatusLabel } from '@/shared/utils/design-constants';
 
 @Component({
   selector: 'app-shop-list',
@@ -141,7 +142,8 @@ export class ShopListComponent implements OnInit {
       header: 'Nom',
     },
     {
-      accessorKey: 'status',
+      accessorFn: (shop: unknown) => getStatusLabel((shop as Shop).status, SHOP_STATUS_LABELS),
+      id: 'status',
       header: 'Statut',
     },
     {

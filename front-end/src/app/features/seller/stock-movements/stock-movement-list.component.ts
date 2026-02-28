@@ -30,7 +30,7 @@ import { ZardSelectImports } from '@/shared/components/select';
           <p class="text-muted-foreground">Liste complète des mouvements de vos boutiques.</p>
         </div>
         <div class="flex flex-wrap gap-2">
-          <a z-button zType="outline" routerLink="/seller/stock-movement-lines">Lignes</a>
+          <a z-button zType="outline" routerLink="/seller/stock-movements/lines">Lignes</a>
           <a z-button routerLink="/seller/stock-movements/new">Nouveau mouvement</a>
         </div>
       </div>
@@ -123,12 +123,17 @@ export class StockMovementListComponent implements OnInit {
   readonly currentPage = signal(1);
 
   selectedShopId = '';
-  selectedType = '';
+  selectedType: MovementType | '' = '';
 
   readonly columns: DataTableColumn[] = [
     {
       accessorKey: 'reference',
       header: 'Référence',
+    },
+    {
+      accessorFn: (movement: unknown) => this.displayMovementShops(movement as StockMovement),
+      id: 'shops',
+      header: 'Boutique(s)',
     },
     {
       accessorKey: 'movementType',
@@ -198,5 +203,20 @@ export class StockMovementListComponent implements OnInit {
     this.selectedType = '';
     this.currentPage.set(1);
     void this.loadMovements();
+  }
+
+  private displayMovementShops(movement: StockMovement): string {
+    const names = (movement.lineIds || [])
+      .map((line) => {
+        const shop = line.shopId as unknown;
+        if (shop && typeof shop === 'object' && 'name' in shop && typeof shop.name === 'string') {
+          return shop.name;
+        }
+        return null;
+      })
+      .filter((name): name is string => Boolean(name));
+
+    const uniqueNames = Array.from(new Set(names));
+    return uniqueNames.length ? uniqueNames.join(', ') : 'Boutique indisponible';
   }
 }
