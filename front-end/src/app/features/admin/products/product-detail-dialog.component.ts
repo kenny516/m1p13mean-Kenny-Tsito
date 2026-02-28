@@ -29,7 +29,7 @@ export interface ProductDetailDialogData {
       <!-- Image et infos principales -->
       <div class="flex gap-4">
         <!-- Image principale -->
-        <div class="flex-shrink-0">
+        <div class="shrink-0">
           @if (product.images && product.images.length > 0) {
             <img
               [src]="product.images[0]"
@@ -83,7 +83,7 @@ export interface ProductDetailDialogData {
               <img
                 [src]="image"
                 [alt]="'Image ' + (i + 1)"
-                class="w-16 h-16 object-cover rounded border flex-shrink-0"
+                class="w-16 h-16 object-cover rounded border shrink-0"
               />
             }
           </div>
@@ -141,19 +141,19 @@ export interface ProductDetailDialogData {
       <div class="grid grid-cols-3 gap-4 p-3 bg-muted/50 rounded-lg">
         <div class="text-center">
           <p class="text-2xl font-bold text-foreground">
-            {{ product.stock?.cache?.total || 0 }}
+            {{ product.stock.cache.total || 0 }}
           </p>
           <p class="text-xs text-muted-foreground">Stock total</p>
         </div>
         <div class="text-center">
           <p class="text-2xl font-bold text-foreground">
-            {{ product.stock?.cache?.available || 0 }}
+            {{ product.stock.cache.available || 0 }}
           </p>
           <p class="text-xs text-muted-foreground">Disponible</p>
         </div>
         <div class="text-center">
           <p class="text-2xl font-bold text-foreground">
-            {{ product.stock?.cache?.reserved || 0 }}
+            {{ product.stock.cache.reserved || 0 }}
           </p>
           <p class="text-xs text-muted-foreground">Réservé</p>
         </div>
