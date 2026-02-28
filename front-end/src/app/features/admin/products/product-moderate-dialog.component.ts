@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Product, Shop } from '@/core/models';
+import { Product, Shop, ProductStatus } from '@/core/models';
 import { ZardButtonComponent } from '@/shared/components/button';
 import { ZardIconComponent } from '@/shared/components/icon';
 import { ZardLabelComponent } from '@/shared/components/label';
@@ -15,12 +15,12 @@ type ProductWithShop = Product & {
 
 export interface ModerateDialogData {
   product: ProductWithShop;
-  initialStatus: 'ACTIVE' | 'REJECTED';
+  initialStatus: ProductStatus;
   onConfirm?: (result: ModerateDialogResult) => void;
 }
 
 export interface ModerateDialogResult {
-  status: 'ACTIVE' | 'REJECTED';
+  status: ProductStatus;
   rejectionReason?: string;
 }
 
@@ -56,7 +56,7 @@ export interface ModerateDialogResult {
 
       <!-- Sélection du statut -->
       <div class="space-y-2">
-        <z-label>Action</z-label>
+        <z-label>Nouveau statut</z-label>
         <z-select
           [(zValue)]="selectedStatus"
           (zSelectionChange)="onStatusChange()"
@@ -65,13 +65,25 @@ export interface ModerateDialogResult {
           <z-select-item zValue="ACTIVE">
             <div class="flex items-center gap-2">
               <z-icon zType="check" class="h-4 w-4 text-green-600" />
-              Approuver le produit
+              Actif (visible aux acheteurs)
+            </div>
+          </z-select-item>
+          <z-select-item zValue="PENDING">
+            <div class="flex items-center gap-2">
+              <z-icon zType="clock" class="h-4 w-4 text-yellow-600" />
+              En attente de validation
             </div>
           </z-select-item>
           <z-select-item zValue="REJECTED">
             <div class="flex items-center gap-2">
               <z-icon zType="x" class="h-4 w-4 text-destructive" />
-              Rejeter le produit
+              Rejeté
+            </div>
+          </z-select-item>
+          <z-select-item zValue="ARCHIVED">
+            <div class="flex items-center gap-2">
+              <z-icon zType="archive" class="h-4 w-4 text-muted-foreground" />
+              Archivé
             </div>
           </z-select-item>
         </z-select>
@@ -117,6 +129,22 @@ export interface ModerateDialogResult {
             </div>
           </div>
         </div>
+      } @else if (selectedStatus === 'PENDING') {
+        <div
+          class="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
+        >
+          <div class="flex items-start gap-2">
+            <z-icon
+              zType="clock"
+              class="h-5 w-5 text-yellow-600 mt-0.5"
+            />
+            <div>
+              <p class="text-sm text-yellow-800 dark:text-yellow-200">
+                Le produit sera remis en attente de validation.
+              </p>
+            </div>
+          </div>
+        </div>
       } @else if (selectedStatus === 'REJECTED') {
         <div
           class="p-3 bg-destructive/10 rounded-lg border border-destructive/20"
@@ -134,6 +162,22 @@ export interface ModerateDialogResult {
             </div>
           </div>
         </div>
+      } @else if (selectedStatus === 'ARCHIVED') {
+        <div
+          class="p-3 bg-muted rounded-lg border border-border"
+        >
+          <div class="flex items-start gap-2">
+            <z-icon
+              zType="archive"
+              class="h-5 w-5 text-muted-foreground mt-0.5"
+            />
+            <div>
+              <p class="text-sm text-muted-foreground">
+                Le produit sera archivé et ne sera plus visible.
+              </p>
+            </div>
+          </div>
+        </div>
       }
 
       <!-- Actions -->
@@ -147,12 +191,8 @@ export interface ModerateDialogResult {
         >
           @if (isSubmitting()) {
             <z-icon zType="loader-circle" class="mr-2 animate-spin" />
-          } @else if (selectedStatus === 'ACTIVE') {
-            <z-icon zType="check" class="mr-2" />
-          } @else {
-            <z-icon zType="x" class="mr-2" />
           }
-          {{ selectedStatus === 'ACTIVE' ? 'Approuver' : 'Rejeter' }}
+          Confirmer
         </button>
       </div>
     </div>
@@ -162,7 +202,7 @@ export class ProductModerateDialogComponent {
   private dialogRef = inject(ZardDialogRef);
   private data = inject<ModerateDialogData>(Z_MODAL_DATA);
 
-  selectedStatus: 'ACTIVE' | 'REJECTED' = this.data.initialStatus;
+  selectedStatus: ProductStatus = this.data.initialStatus;
   rejectionReason = '';
   showError = signal(false);
   isSubmitting = signal(false);

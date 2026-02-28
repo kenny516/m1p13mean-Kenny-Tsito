@@ -277,15 +277,25 @@ export const deleteProduct = async (id, userId, userRole) => {
 };
 
 /**
- * Validation Admin (Approuver/Rejeter)
+ * Modération Admin: Modifier le statut d'un produit
+ * L'admin peut changer le statut de n'importe quel produit (sauf DRAFT)
  */
 export const moderateProduct = async (id, status, rejectionReason) => {
 	const product = await getProductById(id);
 
+	// Empêcher la modification des produits en brouillon
+	if (product.status === "DRAFT") {
+		throw new ApiError(
+			400,
+			"INVALID_STATUS_TRANSITION",
+			"Impossible de modérer un produit en brouillon. Le vendeur doit d'abord le soumettre.",
+		);
+	}
+
 	product.status = status;
 	if (status === "REJECTED") {
 		product.rejectionReason = rejectionReason;
-	} else if (status === "ACTIVE") {
+	} else {
 		product.rejectionReason = undefined;
 	}
 

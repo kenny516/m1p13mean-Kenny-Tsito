@@ -137,9 +137,7 @@ import { FilePickerComponent } from '@/shared/components/file-picker/file-picker
                 @for (image of pendingImagePreviewUrls(); track image; let index = $index) {
                   <div class="relative space-y-2 rounded-md border border-border p-2">
                     <img
-                      [ikSrc]="image"
-                      [transformation]="[{ width: 300, height: 300 }]"
-                      [responsive]="false"
+                      [src]="image"
                       loading="lazy"
                       class="h-24 w-full rounded object-cover"
                       alt="Nouvelle image produit"

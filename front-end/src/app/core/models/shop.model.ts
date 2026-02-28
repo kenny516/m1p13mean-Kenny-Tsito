@@ -84,7 +84,7 @@ export interface UpdateShopRequest {
  * Interface pour la modération d'une boutique par un admin
  */
 export interface ModerateShopRequest {
-  status: 'ACTIVE' | 'REJECTED';
+  status: ShopStatus;
   rejectionReason?: string;
 }
 
