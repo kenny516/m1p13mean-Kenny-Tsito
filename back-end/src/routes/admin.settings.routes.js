@@ -21,6 +21,8 @@ router.get("/", settingsController.getSettings);
  * @desc    Mettre à jour les paramètres de la plateforme
  * @access  Admin only
  */
-router.put("/", validate(updateSettingsSchema), settingsController.updateSettings);
-
-export default router;
+router.put(
+  "/",
+  validate(updateSettingsSchema),
+  settingsController.updateSettings,
+);

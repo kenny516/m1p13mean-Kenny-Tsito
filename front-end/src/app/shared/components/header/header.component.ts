@@ -1,21 +1,50 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from "@angular/core";
 
-import { RouterLink, RouterLinkActive } from '@angular/router';
-import { AuthService, CartService } from '../../../core';
+import { RouterLink, RouterLinkActive } from "@angular/router";
+import { AuthService, CartService, NavigationContextService } from "../../../core";
 
 @Component({
-  selector: 'app-header',
+  selector: "app-header",
   standalone: true,
   imports: [RouterLink, RouterLinkActive],
   template: `
     <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center h-16">
-          <!-- Logo -->
-          <a [routerLink]="getHomeRoute()" class="flex items-center space-x-2">
-            <span class="text-2xl">🛒</span>
-            <span class="text-xl font-bold text-gray-900">MEAN Mall</span>
-          </a>
+      <div class=" mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-12">
+          <!-- Partie gauche : Hamburger (si shell) + Logo -->
+          <div class="flex items-center gap-3">
+            <!-- Bouton hamburger pour sidebar mobile (affiché uniquement si dans un shell) -->
+            @if (hasShell()) {
+              <button
+                (click)="toggleMobileMenu()"
+                class="lg:hidden p-2 -ml-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                [attr.aria-label]="mobileMenuOpen() ? 'Fermer le menu' : 'Ouvrir le menu'"
+              >
+                @if (mobileMenuOpen()) {
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                } @else {
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                }
+              </button>
+            }
+
+            <!-- Logo -->
+            <a [routerLink]="getHomeRoute()" class="flex items-center space-x-2">
+              <span class="text-2xl">🛒</span>
+              <span class="text-xl font-bold text-gray-900">MEAN Mall</span>
+            </a>
+
+            <!-- Titre du contexte (affiché en mobile si dans un shell) -->
+            @if (hasShell() && shellConfig(); as config) {
+              <span class="hidden sm:inline-block lg:hidden text-sm font-medium text-gray-500 border-l border-gray-200 pl-3 ml-1">
+                {{ config.title }}
+              </span>
+            }
+          </div>
 
           <!-- Navigation -->
           <nav class="hidden md:flex items-center space-x-8">
@@ -43,7 +72,7 @@ import { AuthService, CartService } from '../../../core';
             @if (isAuthenticated()) {
               @if (user(); as userData) {
                 <!-- Panier (pour les acheteurs) -->
-                @if (userData.role === 'BUYER') {
+                @if (userData.role === "BUYER") {
                   <a
                     routerLink="/buyer/cart"
                     class="relative p-2 text-gray-600 hover:text-gray-900 transition-colors"
@@ -66,7 +95,7 @@ import { AuthService, CartService } from '../../../core';
                       <span
                         class="absolute -top-1 -right-1 bg-primary text-white text-xs font-bold rounded-full h-5 min-w-5 flex items-center justify-center px-1"
                       >
-                        {{ cartItemCount() > 99 ? '99+' : cartItemCount() }}
+                        {{ cartItemCount() > 99 ? "99+" : cartItemCount() }}
                       </span>
                     }
                   </a>
@@ -115,7 +144,7 @@ import { AuthService, CartService } from '../../../core';
                         Mon profil
                       </a>
 
-                      @if (userData.role === 'SELLER') {
+                      @if (userData.role === "SELLER") {
                         <a
                           routerLink="/seller"
                           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -124,7 +153,7 @@ import { AuthService, CartService } from '../../../core';
                         </a>
                       }
 
-                      @if (userData.role === 'ADMIN') {
+                      @if (userData.role === "ADMIN") {
                         <a
                           routerLink="/admin"
                           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -133,7 +162,7 @@ import { AuthService, CartService } from '../../../core';
                         </a>
                       }
 
-                      @if (userData.role === 'BUYER') {
+                      @if (userData.role === "BUYER") {
                         <a
                           routerLink="/buyer/orders"
                           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -167,14 +196,20 @@ import { AuthService, CartService } from '../../../core';
 export class HeaderComponent implements OnInit {
   private authService = inject(AuthService);
   private cartService = inject(CartService);
+  private navContextService = inject(NavigationContextService);
 
   user = this.authService.currentUser;
   isAuthenticated = this.authService.isAuthenticated;
   cartItemCount = this.cartService.cartItemCount;
 
+  // Navigation context signals
+  hasShell = this.navContextService.hasShell;
+  shellConfig = this.navContextService.shellConfig;
+  mobileMenuOpen = this.navContextService.mobileMenuOpen;
+
   ngOnInit(): void {
     // Charger le panier si l'utilisateur est un BUYER connecté
-    if (this.isAuthenticated() && this.user()?.role === 'BUYER') {
+    if (this.isAuthenticated() && this.user()?.role === "BUYER") {
       this.cartService.getCart().catch(() => {
         // Ignorer si le panier n'existe pas encore
       });
@@ -184,9 +219,9 @@ export class HeaderComponent implements OnInit {
   getInitials(user: {
     profile?: { firstName?: string; lastName?: string };
   }): string {
-    const firstName = user.profile?.firstName || '';
-    const lastName = user.profile?.lastName || '';
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || '?';
+    const firstName = user.profile?.firstName || "";
+    const lastName = user.profile?.lastName || "";
+    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || "?";
   }
 
   logout(): void {
@@ -195,17 +230,21 @@ export class HeaderComponent implements OnInit {
   }
 
   getHomeRoute(): string {
-    if (!this.isAuthenticated()) return '/';
+    if (!this.isAuthenticated()) return "/";
 
     const role = this.user()?.role;
-    if (role === 'SELLER') return '/seller';
-    if (role === 'BUYER') return '/buyer/products';
-    if (role === 'ADMIN') return '/admin';
-    return '/';
+    if (role === "SELLER") return "/seller";
+    if (role === "BUYER") return "/buyer/products";
+    if (role === "ADMIN") return "/admin";
+    return "/";
   }
 
   showProductsMenu(): boolean {
     if (!this.isAuthenticated()) return true;
-    return this.user()?.role !== 'BUYER';
+    return this.user()?.role !== "BUYER";
+  }
+
+  toggleMobileMenu(): void {
+    this.navContextService.toggleMobileMenu();
   }
 }
