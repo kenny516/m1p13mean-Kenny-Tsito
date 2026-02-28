@@ -2,6 +2,29 @@ import * as productService from "../services/product.service.js";
 import Shop from "../models/Shop.js";
 import { ApiError } from "../middlewares/error.middleware.js";
 
+const serializeProductMedia = (product) => {
+	if (!product) return product;
+
+	const serialized =
+		typeof product.toJSON === "function"
+			? product.toJSON()
+			: { ...product };
+
+	if (Array.isArray(serialized.images)) {
+		serialized.images = serialized.images
+			.map((image) => {
+				if (typeof image === "string") return image;
+				return image?.url || null;
+			})
+			.filter(Boolean);
+	}
+
+	return serialized;
+};
+
+const serializeProductsMedia = (products = []) =>
+	products.map((product) => serializeProductMedia(product));
+
 /**
  * Créer un nouveau produit
  * POST /api/products
@@ -28,11 +51,16 @@ export const create = async (req, res, next) => {
 			throw new ApiError(403, "FORBIDDEN", "Votre boutique n'est pas encore active");
 		}
 
-		const product = await productService.createProduct(productData, sellerId, shop._id);
+		const product = await productService.createProduct(
+			productData,
+			sellerId,
+			shop._id,
+			req.files,
+		);
 
 		res.status(201).json({
 			success: true,
-			data: product,
+			data: serializeProductMedia(product),
 			message: "Produit créé avec succès",
 		});
 	} catch (error) {
@@ -51,7 +79,7 @@ export const list = async (req, res, next) => {
 
 		res.json({
 			success: true,
-			data: products,
+			data: serializeProductsMedia(products),
 			pagination: {
 				page,
 				limit,
@@ -105,7 +133,7 @@ export const listMyProducts = async (req, res, next) => {
 
 		res.json({
 			success: true,
-			data: products,
+			data: serializeProductsMedia(products),
 			pagination: {
 				page,
 				limit,
@@ -129,7 +157,7 @@ export const getOne = async (req, res, next) => {
 
 		res.json({
 			success: true,
-			data: product,
+			data: serializeProductMedia(product),
 		});
 	} catch (error) {
 		next(error);
@@ -147,11 +175,17 @@ export const update = async (req, res, next) => {
 		const userId = req.user._id.toString();
 		const userRole = req.user.role;
 
-		const product = await productService.updateProduct(id, updateData, userId, userRole);
+		const product = await productService.updateProduct(
+			id,
+			updateData,
+			userId,
+			userRole,
+			req.files,
+		);
 
 		res.json({
 			success: true,
-			data: product,
+			data: serializeProductMedia(product),
 			message: "Produit mis à jour avec succès",
 		});
 	} catch (error) {
@@ -199,8 +233,57 @@ export const moderate = async (req, res, next) => {
 
 		res.json({
 			success: true,
-			data: product,
+			data: serializeProductMedia(product),
 			message: `Produit ${action} avec succès`,
+		});
+	} catch (error) {
+		next(error);
+	}
+};
+
+/**
+ * Ajouter des images à un produit existant
+ * POST /api/products/:id/images
+ */
+export const addImages = async (req, res, next) => {
+	try {
+		const { id } = req.params;
+		const userId = req.user._id.toString();
+		const userRole = req.user.role;
+
+		const product = await productService.addProductImages(id, userId, userRole, req.files);
+
+		res.json({
+			success: true,
+			data: serializeProductMedia(product),
+			message: "Images ajoutées avec succès",
+		});
+	} catch (error) {
+		next(error);
+	}
+};
+
+/**
+ * Supprimer une image de produit par index
+ * DELETE /api/products/:id/image/:index
+ */
+export const deleteImageByIndex = async (req, res, next) => {
+	try {
+		const { id, index } = req.params;
+		const userId = req.user._id.toString();
+		const userRole = req.user.role;
+
+		const product = await productService.deleteProductImageByIndex(
+			id,
+			Number.parseInt(index, 10),
+			userId,
+			userRole,
+		);
+
+		res.json({
+			success: true,
+			data: serializeProductMedia(product),
+			message: "Image supprimée avec succès",
 		});
 	} catch (error) {
 		next(error);

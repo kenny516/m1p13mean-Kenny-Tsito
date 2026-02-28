@@ -118,7 +118,7 @@ interface NavItem {
               [class.justify-center]="collapsed()"
             >
               <div
-                class="w-9 h-9 rounded-lg bg-primary flex items-center justify-center flex-shrink-0"
+                class="w-9 h-9 rounded-lg bg-primary flex items-center justify-center shrink-0"
               >
                 <z-icon
                   zType="store"
@@ -152,7 +152,7 @@ interface NavItem {
               >
                 <z-icon
                   [zType]="item.icon"
-                  class="h-5 w-5 flex-shrink-0 text-muted-foreground group-hover:text-sidebar-foreground transition-colors"
+                  class="h-5 w-5 shrink-0 text-muted-foreground group-hover:text-sidebar-foreground transition-colors"
                 />
                 @if (!collapsed()) {
                   <span class="truncate">{{ item.label }}</span>
@@ -172,7 +172,7 @@ interface NavItem {
             >
               <z-icon
                 [zType]="collapsed() ? 'panel-left-open' : 'panel-left-close'"
-                class="h-5 w-5 flex-shrink-0"
+                class="h-5 w-5 shrink-0"
               />
               @if (!collapsed()) {
                 <span class="text-sm">Réduire</span>
@@ -187,7 +187,7 @@ interface NavItem {
               [class.px-2]="collapsed()"
               [title]="collapsed() ? 'Retour au catalogue' : ''"
             >
-              <z-icon zType="arrow-left" class="h-5 w-5 flex-shrink-0" />
+              <z-icon zType="arrow-left" class="h-5 w-5 shrink-0" />
               @if (!collapsed()) {
                 <span class="text-sm">Retour au catalogue</span>
               }
@@ -202,28 +202,30 @@ interface NavItem {
         [class.lg:ml-64]="!collapsed()"
         [class.lg:ml-16]="collapsed()"
       >
-        <!-- Breadcrumb desktop -->
-        <div class="hidden lg:block px-6 lg:px-8 mb-4">
-          <nav class="flex items-center gap-2 text-sm">
-            <a
-              routerLink="/seller"
-              class="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Espace vendeur
-            </a>
-            @if (currentPageTitle() && currentPageTitle() !== "Mes boutiques") {
-              <z-icon
-                zType="chevron-right"
-                class="h-4 w-4 text-muted-foreground"
-              />
-              <span class="text-foreground font-medium">{{
-                currentPageTitle()
-              }}</span>
-            }
-          </nav>
-        </div>
+        <div class="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+          <!-- Breadcrumb desktop -->
+          <div class="hidden lg:block mb-4">
+            <nav class="flex items-center gap-2 text-sm">
+              <a
+                routerLink="/seller"
+                class="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Espace vendeur
+              </a>
+              @if (currentPageTitle() && currentPageTitle() !== "Mes boutiques") {
+                <z-icon
+                  zType="chevron-right"
+                  class="h-4 w-4 text-muted-foreground"
+                />
+                <span class="text-foreground font-medium">{{
+                  currentPageTitle()
+                }}</span>
+              }
+            </nav>
+          </div>
 
-        <router-outlet />
+          <router-outlet />
+        </div>
       </main>
     </div>
   `,
@@ -277,7 +279,7 @@ export class SellerShellComponent implements OnInit, OnDestroy {
   }
 
   // Fermer le menu mobile si on redimensionne vers desktop
-  @HostListener("window:resize", ["$event"])
+  @HostListener('window:resize')
   onResize(): void {
     if (window.innerWidth >= 1024 && this.mobileMenuOpen()) {
       this.closeMobileMenu();
@@ -289,7 +291,7 @@ export class SellerShellComponent implements OnInit, OnDestroy {
       "/seller/shops": "Mes boutiques",
       "/seller/products": "Produits",
       "/seller/stock-movements": "Mouvements de stock",
-      "/seller/stock-movement-lines": "Lignes de mouvement",
+      '/seller/stock-movements/lines': 'Lignes de mouvement',
     };
 
     // Chercher le titre correspondant

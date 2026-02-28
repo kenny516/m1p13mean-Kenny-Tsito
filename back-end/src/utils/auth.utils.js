@@ -40,14 +40,16 @@ export const comparePassword = async (password, hash) => {
  * @returns {Object} Utilisateur formaté pour la réponse
  */
 export const formatUserResponse = (user) => {
+  const serialized = typeof user?.toJSON === "function" ? user.toJSON() : user;
+
   return {
-    _id: user._id,
-    email: user.email,
-    role: user.role,
-    profile: user.profile,
-    isValidated: user.isValidated,
-    walletId: user.walletId,
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt,
+    _id: serialized._id,
+    email: serialized.email,
+    role: serialized.role,
+    profile: serialized.profile,
+    isValidated: serialized.isValidated,
+    walletId: serialized.walletId,
+    createdAt: serialized.createdAt,
+    updatedAt: serialized.updatedAt,
   };
 };

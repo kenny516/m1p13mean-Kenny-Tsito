@@ -17,8 +17,14 @@ const shopSchema = new mongoose.Schema(
       trim: true,
     },
     description: String,
-    logo: String,
-    banner: String,
+    logo: {
+      url: { type: String, trim: true },
+      fileId: { type: String, trim: true },
+    },
+    banner: {
+      url: { type: String, trim: true },
+      fileId: { type: String, trim: true },
+    },
     contact: {
       email: String,
       phone: String,
@@ -51,6 +57,21 @@ const shopSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+const serializeShopMedia = (_doc, ret) => {
+  if (ret?.logo && typeof ret.logo === "object") {
+    ret.logo = ret.logo.url || null;
+  }
+
+  if (ret?.banner && typeof ret.banner === "object") {
+    ret.banner = ret.banner.url || null;
+  }
+
+  return ret;
+};
+
+shopSchema.set("toJSON", { transform: serializeShopMedia });
+shopSchema.set("toObject", { transform: serializeShopMedia });
 
 // Sync isActive avec le status avant chaque sauvegarde
 shopSchema.pre("save", function () {

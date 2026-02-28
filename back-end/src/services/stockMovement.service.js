@@ -7,6 +7,17 @@ import { ApiError } from "../middlewares/error.middleware.js";
 import { parseSortOption } from "../utils/request.util.js";
 import { createStockMovement } from "./stockMovementLine.service.js";
 
+const MOVEMENT_POPULATE = [
+	{
+		path: "lineIds",
+		populate: [
+			{ path: "productId", select: "title sku" },
+			{ path: "shopId", select: "name" },
+		],
+	},
+	{ path: "performedBy", select: "email profile" },
+];
+
 const _resolveMoveIdsFromLineFilters = async (filters = {}) => {
 	const { productId, shopId, movementType, direction, startDate, endDate } = filters;
 
@@ -52,8 +63,7 @@ const _listMovementsByIds = async (moveIds, filters = {}) => {
 
 	const [movements, total] = await Promise.all([
 		StockMovement.find(query)
-			.populate("lineIds")
-			.populate("performedBy", "email profile")
+			.populate(MOVEMENT_POPULATE)
 			.sort(sortOptions)
 			.skip(skip)
 			.limit(limit),
@@ -71,8 +81,7 @@ export const createMovement = async (payload, performedBy, options = {}) => {
 
 	const { header } = await createStockMovement(payload, performedBy, options);
 	return await StockMovement.findById(header._id)
-		.populate("lineIds")
-		.populate("performedBy", "email profile");
+		.populate(MOVEMENT_POPULATE);
 };
 
 // ==========================================
@@ -81,8 +90,7 @@ export const createMovement = async (payload, performedBy, options = {}) => {
 
 export const getMovementById = async (id) => {
 	const movement = await StockMovement.findById(id)
-		.populate("lineIds")
-		.populate("performedBy", "email profile")
+		.populate(MOVEMENT_POPULATE)
 
 	if (!movement) {
 		throw new ApiError(404, "NOT_FOUND", "Mouvement de stock non trouvé");

@@ -187,6 +187,11 @@ export class AuthService {
     }
   }
 
+  setCurrentUser(user: User): void {
+    this.currentUserSignal.set(user);
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  }
+
   /**
    * Change le mot de passe
    * @param data - Mot de passe actuel et nouveau

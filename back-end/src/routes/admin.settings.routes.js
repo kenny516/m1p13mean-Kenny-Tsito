@@ -26,3 +26,5 @@ router.put(
   validate(updateSettingsSchema),
   settingsController.updateSettings,
 );
+
+export default router;

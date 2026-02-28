@@ -42,6 +42,7 @@ export const PRODUCT_STATUS_LABELS: Record<string, string> = {
   PENDING: 'En attente',
   ACTIVE: 'Actif',
   REJECTED: 'Rejeté',
+  ARCHIVED: 'Archivé',
   OUT_OF_STOCK: 'Rupture',
 };
 
@@ -50,6 +51,7 @@ export const PRODUCT_STATUS_BADGE_VARIANTS: Record<string, BadgeVariant> = {
   PENDING: 'outline',
   ACTIVE: 'default',
   REJECTED: 'destructive',
+  ARCHIVED: 'secondary',
   OUT_OF_STOCK: 'destructive',
 };
 
