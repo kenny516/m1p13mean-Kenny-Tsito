@@ -12,6 +12,7 @@ export const register = async (req, res, next) => {
       password,
       role,
       profile,
+      avatarFile: req.file,
     });
 
     res
@@ -57,7 +58,7 @@ export const getMe = async (req, res, next) => {
 export const updateProfile = async (req, res, next) => {
   try {
     const { profile } = req.body;
-    const updated = await authService.updateUserProfile(req.user._id, profile);
+    const updated = await authService.updateUserProfile(req.user._id, profile, req.file);
     res.json({
       success: true,
       data: updated,
@@ -95,6 +96,40 @@ export const checkEmail = async (req, res, next) => {
     const { email } = req.body;
     const exists = await authService.checkEmailExists(email);
     res.json({ success: true, data: { exists } });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Upload ou remplace l'avatar de l'utilisateur connecté
+ * PUT /api/auth/profile/avatar
+ */
+export const uploadAvatar = async (req, res, next) => {
+  try {
+    const updated = await authService.uploadUserAvatar(req.user._id, req.file);
+    res.json({
+      success: true,
+      data: updated,
+      message: "Avatar mis à jour avec succès",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Supprime l'avatar de l'utilisateur connecté
+ * DELETE /api/auth/profile/avatar
+ */
+export const deleteAvatar = async (req, res, next) => {
+  try {
+    const updated = await authService.deleteUserAvatar(req.user._id);
+    res.json({
+      success: true,
+      data: updated,
+      message: "Avatar supprimé avec succès",
+    });
   } catch (error) {
     next(error);
   }

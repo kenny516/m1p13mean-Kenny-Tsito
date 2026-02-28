@@ -36,11 +36,24 @@ const config = {
 
   // Panier
   cartExpirationMinutes: parseInt(process.env.CART_EXPIRATION_MINUTES, 10) || 30,
+
+  // ImageKit
+  imagekit: {
+    publicKey: process.env.IMAGEKIT_PUBLIC_KEY || "",
+    privateKey: process.env.IMAGEKIT_PRIVATE_KEY || "",
+    urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT || "",
+  },
 };
 
 // Validation des variables critiques en production
 if (config.nodeEnv === "production") {
-  const requiredVars = ["MONGO_URI", "JWT_SECRET"];
+  const requiredVars = [
+    "MONGO_URI",
+    "JWT_SECRET",
+    "IMAGEKIT_PUBLIC_KEY",
+    "IMAGEKIT_PRIVATE_KEY",
+    "IMAGEKIT_URL_ENDPOINT",
+  ];
   const missingVars = requiredVars.filter((varName) => !process.env[varName]);
 
   if (missingVars.length > 0) {

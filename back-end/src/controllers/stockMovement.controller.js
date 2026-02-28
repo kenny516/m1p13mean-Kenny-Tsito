@@ -59,7 +59,22 @@ export const getOne = async (req, res, next) => {
 			const shops = await Shop.find({ sellerId: req.user._id }, "_id").lean();
 			const ownedShopIds = new Set(shops.map((shop) => shop._id.toString()));
 			const lineShopIds = (movement.lineIds || [])
-				.map((line) => line?.shopId?.toString?.())
+				.map((line) => {
+					const lineShop = line?.shopId;
+					if (!lineShop) return null;
+
+					if (typeof lineShop === "string") {
+						return lineShop;
+					}
+
+					if (typeof lineShop === "object") {
+						if (lineShop._id) return lineShop._id.toString();
+						const raw = lineShop.toString?.();
+						if (raw && raw !== "[object Object]") return raw;
+					}
+
+					return null;
+				})
 				.filter(Boolean);
 
 			const hasForeignShop = lineShopIds.some((shopId) => !ownedShopIds.has(shopId));

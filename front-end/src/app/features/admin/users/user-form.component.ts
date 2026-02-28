@@ -34,131 +34,138 @@ import { ZardSpinnerComponent } from '@/shared/components/spinner';
     ZardSpinnerComponent,
   ],
   template: `
-    <div class="min-h-screen bg-muted/30 py-8">
-      <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-        <!-- Back Button -->
-        <div class="mb-6">
-          <a z-button zType="ghost" routerLink="/admin/users">
-            <z-icon zType="arrow-left" class="mr-2" />
-            Retour à la liste
-          </a>
+    <div class="px-6 lg:px-8">
+      <!-- Back Button -->
+      <div class="mb-4">
+        <a z-button zType="ghost" routerLink="/admin/users">
+          <z-icon zType="arrow-left" class="mr-2" />
+          Retour à la liste
+        </a>
+      </div>
+
+      <!-- Form Card -->
+      <z-card>
+        <div class="px-6 py-4 border-b border-border">
+          <h1 class="text-xl font-semibold text-foreground">
+            {{ isEditMode() ? "Modifier l'utilisateur" : 'Nouvel utilisateur' }}
+          </h1>
         </div>
 
-        <!-- Form Card -->
-        <z-card>
-          <div class="px-6 py-4 border-b border-border">
-            <h1 class="text-xl font-semibold text-foreground">
-              {{
-                isEditMode() ? "Modifier l'utilisateur" : 'Nouvel utilisateur'
-              }}
-            </h1>
-            <p class="mt-1 text-sm text-muted-foreground">
-              {{
-                isEditMode()
-                  ? "Modifiez les informations de l'utilisateur ci-dessous."
-                  : 'Remplissez les informations pour créer un nouvel utilisateur.'
-              }}
-            </p>
+        @if (isLoading()) {
+          <div class="p-6 space-y-4">
+            <z-skeleton class="h-10 w-full" />
+            <z-skeleton class="h-10 w-full" />
+            <z-skeleton class="h-10 w-full" />
           </div>
-
-          @if (isLoading()) {
-            <div class="p-8 space-y-4">
-              <z-skeleton class="h-10 w-full" />
-              <z-skeleton class="h-10 w-full" />
-              <z-skeleton class="h-10 w-full" />
-            </div>
-          } @else {
-            <form
-              [formGroup]="form"
-              (ngSubmit)="onSubmit()"
-              class="p-6 space-y-6"
-            >
-              <!-- Email -->
-              <div>
-                <z-label for="email">
-                  Email <span class="text-destructive">*</span>
-                </z-label>
-                <input
-                  z-input
-                  type="email"
-                  id="email"
-                  formControlName="email"
-                  class="mt-1"
-                  [class.border-destructive]="
-                    form.get('email')?.invalid && form.get('email')?.touched
-                  "
-                  placeholder="utilisateur@exemple.com"
-                />
-                @if (form.get('email')?.invalid && form.get('email')?.touched) {
-                  <p class="mt-1 text-sm text-destructive">
-                    @if (form.get('email')?.errors?.['required']) {
-                      L'email est requis
-                    } @else if (form.get('email')?.errors?.['email']) {
-                      Format d'email invalide
-                    }
-                  </p>
-                }
-              </div>
-
-              <!-- Password (only for create mode) -->
-              @if (!isEditMode()) {
+        } @else {
+          <form [formGroup]="form" (ngSubmit)="onSubmit()" class="p-6">
+            <!-- Grille principale -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              
+              <!-- Colonne gauche - Compte -->
+              <div class="space-y-4">
+                <h3 class="text-sm font-medium text-muted-foreground uppercase tracking-wide">Compte</h3>
+                
+                <!-- Email -->
                 <div>
-                  <z-label for="password">
-                    Mot de passe <span class="text-destructive">*</span>
+                  <z-label for="email">
+                    Email <span class="text-destructive">*</span>
                   </z-label>
                   <input
                     z-input
-                    type="password"
-                    id="password"
-                    formControlName="password"
+                    type="email"
+                    id="email"
+                    formControlName="email"
                     class="mt-1"
-                    [class.border-destructive]="
-                      form.get('password')?.invalid &&
-                      form.get('password')?.touched
-                    "
-                    placeholder="Minimum 8 caractères"
+                    [class.border-destructive]="form.get('email')?.invalid && form.get('email')?.touched"
+                    placeholder="utilisateur@exemple.com"
                   />
-                  @if (
-                    form.get('password')?.invalid &&
-                    form.get('password')?.touched
-                  ) {
+                  @if (form.get('email')?.invalid && form.get('email')?.touched) {
                     <p class="mt-1 text-sm text-destructive">
-                      @if (form.get('password')?.errors?.['required']) {
-                        Le mot de passe est requis
-                      } @else if (form.get('password')?.errors?.['minlength']) {
-                        Le mot de passe doit contenir au moins 8 caractères
+                      @if (form.get('email')?.errors?.['required']) {
+                        L'email est requis
+                      } @else if (form.get('email')?.errors?.['email']) {
+                        Format d'email invalide
                       }
                     </p>
                   }
                 </div>
-              }
 
-              <!-- Role -->
-              <div>
-                <z-label>
-                  Rôle <span class="text-destructive">*</span>
-                </z-label>
-                <z-select
-                  [zValue]="form.get('role')?.value"
-                  (zSelectionChange)="form.get('role')?.setValue($event)"
-                  zPlaceholder="Sélectionnez un rôle"
-                  class="mt-1 w-full"
-                >
-                  <z-select-item zValue="BUYER">Acheteur</z-select-item>
-                  <z-select-item zValue="SELLER">Vendeur</z-select-item>
-                  <z-select-item zValue="ADMIN">Administrateur</z-select-item>
-                </z-select>
+                <!-- Password (only for create mode) -->
+                @if (!isEditMode()) {
+                  <div>
+                    <z-label for="password">
+                      Mot de passe <span class="text-destructive">*</span>
+                    </z-label>
+                    <input
+                      z-input
+                      type="password"
+                      id="password"
+                      formControlName="password"
+                      class="mt-1"
+                      [class.border-destructive]="form.get('password')?.invalid && form.get('password')?.touched"
+                      placeholder="Min. 8 caractères"
+                    />
+                    @if (form.get('password')?.invalid && form.get('password')?.touched) {
+                      <p class="mt-1 text-sm text-destructive">
+                        @if (form.get('password')?.errors?.['required']) {
+                          Le mot de passe est requis
+                        } @else if (form.get('password')?.errors?.['minlength']) {
+                          Min. 8 caractères
+                        }
+                      </p>
+                    }
+                  </div>
+                }
+
+                <!-- Role -->
+                <div>
+                  <z-label>Rôle <span class="text-destructive">*</span></z-label>
+                  <z-select
+                    [zValue]="form.get('role')?.value"
+                    (zSelectionChange)="form.get('role')?.setValue($event)"
+                    zPlaceholder="Sélectionnez un rôle"
+                    class="mt-1 w-full"
+                  >
+                    <z-select-item zValue="BUYER">Acheteur</z-select-item>
+                    <z-select-item zValue="SELLER">Vendeur</z-select-item>
+                    <z-select-item zValue="ADMIN">Administrateur</z-select-item>
+                  </z-select>
+                </div>
+
+                <!-- Account Status (only for edit mode) -->
+                @if (isEditMode()) {
+                  <div class="pt-4 border-t border-border space-y-3">
+                    <h3 class="text-sm font-medium text-muted-foreground uppercase tracking-wide">Statut</h3>
+                    <div class="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="isActive"
+                        formControlName="isActive"
+                        class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <z-label for="isActive" class="cursor-pointer">Compte actif</z-label>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="isValidated"
+                        formControlName="isValidated"
+                        class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <z-label for="isValidated" class="cursor-pointer">Compte validé</z-label>
+                    </div>
+                  </div>
+                }
               </div>
 
-              <!-- Profile Section -->
-              <div class="border-t border-border pt-6">
-                <h3 class="text-lg font-medium text-foreground mb-4">
-                  Informations personnelles
-                </h3>
-
+              <!-- Colonne droite - Profil -->
+              <div class="space-y-4">
+                <h3 class="text-sm font-medium text-muted-foreground uppercase tracking-wide">Profil</h3>
+                
                 <div formGroupName="profile" class="space-y-4">
                   <!-- First Name & Last Name -->
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div class="grid grid-cols-2 gap-4">
                     <div>
                       <z-label for="firstName">Prénom</z-label>
                       <input
@@ -195,18 +202,11 @@ import { ZardSpinnerComponent } from '@/shared/components/spinner';
                       placeholder="+261 34 00 000 00"
                     />
                   </div>
-                </div>
-              </div>
 
-              <!-- Address Section -->
-              <div class="border-t border-border pt-6">
-                <h3 class="text-lg font-medium text-foreground mb-4">
-                  Adresse
-                </h3>
-
-                <div formGroupName="profile" class="space-y-4">
-                  <div formGroupName="address" class="space-y-4">
-                    <!-- Street -->
+                  <!-- Address Section -->
+                  <div formGroupName="address" class="pt-4 border-t border-border space-y-4">
+                    <h3 class="text-sm font-medium text-muted-foreground uppercase tracking-wide">Adresse</h3>
+                    
                     <div>
                       <z-label for="street">Rue</z-label>
                       <input
@@ -219,8 +219,7 @@ import { ZardSpinnerComponent } from '@/shared/components/spinner';
                       />
                     </div>
 
-                    <!-- City & Postal Code -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-2 gap-4">
                       <div>
                         <z-label for="city">Ville</z-label>
                         <input
@@ -245,7 +244,6 @@ import { ZardSpinnerComponent } from '@/shared/components/spinner';
                       </div>
                     </div>
 
-                    <!-- Country -->
                     <div>
                       <z-label for="country">Pays</z-label>
                       <input
@@ -260,66 +258,23 @@ import { ZardSpinnerComponent } from '@/shared/components/spinner';
                   </div>
                 </div>
               </div>
+            </div>
 
-              <!-- Account Status (only for edit mode) -->
-              @if (isEditMode()) {
-                <div class="border-t border-border pt-6">
-                  <h3 class="text-lg font-medium text-foreground mb-4">
-                    Statut du compte
-                  </h3>
-
-                  <div class="space-y-4">
-                    <div class="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="isActive"
-                        formControlName="isActive"
-                        class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                      />
-                      <z-label for="isActive" class="cursor-pointer">
-                        Compte actif
-                      </z-label>
-                    </div>
-
-                    <div class="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="isValidated"
-                        formControlName="isValidated"
-                        class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                      />
-                      <z-label for="isValidated" class="cursor-pointer">
-                        Compte validé
-                      </z-label>
-                    </div>
-                  </div>
-                </div>
-              }
-
-              <!-- Submit Buttons -->
-              <div
-                class="border-t border-border pt-6 flex justify-end space-x-4"
-              >
-                <a z-button zType="outline" routerLink="/admin/users">
-                  Annuler
-                </a>
-                <button
-                  z-button
-                  type="submit"
-                  [disabled]="form.invalid || isSubmitting()"
-                >
-                  @if (isSubmitting()) {
-                    <z-spinner class="mr-2 h-4 w-4" />
-                    Enregistrement...
-                  } @else {
-                    {{ isEditMode() ? 'Modifier' : 'Créer' }}
-                  }
-                </button>
-              </div>
-            </form>
-          }
-        </z-card>
-      </div>
+            <!-- Submit Buttons -->
+            <div class="border-t border-border pt-6 mt-6 flex justify-end space-x-4">
+              <a z-button zType="outline" routerLink="/admin/users">Annuler</a>
+              <button z-button type="submit" [disabled]="form.invalid || isSubmitting()">
+                @if (isSubmitting()) {
+                  <z-spinner class="mr-2 h-4 w-4" />
+                  Enregistrement...
+                } @else {
+                  {{ isEditMode() ? 'Modifier' : 'Créer' }}
+                }
+              </button>
+            </div>
+          </form>
+        }
+      </z-card>
     </div>
   `,
 })

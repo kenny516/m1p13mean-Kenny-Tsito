@@ -24,6 +24,30 @@ export interface ProductsResponse {
 export class ProductService {
   private api = inject(ApiService);
 
+  private buildProductFormData(
+    data: CreateProductRequest | UpdateProductRequest,
+    files: File[] = [],
+  ): FormData {
+    const formData = new FormData();
+
+    Object.entries(data).forEach(([key, value]) => {
+      if (value === undefined || value === null) return;
+
+      if (Array.isArray(value) || typeof value === 'object') {
+        formData.append(key, JSON.stringify(value));
+        return;
+      }
+
+      formData.append(key, String(value));
+    });
+
+    files.forEach((file) => {
+      formData.append('images', file);
+    });
+
+    return formData;
+  }
+
   // Signals pour l'état réactif
   private productsSignal = signal<Product[]>([]);
   private selectedProductSignal = signal<Product | null>(null);
@@ -209,6 +233,19 @@ export class ProductService {
     }
   }
 
+  async createProductWithImages(
+    data: CreateProductRequest,
+    files: File[] = [],
+  ): Promise<Product> {
+    this.isLoadingSignal.set(true);
+    try {
+      const formData = this.buildProductFormData(data, files);
+      return await this.api.post<Product>('/products', formData);
+    } finally {
+      this.isLoadingSignal.set(false);
+    }
+  }
+
   /**
    * Met à jour un produit
    * @param id - Identifiant du produit
@@ -228,6 +265,22 @@ export class ProductService {
     }
   }
 
+  async updateProductWithImages(
+    id: string,
+    data: UpdateProductRequest,
+    files: File[] = [],
+  ): Promise<Product> {
+    this.isLoadingSignal.set(true);
+    try {
+      const formData = this.buildProductFormData(data, files);
+      const product = await this.api.put<Product>(`/products/${id}`, formData);
+      this.selectedProductSignal.set(product);
+      return product;
+    } finally {
+      this.isLoadingSignal.set(false);
+    }
+  }
+
   /**
    * Supprime un produit
    * @param id - Identifiant du produit
@@ -240,6 +293,95 @@ export class ProductService {
       this.productsSignal.update((products: Product[]) =>
         products.filter((p: Product) => p._id !== id),
       );
+    } finally {
+      this.isLoadingSignal.set(false);
+    }
+  }
+
+  // ============================================
+  // Méthodes pour les admins (ADMIN)
+  // ============================================
+
+  /**
+   * Récupère tous les produits (tous statuts) pour l'admin
+   * @param filters - Filtres de recherche
+   * @param page - Numéro de page
+   * @param limit - Nombre d'éléments par page
+   */
+  async getAllProducts(
+    filters?: ProductFilters,
+    page = 1,
+    limit = 10,
+  ): Promise<ProductsResponse> {
+    this.isLoadingSignal.set(true);
+    try {
+      const params: Record<string, string> = {
+        page: String(page),
+        limit: String(limit),
+      };
+
+      if (filters) {
+        if (filters.search) params['search'] = filters.search;
+        if (filters.status && filters.status !== 'ALL')
+          params['status'] = filters.status;
+        if (filters.category) params['category'] = filters.category;
+        if (filters.shopId) params['shopId'] = filters.shopId;
+        if (filters.sort) params['sort'] = filters.sort;
+      }
+
+      const response = await this.api.getWithPagination<Product[]>(
+        '/admin/products',
+        params,
+      );
+
+      if (response.success && response.data) {
+        this.productsSignal.set(response.data);
+        if (response.pagination) {
+          this.paginationSignal.set(response.pagination);
+        }
+        return { products: response.data, pagination: response.pagination! };
+      }
+
+      throw new Error('Erreur lors de la récupération des produits');
+    } finally {
+      this.isLoadingSignal.set(false);
+    }
+  }
+
+  /**
+   * Récupère les produits en attente de validation (admin)
+   * @param filters - Filtres additionnels
+   * @param page - Numéro de page
+   * @param limit - Nombre d'éléments par page
+   */
+  async getPendingProducts(
+    filters?: Omit<ProductFilters, 'status'>,
+    page = 1,
+    limit = 10,
+  ): Promise<ProductsResponse> {
+    return this.getAllProducts({ ...filters, status: 'PENDING' }, page, limit);
+  }
+
+  /**
+   * Modère un produit (approuver/rejeter) - Admin uniquement
+   * @param id - Identifiant du produit
+   * @param data - Données de modération (status + rejectionReason optionnel)
+   */
+  async moderateProduct(
+    id: string,
+    data: { status: 'ACTIVE' | 'REJECTED'; rejectionReason?: string },
+  ): Promise<Product> {
+    this.isLoadingSignal.set(true);
+    try {
+      const product = await this.api.put<Product>(
+        `/admin/products/${id}/validate`,
+        data,
+      );
+      // Mettre à jour le produit dans la liste locale si présent
+      this.productsSignal.update((products: Product[]) =>
+        products.map((p: Product) => (p._id === id ? product : p)),
+      );
+      return product;
     } finally {
       this.isLoadingSignal.set(false);
     }

@@ -57,6 +57,7 @@ import {
   LogOut,
   type LucideIconData,
   Mail,
+  Menu,
   Minus,
   Monitor,
   Moon,
@@ -64,6 +65,8 @@ import {
   Package,
   Palette,
   PanelLeft,
+  PanelLeftClose,
+  PanelLeftOpen,
   Plus,
   Popcorn,
   Puzzle,
@@ -204,6 +207,9 @@ export const ZARD_ICONS = {
   image: Image,
   store: Store,
   package: Package,
+  menu: Menu,
+  'panel-left-open': PanelLeftOpen,
+  'panel-left-close': PanelLeftClose,
 } as const satisfies Record<string, LucideIconData>;
 
 export declare type ZardIcon = keyof typeof ZARD_ICONS | LucideIconData;

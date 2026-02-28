@@ -8,6 +8,7 @@ import {
   updateProfileSchema,
   changePasswordSchema,
 } from "../validations/auth.validation.js";
+import { uploadAvatar, parseJsonFields } from "../middlewares/upload.middleware.js";
 
 const router = Router();
 
@@ -16,7 +17,13 @@ const router = Router();
  * @desc    Inscription d'un nouvel utilisateur
  * @access  Public
  */
-router.post("/register", validate(registerSchema), authController.register);
+router.post(
+  "/register",
+  uploadAvatar,
+  parseJsonFields(["profile"]),
+  validate(registerSchema),
+  authController.register,
+);
 
 /**
  * @route   POST /api/auth/login
@@ -40,9 +47,25 @@ router.get("/me", auth, authController.getMe);
 router.put(
   "/profile",
   auth,
+  uploadAvatar,
+  parseJsonFields(["profile"]),
   validate(updateProfileSchema),
   authController.updateProfile,
 );
+
+/**
+ * @route   PUT /api/auth/profile/avatar
+ * @desc    Upload ou remplacer l'avatar de l'utilisateur connecté
+ * @access  Private
+ */
+router.put("/profile/avatar", auth, uploadAvatar, authController.uploadAvatar);
+
+/**
+ * @route   DELETE /api/auth/profile/avatar
+ * @desc    Supprimer l'avatar de l'utilisateur connecté
+ * @access  Private
+ */
+router.delete("/profile/avatar", auth, authController.deleteAvatar);
 
 /**
  * @route   PUT /api/auth/password

@@ -1,4 +1,7 @@
 import { Routes } from '@angular/router';
+import { ShopListComponent } from '@/features/seller/shops/shop-list.component';
+import { SellerProductListComponent } from '@/features/seller/products/seller-product-list.component';
+import { StockMovementListComponent } from '@/features/seller/stock-movements/stock-movement-list.component';
 
 export const SELLER_ROUTES: Routes = [
   {
@@ -13,8 +16,7 @@ export const SELLER_ROUTES: Routes = [
       },
       {
         path: 'shops',
-        loadComponent: () =>
-          import('./shops/shop-list.component').then((m) => m.ShopListComponent),
+        loadComponent: () => Promise.resolve(ShopListComponent),
       },
       {
         path: 'shops/new',
@@ -33,10 +35,7 @@ export const SELLER_ROUTES: Routes = [
       },
       {
         path: 'products',
-        loadComponent: () =>
-          import('./products/seller-product-list.component').then(
-            (m) => m.SellerProductListComponent,
-          ),
+        loadComponent: () => Promise.resolve(SellerProductListComponent),
       },
       {
         path: 'products/new',
@@ -61,10 +60,7 @@ export const SELLER_ROUTES: Routes = [
       },
       {
         path: 'stock-movements',
-        loadComponent: () =>
-          import('./stock-movements/stock-movement-list.component').then(
-            (m) => m.StockMovementListComponent,
-          ),
+        loadComponent: () => Promise.resolve(StockMovementListComponent),
       },
       {
         path: 'stock-movements/new',
@@ -81,9 +77,9 @@ export const SELLER_ROUTES: Routes = [
           ),
       },
       {
-        path: 'stock-movement-lines',
+        path: 'stock-movements/lines',
         loadComponent: () =>
-          import('./stock-movements/stockMovement-lines.component').then(
+          import('./stock-movements/stock-movement-lines.component').then(
             (m) => m.StockMovementLinesComponent,
           ),
       },

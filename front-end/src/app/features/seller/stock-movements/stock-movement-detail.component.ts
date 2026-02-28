@@ -76,6 +76,10 @@ import { ZardSelectImports } from '@/shared/components/select';
               <p class="text-sm text-muted-foreground">Effectué par</p>
               <p class="font-medium">{{ displayActor(current.performedBy) }}</p>
             </div>
+            <div>
+              <p class="text-sm text-muted-foreground">Boutique(s)</p>
+              <p class="font-medium">{{ displayMovementShops(current) }}</p>
+            </div>
           </div>
 
           @if (current.note) {
@@ -267,40 +271,30 @@ export class StockMovementDetailComponent implements OnInit {
   selectedSaleStatus: SaleStatus = 'CONFIRMED';
 
   readonly lineColumns: DataTableColumn[] = [
-    { accessorKey: 'reference', header: 'Référence ligne' },
+    { accessorKey: 'reference', header: 'Référence' },
     {
       accessorFn: (line: unknown) => this.displayProduct(line as StockMovementLine),
       id: 'product',
       header: 'Produit',
-    },
-    {
-      accessorFn: (line: unknown) => this.displayShop(line as StockMovementLine),
-      id: 'shop',
-      header: 'Boutique',
     },
     { accessorKey: 'quantity', header: 'Quantité' },
     {
       accessorFn: (line: unknown) =>
         `${(line as StockMovementLine).unitPrice.toLocaleString('fr-FR')} MGA`,
       id: 'unitPrice',
-      header: 'Prix unitaire',
+      header: 'Prix',
     },
     {
       accessorFn: (line: unknown) =>
         `${(line as StockMovementLine).totalAmount.toLocaleString('fr-FR')} MGA`,
       id: 'totalAmount',
-      header: 'Montant',
-    },
-    {
-      accessorFn: (line: unknown) => this.displayActor((line as StockMovementLine).performedBy),
-      id: 'performedBy',
-      header: 'Effectué par',
+      header: 'Total',
     },
     {
       accessorFn: (line: unknown) =>
         new Date((line as StockMovementLine).createdAt).toLocaleString('fr-FR'),
       id: 'createdAt',
-      header: 'Créée le',
+      header: 'Date',
     },
   ];
 
@@ -347,16 +341,23 @@ export class StockMovementDetailComponent implements OnInit {
       if (titled.title) return titled.title;
       if (titled.sku) return titled.sku;
     }
-    return String(line.productId || '-');
+    return 'Produit indisponible';
   }
 
-  private displayShop(line: StockMovementLine): string {
-    const shop = line.shopId as unknown;
-    if (shop && typeof shop === 'object' && 'name' in shop) {
-      const namedShop = shop as { name?: string };
-      return namedShop.name || '-';
-    }
-    return String(line.shopId || '-');
+  displayMovementShops(movement: StockMovement): string {
+    const names = (movement.lineIds || [])
+      .map((line) => {
+        const shop = line.shopId as unknown;
+        if (shop && typeof shop === 'object') {
+          const named = shop as { name?: string };
+          if (named.name) return named.name;
+        }
+        return null;
+      })
+      .filter((name): name is string => Boolean(name));
+
+    const uniqueNames = Array.from(new Set(names));
+    return uniqueNames.length ? uniqueNames.join(', ') : 'Boutique indisponible';
   }
 
   displayActor(actor: unknown): string {

@@ -7,7 +7,12 @@ import {
 	updateProductSchema,
 	listProductsQuerySchema,
 	updateStockSchema,
+	productImageIndexParamsSchema,
 } from "../validations/product.validation.js";
+import {
+	uploadProductImages,
+	parseJsonFields,
+} from "../middlewares/upload.middleware.js";
 
 const router = Router();
 
@@ -47,6 +52,8 @@ router.post(
 	"/",
 	auth,
 	authorize("SELLER"),
+	uploadProductImages,
+	parseJsonFields(["tags", "characteristics", "stock"]),
 	validate(createProductSchema),
 	productController.create,
 );
@@ -60,8 +67,36 @@ router.put(
 	"/:id",
 	auth,
 	authorize("SELLER", "ADMIN"),
+	uploadProductImages,
+	parseJsonFields(["tags", "characteristics", "stock"]),
 	validate(updateProductSchema),
 	productController.update,
+);
+
+/**
+ * @route   POST /api/products/:id/images
+ * @desc    Ajouter des images à un produit existant
+ * @access  Private (SELLER, ADMIN)
+ */
+router.post(
+	"/:id/images",
+	auth,
+	authorize("SELLER", "ADMIN"),
+	uploadProductImages,
+	productController.addImages,
+);
+
+/**
+ * @route   DELETE /api/products/:id/image/:index
+ * @desc    Supprimer une image produit par index
+ * @access  Private (SELLER, ADMIN)
+ */
+router.delete(
+	"/:id/image/:index",
+	auth,
+	authorize("SELLER", "ADMIN"),
+	validate(productImageIndexParamsSchema, "params"),
+	productController.deleteImageByIndex,
 );
 
 /**

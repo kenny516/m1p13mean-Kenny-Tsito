@@ -2,12 +2,16 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { Product, ProductService, Shop, ShopService, ToastService } from '@/core';
+import { Product, ProductService, ProductStatus, Shop, ShopService, ToastService } from '@/core';
 import { ZardButtonComponent } from '@/shared/components/button';
 import { ZardCardComponent } from '@/shared/components/card';
 import { DataTableColumn, DataTableComponent } from '@/shared/components/data-table';
 import { ZardInputDirective } from '@/shared/components/input';
 import { ZardSelectImports } from '@/shared/components/select';
+import {
+  PRODUCT_STATUS_LABELS,
+  getStatusLabel,
+} from '@/shared/utils/design-constants';
 
 @Component({
   selector: 'app-seller-product-list',
@@ -165,7 +169,8 @@ export class SellerProductListComponent implements OnInit {
       header: 'Boutique',
     },
     {
-      accessorKey: 'status',
+      accessorFn: (product: unknown) => this.getStatusLabel((product as Product).status),
+      id: 'status',
       header: 'Statut',
     },
   ];
@@ -245,5 +250,11 @@ export class SellerProductListComponent implements OnInit {
     } catch {
       this.toast.error('Échec de suppression');
     }
+  }
+
+  // === Helpers pour le statut ===
+
+  getStatusLabel(status: ProductStatus): string {
+    return getStatusLabel(status, PRODUCT_STATUS_LABELS);
   }
 }

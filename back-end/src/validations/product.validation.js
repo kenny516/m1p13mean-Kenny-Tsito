@@ -44,10 +44,6 @@ export const createProductSchema = Joi.object({
       "object.unknown": "Caractéristiques invalides",
     }),
 
-  images: Joi.array().items(Joi.string().uri()).max(5).optional().messages({
-    "string.uri": "Les images doivent être des URLs valides",
-    "array.max": "Maximum 5 images autorisées",
-  }),
 
   // === TARIFICATION ===
   price: Joi.number().min(0).required().messages({
@@ -103,10 +99,6 @@ export const updateProductSchema = Joi.object({
     .pattern(Joi.string(), Joi.alternatives().try(Joi.string(), Joi.number()))
     .optional(),
 
-  images: Joi.array().items(Joi.string().uri()).max(5).optional().messages({
-    "string.uri": "Les images doivent être des URLs valides",
-    "array.max": "Maximum 5 images autorisées",
-  }),
 
   // === TARIFICATION ===
   price: Joi.number().min(0).optional().messages({
@@ -132,7 +124,7 @@ export const updateProductSchema = Joi.object({
     .messages({
       "any.only": "Le statut doit être DRAFT, PENDING ou ARCHIVED",
     }),
-}).strict();
+});
 
 /**
  * Schéma de validation pour les paramètres de liste des produits
@@ -204,7 +196,7 @@ export const listProductsQuerySchema = Joi.object({
     }),
 
   sort: Joi.string()
-    .pattern(/^(-?[a-zA-Z]+|[a-zA-Z]+_(asc|desc))$/)
+    .pattern(/^(-?[a-zA-Z0-9.]+|[a-zA-Z0-9.]+_(asc|desc))$/)
     .default("createdAt_desc")
     .optional()
     .messages({
@@ -272,3 +264,18 @@ export const reserveStockSchema = Joi.object({
       "any.required": "L' action est requise",
     }),
 }).strict();
+
+export const productImageIndexParamsSchema = Joi.object({
+    id: Joi.string()
+      .pattern(/^[0-9a-fA-F]{24}$/)
+      .required()
+      .messages({
+        "any.required": "L'identifiant du produit est requis",
+        "string.pattern.base": "L'identifiant du produit est invalide",
+      }),
+    index: Joi.number().integer().min(0).required().messages({
+      "number.base": "L'index doit être un nombre entier",
+      "number.min": "L'index doit être supérieur ou égal à 0",
+      "any.required": "L'index est requis",
+    }),
+});

@@ -157,8 +157,9 @@ export const updateUser = async (userId, updateData) => {
       updateFields["profile.lastName"] = updateData.profile.lastName;
     if (updateData.profile.phone !== undefined)
       updateFields["profile.phone"] = updateData.profile.phone;
-    if (updateData.profile.avatar !== undefined)
-      updateFields["profile.avatar"] = updateData.profile.avatar;
+      if (updateData.profile.avatar !== undefined) {
+        delete updateData.profile.avatar;
+      }
     if (updateData.profile.address) {
       if (updateData.profile.address.street !== undefined)
         updateFields["profile.address.street"] =

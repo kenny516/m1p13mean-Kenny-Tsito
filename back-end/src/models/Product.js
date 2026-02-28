@@ -42,7 +42,12 @@ const productSchema = new mongoose.Schema(
       type: Map,
       of: mongoose.Schema.Types.Mixed,
     },
-    images: [String],
+    images: [
+      {
+        url: { type: String, required: true, trim: true },
+        fileId: { type: String, trim: true },
+      },
+    ],
 
     // === TARIFICATION ===
     price: {
@@ -87,6 +92,22 @@ const productSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+const serializeImages = (_doc, ret) => {
+  if (Array.isArray(ret?.images)) {
+    ret.images = ret.images
+      .map((image) => {
+        if (typeof image === "string") return image;
+        return image?.url || null;
+      })
+      .filter(Boolean);
+  }
+
+  return ret;
+};
+
+productSchema.set("toJSON", { transform: serializeImages });
+productSchema.set("toObject", { transform: serializeImages });
 
 // Index pour recherche full-text
 productSchema.index({ title: "text", description: "text", tags: "text" });

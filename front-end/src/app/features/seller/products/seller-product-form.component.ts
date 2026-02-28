@@ -2,11 +2,20 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { Product, ProductService, Shop, ShopService, ToastService } from '@/core';
+import {
+  ImageManagementService,
+  Product,
+  ProductService,
+  Shop,
+  ShopService,
+  ToastService,
+} from '@/core';
 import { ZardButtonComponent } from '@/shared/components/button';
 import { ZardCardComponent } from '@/shared/components/card';
 import { ZardInputDirective } from '@/shared/components/input';
 import { ZardSelectImports } from '@/shared/components/select';
+import { IKImageDirective } from '@imagekit/angular';
+import { FilePickerComponent } from '@/shared/components/file-picker/file-picker.component';
 
 @Component({
   selector: 'app-seller-product-form',
@@ -18,6 +27,8 @@ import { ZardSelectImports } from '@/shared/components/select';
     ZardCardComponent,
     ZardButtonComponent,
     ZardInputDirective,
+    IKImageDirective,
+    FilePickerComponent,
     ...ZardSelectImports,
   ],
   template: `
@@ -80,9 +91,78 @@ import { ZardSelectImports } from '@/shared/components/select';
             <input z-input formControlName="tags" placeholder="promotion, nouveauté" />
           </div>
 
-          <div>
-            <p class="mb-1 text-sm text-muted-foreground">Images (URLs séparées par virgule)</p>
-            <input z-input formControlName="images" placeholder="https://..." />
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <p class="text-sm text-muted-foreground">Galerie produit</p>
+              <app-file-picker
+                label="Ajouter des images"
+                [multiple]="true"
+                [disabled]="isSubmitting()"
+                (filesSelected)="onProductImagesSelected($event)"
+              />
+            </div>
+
+            @if (existingImages().length > 0) {
+              <p class="text-xs text-muted-foreground">Images existantes (hors formulaire)</p>
+              <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
+                @for (image of existingImages(); track image; let index = $index) {
+                  <div class="group relative space-y-2 rounded-md border border-border p-2">
+                    <img
+                      [ikSrc]="image"
+                      [transformation]="[{ width: 300, height: 300 }]"
+                      [responsive]="false"
+                      loading="lazy"
+                      class="h-24 w-full rounded object-cover"
+                      alt="Image produit"
+                    />
+                    <button
+                      z-button
+                      zType="destructive"
+                      zSize="sm"
+                      type="button"
+                      class="absolute right-3 top-3 opacity-0 transition-opacity group-hover:opacity-100"
+                      [disabled]="isSubmitting()"
+                      (click)="removeExistingImage(index)"
+                    >
+                      Supprimer
+                    </button>
+                  </div>
+                }
+              </div>
+            }
+
+            @if (pendingImagePreviewUrls().length > 0) {
+              <p class="text-xs text-muted-foreground">Nouvelles images (seront ajoutées à l'enregistrement)</p>
+              <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
+                @for (image of pendingImagePreviewUrls(); track image; let index = $index) {
+                  <div class="relative space-y-2 rounded-md border border-border p-2">
+                    <img
+                      [ikSrc]="image"
+                      [transformation]="[{ width: 300, height: 300 }]"
+                      [responsive]="false"
+                      loading="lazy"
+                      class="h-24 w-full rounded object-cover"
+                      alt="Nouvelle image produit"
+                    />
+                    <button
+                      z-button
+                      zType="destructive"
+                      zSize="sm"
+                      type="button"
+                      class="absolute right-3 top-3"
+                      [disabled]="isSubmitting()"
+                      (click)="removePendingImage(index)"
+                    >
+                      Retirer
+                    </button>
+                  </div>
+                }
+              </div>
+            }
+
+            @if (existingImages().length === 0 && pendingImagePreviewUrls().length === 0) {
+              <p class="text-xs text-muted-foreground">Aucune image pour le moment.</p>
+            }
           </div>
 
           <div class="flex justify-end gap-2">
@@ -102,11 +182,16 @@ export class SellerProductFormComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly productService = inject(ProductService);
   private readonly shopService = inject(ShopService);
+  private readonly imageManagementService = inject(ImageManagementService);
   private readonly toast = inject(ToastService);
 
   readonly shops = signal<Shop[]>([]);
   readonly isEditMode = signal(false);
   readonly isSubmitting = signal(false);
+  readonly existingImages = signal<string[]>([]);
+
+  private readonly pendingImageFiles = signal<File[]>([]);
+  readonly pendingImagePreviewUrls = signal<string[]>([]);
 
   private productId: string | null = null;
 
@@ -118,7 +203,6 @@ export class SellerProductFormComponent implements OnInit {
     price: [0, [Validators.required, Validators.min(0)]],
     originalPrice: [0],
     tags: [''],
-    images: [''],
   });
 
   ngOnInit(): void {
@@ -161,8 +245,44 @@ export class SellerProductFormComponent implements OnInit {
       price: product.price,
       originalPrice: product.originalPrice || 0,
       tags: (product.tags || []).join(', '),
-      images: (product.images || []).join(', '),
     });
+
+    this.existingImages.set(product.images || []);
+  }
+
+  onProductImagesSelected(files: File[]): void {
+    if (!files.length) {
+      return;
+    }
+
+    const previewUrls = files.map((file) => URL.createObjectURL(file));
+    this.pendingImageFiles.update((currentFiles) => [...currentFiles, ...files]);
+    this.pendingImagePreviewUrls.update((currentUrls) => [...currentUrls, ...previewUrls]);
+  }
+
+  removePendingImage(index: number): void {
+    const previews = this.pendingImagePreviewUrls();
+    const previewUrl = previews[index];
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
+    this.pendingImageFiles.update((files) => files.filter((_, current) => current !== index));
+    this.pendingImagePreviewUrls.update((urls) => urls.filter((_, current) => current !== index));
+  }
+
+  async removeExistingImage(index: number): Promise<void> {
+    if (!this.isEditMode() || !this.productId) {
+      return;
+    }
+
+    try {
+      const product = await this.imageManagementService.deleteProductImage(this.productId, index);
+      this.existingImages.set(product.images || []);
+      this.toast.success('Image supprimée');
+    } catch {
+      this.toast.error('Impossible de supprimer cette image');
+    }
   }
 
   async onSubmit(): Promise<void> {
@@ -186,18 +306,18 @@ export class SellerProductFormComponent implements OnInit {
         .split(',')
         .map((item) => item.trim())
         .filter(Boolean),
-      images: (value.images || '')
-        .split(',')
-        .map((item) => item.trim())
-        .filter(Boolean),
     };
 
     try {
       if (this.isEditMode() && this.productId) {
-        await this.productService.updateProduct(this.productId, payload);
+        await this.productService.updateProductWithImages(
+          this.productId,
+          payload,
+          this.pendingImageFiles(),
+        );
         this.toast.success('Produit mis à jour');
       } else {
-        await this.productService.createProduct(payload);
+        await this.productService.createProductWithImages(payload, this.pendingImageFiles());
         this.toast.success('Produit créé');
       }
 
@@ -206,6 +326,10 @@ export class SellerProductFormComponent implements OnInit {
       this.toast.error('Erreur lors de l\'enregistrement du produit');
     } finally {
       this.isSubmitting.set(false);
+
+      this.pendingImagePreviewUrls().forEach((url) => URL.revokeObjectURL(url));
+      this.pendingImagePreviewUrls.set([]);
+      this.pendingImageFiles.set([]);
     }
   }
 }

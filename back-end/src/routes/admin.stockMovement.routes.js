@@ -1,10 +1,14 @@
 import { Router } from "express";
 import * as stockMovementController from "../controllers/stockMovement.controller.js";
+import { auth, authorize } from "../middlewares/auth.middleware.js";
 import { validateQuery } from "../middlewares/validate.middleware.js";
 import { listStockMovementsQuerySchema } from "../validations/stockMovement.validation.js";
 import { listStockMovementLineQuerySchema } from "../validations/stockMovementLine.validation.js";
 
 const router = Router();
+
+// Protection explicite - toutes les routes nécessitent ADMIN
+router.use(auth, authorize("ADMIN"));
 
 /**
  * @route   GET /api/admin/stock-movements

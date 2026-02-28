@@ -62,8 +62,8 @@ export interface Shop {
 export interface CreateShopRequest {
   name: string;
   description?: string;
-  logo?: string;
-  banner?: string;
+  logo?: string | null;
+  banner?: string | null;
   contact?: ShopContact;
   categories?: string[];
 }
@@ -74,8 +74,44 @@ export interface CreateShopRequest {
 export interface UpdateShopRequest {
   name?: string;
   description?: string;
-  logo?: string;
-  banner?: string;
+  logo?: string | null;
+  banner?: string | null;
   contact?: ShopContact;
   categories?: string[];
+}
+
+/**
+ * Interface pour la modération d'une boutique par un admin
+ */
+export interface ModerateShopRequest {
+  status: 'ACTIVE' | 'REJECTED';
+  rejectionReason?: string;
+}
+
+/**
+ * Interface pour la mise à jour admin d'une boutique
+ */
+export interface AdminUpdateShopRequest {
+  commissionRate?: number;
+  name?: string;
+  description?: string;
+  categories?: string[];
+}
+
+/**
+ * Interface pour les filtres de recherche des boutiques
+ */
+export interface ShopFilters {
+  search?: string;
+  status?: ShopStatus | 'ALL';
+  category?: string;
+  startDate?: string;
+  endDate?: string;
+  sort?:
+    | 'createdAt'
+    | '-createdAt'
+    | 'name'
+    | '-name'
+    | 'commissionRate'
+    | '-commissionRate';
 }

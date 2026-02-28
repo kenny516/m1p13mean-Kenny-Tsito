@@ -15,13 +15,8 @@ export const createShopSchema = Joi.object({
 		"string.max": "La description ne doit pas dépasser 5000 caractères",
 	}),
 
-	logo: Joi.string().uri().optional().messages({
-		"string.uri": "Le logo doit être une URL valide",
-	}),
-
-	banner: Joi.string().uri().optional().messages({
-		"string.uri": "La bannière doit être une URL valide",
-	}),
+	logo: Joi.any().optional().allow(null, ""),
+	banner: Joi.any().optional().allow(null, ""),
 
 	contact: Joi.object({
 		email: Joi.string().email().optional().messages({
@@ -58,13 +53,8 @@ export const updateShopSchema = Joi.object({
 		"string.max": "La description ne doit pas dépasser 5000 caractères",
 	}),
 
-	logo: Joi.string().uri().optional().allow(null, "").messages({
-		"string.uri": "Le logo doit être une URL valide",
-	}),
-
-	banner: Joi.string().uri().optional().allow(null, "").messages({
-		"string.uri": "La bannière doit être une URL valide",
-	}),
+	logo: Joi.any().optional().allow(null, ""),
+	banner: Joi.any().optional().allow(null, ""),
 
 	contact: Joi.object({
 		email: Joi.string().email().optional().messages({
@@ -119,7 +109,7 @@ export const listShopsQuerySchema = Joi.object({
 	sellerId: Joi.string().optional(),
 
 	sort: Joi.string()
-		.pattern(/^[a-zA-Z]+_(asc|desc)$/)
+		.pattern(/^[a-zA-Z0-9.]+_(asc|desc)$/)
 		.default("createdAt_desc")
 		.optional()
 		.messages({
