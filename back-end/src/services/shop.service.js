@@ -342,24 +342,25 @@ export const deleteShop = async (id, userId, userRole) => {
 };
 
 /**
- * Modération admin: Approuver ou Rejeter une boutique
- * Seules les boutiques PENDING peuvent être modérées
+ * Modération admin: Modifier le statut d'une boutique
+ * L'admin peut changer le statut de n'importe quelle boutique (sauf DRAFT)
  */
 export const moderateShop = async (id, status, rejectionReason) => {
 	const shop = await getShopById(id);
 
-	if (shop.status !== "PENDING") {
+	// Empêcher la modification des boutiques en brouillon
+	if (shop.status === "DRAFT") {
 		throw new ApiError(
 			400,
 			"INVALID_STATUS_TRANSITION",
-			`Impossible de modérer une boutique en statut ${shop.status}. Seules les boutiques PENDING peuvent être modérées`,
+			"Impossible de modérer une boutique en brouillon. Le vendeur doit d'abord la soumettre.",
 		);
 	}
 
 	shop.status = status;
 	if (status === "REJECTED") {
 		shop.rejectionReason = rejectionReason;
-	} else if (status === "ACTIVE") {
+	} else {
 		shop.rejectionReason = undefined;
 	}
 

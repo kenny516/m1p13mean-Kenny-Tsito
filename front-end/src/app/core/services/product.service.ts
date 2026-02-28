@@ -5,6 +5,7 @@ import {
   ProductFilters,
   CreateProductRequest,
   UpdateProductRequest,
+  ProductStatus,
 } from '../models';
 import { Pagination } from '../models/api.model';
 
@@ -369,7 +370,7 @@ export class ProductService {
    */
   async moderateProduct(
     id: string,
-    data: { status: 'ACTIVE' | 'REJECTED'; rejectionReason?: string },
+    data: { status: ProductStatus; rejectionReason?: string },
   ): Promise<Product> {
     this.isLoadingSignal.set(true);
     try {

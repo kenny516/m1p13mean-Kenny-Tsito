@@ -28,12 +28,12 @@ router.get("/pending", validateQuery(listShopsQuerySchema), shopController.getPe
 router.get("/", validateQuery(listShopsQuerySchema), shopController.listAllShops);
 
 /**
- * @route   PATCH /api/admin/shops/:id/moderate
- * @desc    Modérer une boutique (PENDING → ACTIVE|REJECTED)
+ * @route   PUT /api/admin/shops/:id/validate
+ * @desc    Modérer une boutique (changer le statut)
  * @access  Admin only
  */
-router.patch(
-  "/:id/moderate",
+router.put(
+  "/:id/validate",
   validate(moderateShopSchema),
   shopController.moderate,
 );

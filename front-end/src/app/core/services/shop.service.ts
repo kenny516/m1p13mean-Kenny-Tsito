@@ -277,8 +277,8 @@ export class ShopService {
   async moderateShop(id: string, data: ModerateShopRequest): Promise<Shop> {
     this.isLoadingSignal.set(true);
     try {
-      const shop = await this.api.patch<Shop>(
-        `/admin/shops/${id}/moderate`,
+      const shop = await this.api.put<Shop>(
+        `/admin/shops/${id}/validate`,
         data,
       );
       this.selectedShopSignal.set(shop);

@@ -262,28 +262,17 @@ type ProductWithShop = Product & {
         >
           <z-icon zType="eye" />
         </button>
-        @if (product.status === 'PENDING') {
+        @if (product.status !== 'DRAFT') {
           <button
             z-button
             zType="ghost"
             zSize="sm"
             data-icon-only
-            (click)="openModerateDialog(product, 'ACTIVE')"
-            title="Approuver"
-            class="text-green-600 hover:text-green-700"
+            (click)="openModerateDialog(product, product.status)"
+            title="Modifier le statut"
+            class="text-primary hover:text-primary/80"
           >
-            <z-icon zType="check" />
-          </button>
-          <button
-            z-button
-            zType="ghost"
-            zSize="sm"
-            data-icon-only
-            (click)="openModerateDialog(product, 'REJECTED')"
-            title="Rejeter"
-            class="text-destructive hover:text-destructive/80"
-          >
-            <z-icon zType="x" />
+            <z-icon zType="settings" />
           </button>
         }
       </div>
@@ -538,7 +527,7 @@ export class ProductListComponent implements OnInit {
 
   openModerateDialog(
     product: ProductWithShop,
-    initialStatus: 'ACTIVE' | 'REJECTED',
+    initialStatus: ProductStatus,
   ): void {
     const handleConfirm = async (result: ModerateDialogResult) => {
       try {
@@ -547,11 +536,13 @@ export class ProductListComponent implements OnInit {
           rejectionReason: result.rejectionReason,
         });
 
-        const message =
-          result.status === 'ACTIVE'
-            ? 'Produit approuvé avec succès'
-            : 'Produit rejeté';
-        this.toastService.success(message);
+        const statusLabels: Record<string, string> = {
+          ACTIVE: 'Produit activé avec succès',
+          PENDING: 'Produit remis en attente',
+          REJECTED: 'Produit rejeté',
+          ARCHIVED: 'Produit archivé',
+        };
+        this.toastService.success(statusLabels[result.status] || 'Statut modifié');
 
         await this.loadProducts();
         await this.loadPendingCount();
@@ -569,10 +560,7 @@ export class ProductListComponent implements OnInit {
 
     this.dialogService.create<ProductModerateDialogComponent, ModerateDialogData>({
       zContent: ProductModerateDialogComponent,
-      zTitle:
-        initialStatus === 'ACTIVE'
-          ? 'Approuver le produit'
-          : 'Rejeter le produit',
+      zTitle: 'Modifier le statut du produit',
       zDescription: product.title,
       zData: dialogData,
       zWidth: '500px',
