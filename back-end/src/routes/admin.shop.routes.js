@@ -1,5 +1,6 @@
 import { Router } from "express";
 import * as shopController from "../controllers/shop.controller.js";
+import { auth, authorize } from "../middlewares/auth.middleware.js";
 import { validate, validateQuery } from "../middlewares/validate.middleware.js";
 import {
   moderateShopSchema,
@@ -8,6 +9,9 @@ import {
 } from "../validations/shop.validation.js";
 
 const router = Router();
+
+// Protection explicite - toutes les routes nécessitent ADMIN
+router.use(auth, authorize("ADMIN"));
 
 /**
  * @route   GET /api/admin/shops/pending

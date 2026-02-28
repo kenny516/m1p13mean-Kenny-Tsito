@@ -1,16 +1,16 @@
-import { CommonModule } from '@angular/common';
-import { Component, signal, HostListener } from '@angular/core';
+import { CommonModule } from "@angular/common";
+import { Component, signal, HostListener, OnInit, OnDestroy, inject } from "@angular/core";
 import {
   Router,
   RouterLink,
   RouterLinkActive,
   RouterOutlet,
   NavigationEnd,
-} from '@angular/router';
-import { ZardButtonComponent } from '@/shared/components/button';
-import { ZardIconComponent } from '@/shared/components/icon';
-import { ZardIcon } from '@/shared/components/icon/icons';
-import { filter } from 'rxjs';
+} from "@angular/router";
+import { ZardIconComponent } from "@/shared/components/icon";
+import { ZardIcon } from "@/shared/components/icon/icons";
+import { filter } from "rxjs";
+import { NavigationContextService } from "@/core";
 
 interface NavItem {
   label: string;
@@ -20,37 +20,17 @@ interface NavItem {
 }
 
 @Component({
-  selector: 'app-admin-shell',
+  selector: "app-admin-shell",
   standalone: true,
   imports: [
     CommonModule,
     RouterOutlet,
     RouterLink,
     RouterLinkActive,
-    ZardButtonComponent,
     ZardIconComponent,
   ],
   template: `
     <div class="min-h-screen bg-muted/30">
-      <!-- Mobile Header - Sticky -->
-      <div
-        class="lg:hidden sticky top-16 z-40 h-14 bg-background border-b border-border px-4 flex items-center justify-between"
-      >
-        <div class="flex items-center gap-3">
-          <button
-            (click)="toggleMobileMenu()"
-            class="p-2 rounded-md hover:bg-muted transition-colors"
-          >
-            <z-icon [zType]="mobileMenuOpen() ? 'x' : 'menu'" class="h-5 w-5" />
-          </button>
-          <span class="font-semibold text-foreground">Administration</span>
-        </div>
-        <!-- Breadcrumb mobile -->
-        <div class="text-sm text-muted-foreground truncate max-w-[150px]">
-          {{ currentPageTitle() }}
-        </div>
-      </div>
-
       <!-- Mobile Overlay -->
       @if (mobileMenuOpen()) {
         <div
@@ -67,13 +47,22 @@ interface NavItem {
       >
         <div class="flex flex-col h-full">
           <!-- Mobile Sidebar Header -->
-          <div class="p-4 border-b border-sidebar-border flex items-center justify-between">
+          <div
+            class="p-4 border-b border-sidebar-border flex items-center justify-between"
+          >
             <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-                <z-icon zType="shield" class="h-5 w-5 text-primary-foreground" />
+              <div
+                class="w-9 h-9 rounded-lg bg-primary flex items-center justify-center"
+              >
+                <z-icon
+                  zType="shield"
+                  class="h-5 w-5 text-primary-foreground"
+                />
               </div>
               <div>
-                <h2 class="font-semibold text-sidebar-foreground">Administration</h2>
+                <h2 class="font-semibold text-sidebar-foreground">
+                  Administration
+                </h2>
                 <p class="text-xs text-muted-foreground">Gestion plateforme</p>
               </div>
             </div>
@@ -95,7 +84,10 @@ interface NavItem {
                 class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
                 (click)="closeMobileMenu()"
               >
-                <z-icon [zType]="item.icon" class="h-5 w-5 text-muted-foreground" />
+                <z-icon
+                  [zType]="item.icon"
+                  class="h-5 w-5 text-muted-foreground"
+                />
                 <span>{{ item.label }}</span>
               </a>
             }
@@ -129,7 +121,7 @@ interface NavItem {
 
       <!-- Desktop Sidebar -->
       <aside
-        class="hidden lg:block fixed z-40 top-16 h-[calc(100vh-4rem)] bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out overflow-hidden"
+        class="hidden lg:block fixed z-40 top-12 h-[calc(100vh-3rem)] bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out overflow-hidden"
         [class.w-64]="!collapsed()"
         [class.w-16]="collapsed()"
       >
@@ -146,7 +138,10 @@ interface NavItem {
               <div
                 class="w-9 h-9 rounded-lg bg-primary flex items-center justify-center flex-shrink-0"
               >
-                <z-icon zType="shield" class="h-5 w-5 text-primary-foreground" />
+                <z-icon
+                  zType="shield"
+                  class="h-5 w-5 text-primary-foreground"
+                />
               </div>
               @if (!collapsed()) {
                 <div class="overflow-hidden">
@@ -240,7 +235,7 @@ interface NavItem {
 
       <!-- Main Content -->
       <main
-        class="transition-all duration-300 ease-in-out min-h-[calc(100vh-4rem)] pt-6 lg:pt-6 pb-8"
+        class="transition-all duration-300 ease-in-out min-h-[calc(100vh-3rem)] pt-6 lg:pt-6 pb-8"
         [class.lg:ml-64]="!collapsed()"
         [class.lg:ml-16]="collapsed()"
       >
@@ -253,9 +248,14 @@ interface NavItem {
             >
               Administration
             </a>
-            @if (currentPageTitle() && currentPageTitle() !== 'Dashboard') {
-              <z-icon zType="chevron-right" class="h-4 w-4 text-muted-foreground" />
-              <span class="text-foreground font-medium">{{ currentPageTitle() }}</span>
+            @if (currentPageTitle() && currentPageTitle() !== "Dashboard") {
+              <z-icon
+                zType="chevron-right"
+                class="h-4 w-4 text-muted-foreground"
+              />
+              <span class="text-foreground font-medium">{{
+                currentPageTitle()
+              }}</span>
             }
           </nav>
         </div>
@@ -265,19 +265,28 @@ interface NavItem {
     </div>
   `,
 })
-export class AdminShellComponent {
+export class AdminShellComponent implements OnInit, OnDestroy {
+  private navContextService = inject(NavigationContextService);
+
   collapsed = signal(false);
-  mobileMenuOpen = signal(false);
-  currentPageTitle = signal('Dashboard');
+  currentPageTitle = signal("Dashboard");
+
+  // Utiliser le service pour le menu mobile
+  mobileMenuOpen = this.navContextService.mobileMenuOpen;
 
   navItems: NavItem[] = [
-    { label: 'Dashboard', icon: 'layout-dashboard', route: '/admin', exact: true },
-    { label: 'Boutiques', icon: 'store', route: '/admin/shops' },
-    { label: 'Produits', icon: 'package', route: '/admin/products' },
-    { label: 'Utilisateurs', icon: 'users', route: '/admin/users' },
+    {
+      label: "Dashboard",
+      icon: "layout-dashboard",
+      route: "/admin",
+      exact: true,
+    },
+    { label: "Boutiques", icon: "store", route: "/admin/shops" },
+    { label: "Produits", icon: "package", route: "/admin/products" },
+    { label: "Utilisateurs", icon: "users", route: "/admin/users" },
   ];
 
-  constructor(router: Router) {
+  constructor(private router: Router) {
     // Écouter les changements de route pour mettre à jour le titre
     router.events
       .pipe(filter((event) => event instanceof NavigationEnd))
@@ -290,8 +299,23 @@ export class AdminShellComponent {
     this.updatePageTitle(router.url);
   }
 
+  ngOnInit(): void {
+    // Enregistrer le shell auprès du service de navigation
+    this.navContextService.registerShell({
+      context: 'admin',
+      title: 'Administration',
+      icon: 'shield',
+      subtitle: 'Gestion plateforme',
+    });
+  }
+
+  ngOnDestroy(): void {
+    // Désenregistrer le shell
+    this.navContextService.unregisterShell();
+  }
+
   // Fermer le menu mobile si on redimensionne vers desktop
-  @HostListener('window:resize', ['$event'])
+  @HostListener("window:resize", ["$event"])
   onResize(): void {
     if (window.innerWidth >= 1024 && this.mobileMenuOpen()) {
       this.closeMobileMenu();
@@ -300,22 +324,22 @@ export class AdminShellComponent {
 
   private updatePageTitle(url: string): void {
     const titles: Record<string, string> = {
-      '/admin': 'Dashboard',
-      '/admin/shops': 'Boutiques',
-      '/admin/products': 'Produits',
-      '/admin/users': 'Utilisateurs',
-      '/admin/users/new': 'Nouvel utilisateur',
-      '/admin/settings': 'Paramètres',
+      "/admin": "Dashboard",
+      "/admin/shops": "Boutiques",
+      "/admin/products": "Produits",
+      "/admin/users": "Utilisateurs",
+      "/admin/users/new": "Nouvel utilisateur",
+      "/admin/settings": "Paramètres",
     };
 
     // Chercher le titre correspondant
     for (const [path, title] of Object.entries(titles)) {
-      if (url === path || url.startsWith(path + '/')) {
+      if (url === path || url.startsWith(path + "/")) {
         this.currentPageTitle.set(title);
         return;
       }
     }
-    this.currentPageTitle.set('Administration');
+    this.currentPageTitle.set("Administration");
   }
 
   toggleCollapse(): void {
@@ -323,10 +347,10 @@ export class AdminShellComponent {
   }
 
   toggleMobileMenu(): void {
-    this.mobileMenuOpen.set(!this.mobileMenuOpen());
+    this.navContextService.toggleMobileMenu();
   }
 
   closeMobileMenu(): void {
-    this.mobileMenuOpen.set(false);
+    this.navContextService.closeMobileMenu();
   }
 }

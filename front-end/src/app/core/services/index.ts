@@ -8,3 +8,4 @@ export * from './cart.service';
 export * from './shop.service';
 export * from './stock-movement.service';
 export * from './settings.service';
+export * from './navigation-context.service';
