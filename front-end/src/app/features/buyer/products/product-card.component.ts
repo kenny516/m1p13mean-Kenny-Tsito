@@ -48,9 +48,9 @@ import { ZardIconComponent } from '../../../shared/components/icon';
               -{{ discountPercentage() }}%
             </z-badge>
           }
-          @if (product().isOutOfStock) {
+          @if (isOutOfStock()) {
             <z-badge zType="secondary" zShape="pill"> Rupture </z-badge>
-          } @else if (product().isLowStock) {
+          } @else if (isLowStock()) {
             <z-badge zType="outline" zShape="pill"> Stock limité </z-badge>
           }
         </div>
@@ -116,7 +116,7 @@ import { ZardIconComponent } from '../../../shared/components/icon';
             z-button
             class="flex-1"
             zSize="sm"
-            [disabled]="product().isOutOfStock || isAddingToCart()"
+            [disabled]="isOutOfStock() || isAddingToCart()"
             (click)="onAddToCart()"
           >
             @if (isAddingToCart()) {
@@ -166,11 +166,32 @@ export class ProductCardComponent {
     return Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100);
   }
 
+  availableStock(): number {
+    return this.product().stock?.cache?.available ?? 0;
+  }
+
+  isOutOfStock(): boolean {
+    return !!this.product().isOutOfStock || this.availableStock() <= 0;
+  }
+
+  isLowStock(): boolean {
+    if (this.isOutOfStock()) {
+      return false;
+    }
+
+    if (this.product().isLowStock) {
+      return true;
+    }
+
+    const threshold = this.product().stock?.alert?.lowThreshold ?? 5;
+    return this.availableStock() <= threshold;
+  }
+
   /**
    * Émet l'événement d'ajout au panier
    */
   onAddToCart(): void {
-    if (!this.product().isOutOfStock) {
+    if (!this.isOutOfStock()) {
       this.addToCart.emit(this.product());
     }
   }

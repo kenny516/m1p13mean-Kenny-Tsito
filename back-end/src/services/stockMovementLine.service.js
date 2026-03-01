@@ -246,6 +246,8 @@ const _createLine = async (header, item, options) => {
     direction: header.direction,
     quantity: item.quantity,
     unitPrice: item.unitPrice || 0,
+    commissionRate: item.commissionRate || 0,
+    commissionAmount: item.commissionAmount || 0,
     totalAmount,
     stockBefore,
     stockAfter,

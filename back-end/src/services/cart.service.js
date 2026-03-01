@@ -1,13 +1,16 @@
 import mongoose from "mongoose";
 import Cart from "../models/Cart.js";
 import Product from "../models/Product.js";
+import Shop from "../models/Shop.js";
+import StockMovementLine from "../models/StockMovementLine.js";
+import WalletTransaction from "../models/WalletTransaction.js";
 import { ApiError } from "../middlewares/error.middleware.js";
 import {
   createStockMovement,
   createCartMovementLine,
 } from "./stockMovementLine.service.js";
 import { updateSaleStatus } from "./stockMovement.service.js";
-import { debitWallet } from "./wallet.service.js";
+import { debitWallet, debitWalletByOwner } from "./wallet.service.js";
 import { requireActiveProduct } from "./product.service.js";
 import { createOptionalSession } from "../utils/transaction.util.js";
 import * as settingsService from "./settings.service.js";
@@ -34,6 +37,102 @@ const getExpiresAt = async () => {
 
 const computeTotal = (items = []) =>
   items.reduce((sum, item) => sum + (item.totalAmount || 0), 0);
+
+const loadShopCommissionRates = async (items = [], session = null) => {
+  const uniqueShopIds = [
+    ...new Set(items.map((item) => item.shopId?.toString()).filter(Boolean)),
+  ];
+
+  if (uniqueShopIds.length === 0) {
+    return new Map();
+  }
+
+  const query = Shop.find({ _id: { $in: uniqueShopIds } }).select(
+    "_id commissionRate",
+  );
+  if (session) query.session(session);
+
+  const shops = await query;
+  const rates = new Map();
+
+  for (const shop of shops) {
+    rates.set(shop._id.toString(), Number(shop.commissionRate) || 0);
+  }
+
+  return rates;
+};
+
+const groupSaleCommissionsByShop = async (saleId, session = null) => {
+  const query = StockMovementLine.find({
+    moveId: saleId,
+    movementType: "SALE",
+  }).select("shopId commissionAmount");
+
+  if (session) query.session(session);
+
+  const lines = await query;
+  const grouped = new Map();
+
+  for (const line of lines) {
+    const shopId = line.shopId?.toString();
+    if (!shopId) continue;
+    const amount = Number(line.commissionAmount) || 0;
+    grouped.set(shopId, (grouped.get(shopId) || 0) + amount);
+  }
+
+  return grouped;
+};
+
+const hasCommissionDebit = async (saleId, shopId, session = null) => {
+  const query = WalletTransaction.findOne({
+    type: "COMMISSION",
+    stockMovementId: saleId,
+    "metadata.shopId": shopId,
+  }).select("_id");
+
+  if (session) query.session(session);
+
+  const existing = await query;
+  return Boolean(existing);
+};
+
+const debitDeliveryCommissions = async (cart, session = null) => {
+  const saleId = cart?.order?.saleId;
+  if (!saleId) {
+    return;
+  }
+
+  const commissionByShop = await groupSaleCommissionsByShop(saleId, session);
+
+  for (const [shopId, totalCommission] of commissionByShop.entries()) {
+    const amount = Math.round(totalCommission);
+    if (amount === 0) {
+      continue;
+    }
+
+    const alreadyDebited = await hasCommissionDebit(saleId, shopId, session);
+    if (alreadyDebited) {
+      continue;
+    }
+
+    await debitWalletByOwner(
+      { ownerId: shopId, ownerModel: "Shop" },
+      amount,
+      {
+        type: "COMMISSION",
+        allowNegative: true,
+        paymentMethod: "WALLET",
+        description: `Commission commande ${cart.order.reference || cart._id}`,
+        stockMovementId: saleId,
+        metadata: {
+          cartId: cart._id.toString(),
+          saleId,
+          shopId,
+        },
+      },
+    );
+  }
+};
 
 const buildItemSnapshot = (product) => {
   const unitPrice = product.price || 0;
@@ -63,13 +162,15 @@ export const getCart = async (userId) => {
   const cart = await findActiveCartByUser(userId);
   if (!cart) {
     const expiresAt = await getExpiresAt();
-    const created = await Cart.create({
-      userId,
-      items: [],
-      status: "CART",
-      totalAmount: 0,
-      expiresAt,
-    });
+    const [created] = await Cart.create([
+      {
+        userId,
+        items: [],
+        status: "CART",
+        totalAmount: 0,
+        expiresAt,
+      },
+    ]);
 
     return created;
   }
@@ -286,14 +387,16 @@ export const clearCart = async (userId) => {
     if (!cart) {
       const createOptions = txn.session ? { session: txn.session } : {};
       const expiresAt = await getExpiresAt();
-      const emptyCart = await Cart.create(
-        {
-          userId,
-          items: [],
-          status: "CART",
-          totalAmount: 0,
-          expiresAt,
-        },
+      const [emptyCart] = await Cart.create(
+        [
+          {
+            userId,
+            items: [],
+            status: "CART",
+            totalAmount: 0,
+            expiresAt,
+          },
+        ],
         createOptions,
       );
       if (txn.ownsSession) await txn.commit();
@@ -360,9 +463,15 @@ export const checkoutCart = async (userId, payload) => {
         cart.totalAmount,
         "WALLET",
         `Achat via panier ${cart._id}`,
+        { session: txn.session },
       );
       paymentTransaction = result.transaction;
     }
+
+    const commissionRatesByShop = await loadShopCommissionRates(
+      cart.items,
+      txn.session,
+    );
 
     const saleItems = [];
     for (const item of cart.items) {
@@ -371,12 +480,20 @@ export const checkoutCart = async (userId, payload) => {
         null,
         txn.session,
       );
+      const unitPrice = item.productSnapshot?.unitPrice || product.price;
+      const lineTotal = item.quantity * unitPrice;
+      const shopId = item.shopId.toString();
+      const commissionRate = commissionRatesByShop.get(shopId) || 0;
+      const commissionAmount = Math.round((lineTotal * commissionRate) / 100);
+
       saleItems.push({
         productId: item.productId.toString(),
-        shopId: item.shopId.toString(),
+        shopId,
         quantity: item.quantity,
         cartId: cart._id,
-        unitPrice: item.productSnapshot?.unitPrice || product.price,
+        unitPrice,
+        commissionRate,
+        commissionAmount,
         product,
       });
     }
@@ -404,20 +521,21 @@ export const checkoutCart = async (userId, payload) => {
     cart.order.paymentMethod = payload.paymentMethod;
     cart.order.paymentTransaction = paymentTransaction?._id.toString();
 
-    cart.expiresAt = new Date();
     const saveOptions = txn.session ? { session: txn.session } : {};
     await cart.save(saveOptions);
 
     const createOptions = txn.session ? { session: txn.session } : {};
     const nextCartExpiresAt = await getExpiresAt();
-    const nextCart = await Cart.create(
-      {
-        userId,
-        items: [],
-        status: "CART",
-        totalAmount: 0,
-        expiresAt: nextCartExpiresAt,
-      },
+    const [nextCart] = await Cart.create(
+      [
+        {
+          userId,
+          items: [],
+          status: "CART",
+          totalAmount: 0,
+          expiresAt: nextCartExpiresAt,
+        },
+      ],
       createOptions,
     );
 
@@ -455,6 +573,8 @@ export const confirmDelivery = async (userId, cartId) => {
     }
 
     await updateSaleStatus(cart.order.saleId, { status: "DELIVERED" }, userId);
+
+    await debitDeliveryCommissions(cart, txn.session);
  
     cart.status = "DELIVERED";
     const saveOptions = txn.session ? { session: txn.session } : {};

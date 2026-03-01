@@ -26,7 +26,7 @@ export interface TransactionsResponse {
  */
 export interface WalletOperationRequest {
   amount: number;
-  paymentMethod: 'CARD' | 'MOBILE_MONEY' | 'BANK_TRANSFER' | 'CASH';
+  paymentMethod?: 'CARD' | 'MOBILE_MONEY' | 'BANK_TRANSFER' | 'CASH';
   description?: string;
 }
 
