@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Cart from "../models/Cart.js";
 import Product from "../models/Product.js";
 import Shop from "../models/Shop.js";
+import StockMovement from "../models/StockMovement.js";
 import StockMovementLine from "../models/StockMovementLine.js";
 import WalletTransaction from "../models/WalletTransaction.js";
 import { ApiError } from "../middlewares/error.middleware.js";
@@ -10,7 +11,11 @@ import {
   createCartMovementLine,
 } from "./stockMovementLine.service.js";
 import { updateSaleStatus } from "./stockMovement.service.js";
-import { debitWallet, debitWalletByOwner } from "./wallet.service.js";
+import {
+  debitWallet,
+  debitWalletByOwner,
+  creditWalletByOwner,
+} from "./wallet.service.js";
 import { requireActiveProduct } from "./product.service.js";
 import { createOptionalSession } from "../utils/transaction.util.js";
 import * as settingsService from "./settings.service.js";
@@ -98,6 +103,115 @@ const hasCommissionDebit = async (saleId, shopId, session = null) => {
   return Boolean(existing);
 };
 
+const hasSaleIncomeCredit = async (saleId, shopId, session = null) => {
+  const query = WalletTransaction.findOne({
+    type: "SALE_INCOME",
+    stockMovementId: saleId,
+    "metadata.shopId": shopId,
+  }).select("_id");
+
+  if (session) query.session(session);
+
+  const existing = await query;
+  return Boolean(existing);
+};
+
+const hasRefundByType = async (
+  stockMovementId,
+  kind,
+  shopId,
+  session = null,
+) => {
+  const query = {
+    type: "REFUND",
+    stockMovementId,
+    "metadata.kind": kind,
+  };
+
+  if (shopId) {
+    query["metadata.shopId"] = shopId;
+  }
+
+  const findQuery = WalletTransaction.findOne(query).select("_id");
+  if (session) findQuery.session(session);
+
+  const existing = await findQuery;
+  return Boolean(existing);
+};
+
+const hasWithdrawalByType = async (
+  stockMovementId,
+  kind,
+  shopId,
+  session = null,
+) => {
+  const query = {
+    type: "WITHDRAWAL",
+    stockMovementId,
+    "metadata.kind": kind,
+  };
+
+  if (shopId) {
+    query["metadata.shopId"] = shopId;
+  }
+
+  const findQuery = WalletTransaction.findOne(query).select("_id");
+  if (session) findQuery.session(session);
+
+  const existing = await findQuery;
+  return Boolean(existing);
+};
+
+const creditCheckoutSalesToShops = async ({
+  saleId,
+  orderReference,
+  cart,
+  saleItems,
+  session = null,
+}) => {
+  if (!saleId || !Array.isArray(saleItems) || saleItems.length === 0) {
+    return;
+  }
+
+  const grossByShop = new Map();
+
+  for (const item of saleItems) {
+    const shopId = item.shopId?.toString();
+    if (!shopId) continue;
+    const lineTotal = (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0);
+    grossByShop.set(shopId, (grossByShop.get(shopId) || 0) + lineTotal);
+  }
+
+  for (const [shopId, grossAmount] of grossByShop.entries()) {
+    const amount = Math.round(grossAmount);
+    if (amount === 0) {
+      continue;
+    }
+
+    const alreadyCredited = await hasSaleIncomeCredit(saleId, shopId, session);
+    if (alreadyCredited) {
+      continue;
+    }
+
+    await creditWalletByOwner(
+      { ownerId: shopId, ownerModel: "Shop" },
+      amount,
+      {
+        type: "SALE_INCOME",
+        paymentMethod: "WALLET",
+        description: `Revenu vente commande ${orderReference || cart._id}`,
+        stockMovementId: saleId,
+        metadata: {
+          cartId: cart._id.toString(),
+          saleId,
+          shopId,
+        },
+        session,
+      },
+    );
+  }
+};
+
 const debitDeliveryCommissions = async (cart, session = null) => {
   const saleId = cart?.order?.saleId;
   if (!saleId) {
@@ -131,9 +245,133 @@ const debitDeliveryCommissions = async (cart, session = null) => {
           saleId,
           shopId,
         },
+        session,
       },
     );
   }
+};
+
+const reverseSaleIncomeCredits = async ({
+  saleId,
+  returnMovementId,
+  orderReference,
+  cartId,
+  session = null,
+}) => {
+  const query = WalletTransaction.find({
+    type: "SALE_INCOME",
+    stockMovementId: saleId,
+  }).select("amount metadata");
+
+  if (session) query.session(session);
+
+  const saleIncomeTransactions = await query;
+
+  for (const tx of saleIncomeTransactions) {
+    const shopId = tx.metadata?.get("shopId") || tx.metadata?.shopId;
+    if (!shopId) continue;
+
+    const alreadyReversed = await hasWithdrawalByType(
+      returnMovementId,
+      "RETURN_SALE_INCOME",
+      shopId,
+      session,
+    );
+
+    if (alreadyReversed) {
+      continue;
+    }
+
+    await debitWalletByOwner(
+      { ownerId: shopId, ownerModel: "Shop" },
+      Number(tx.amount) || 0,
+      {
+        type: "WITHDRAWAL",
+        allowNegative: true,
+        paymentMethod: "WALLET",
+        description: `Annulation revenu vente commande ${orderReference || cartId}`,
+        stockMovementId: returnMovementId,
+        metadata: {
+          kind: "RETURN_SALE_INCOME",
+          cartId: cartId.toString(),
+          saleId,
+          returnMovementId,
+          shopId,
+        },
+        session,
+      },
+    );
+  }
+};
+
+const refundDeliveryCommissions = async ({
+  saleId,
+  returnMovementId,
+  orderReference,
+  cartId,
+  session = null,
+}) => {
+  const query = WalletTransaction.find({
+    type: "COMMISSION",
+    stockMovementId: saleId,
+  }).select("amount metadata");
+
+  if (session) query.session(session);
+
+  const commissionTransactions = await query;
+
+  for (const tx of commissionTransactions) {
+    const shopId = tx.metadata?.get("shopId") || tx.metadata?.shopId;
+    if (!shopId) continue;
+
+    const alreadyRefunded = await hasRefundByType(
+      returnMovementId,
+      "RETURN_COMMISSION",
+      shopId,
+      session,
+    );
+
+    if (alreadyRefunded) {
+      continue;
+    }
+
+    await creditWalletByOwner(
+      { ownerId: shopId, ownerModel: "Shop" },
+      Number(tx.amount) || 0,
+      {
+        type: "REFUND",
+        paymentMethod: "WALLET",
+        description: `Remboursement commission commande ${orderReference || cartId}`,
+        stockMovementId: returnMovementId,
+        metadata: {
+          kind: "RETURN_COMMISSION",
+          cartId: cartId.toString(),
+          saleId,
+          returnMovementId,
+          shopId,
+        },
+        session,
+      },
+    );
+  }
+};
+
+const hasBuyerRefundForOrder = async (
+  returnMovementId,
+  cartId,
+  session = null,
+) => {
+  const query = WalletTransaction.findOne({
+    type: "REFUND",
+    stockMovementId: returnMovementId,
+    "metadata.kind": "RETURN_ORDER",
+    "metadata.cartId": cartId.toString(),
+  }).select("_id");
+
+  if (session) query.session(session);
+
+  const existing = await query;
+  return Boolean(existing);
 };
 
 const buildItemSnapshot = (product) => {
@@ -647,6 +885,16 @@ export const checkoutCart = async (userId, payload) => {
       { session: txn.session, cache: true },
     );
 
+    if (payload.paymentMethod === "WALLET") {
+      await creditCheckoutSalesToShops({
+        saleId: header._id.toString(),
+        orderReference: header.reference,
+        cart,
+        saleItems,
+        session: txn.session,
+      });
+    }
+
     cart.status = "ORDER";
 
     cart.order.reference = header.reference;
@@ -706,11 +954,153 @@ export const confirmDelivery = async (userId, cartId) => {
       );
     }
 
-    await updateSaleStatus(cart.order.saleId, { status: "DELIVERED" }, userId);
+    await updateSaleStatus(
+      cart.order.saleId,
+      { status: "DELIVERED" },
+      userId,
+      { session: txn.session },
+    );
 
     await debitDeliveryCommissions(cart, txn.session);
  
     cart.status = "DELIVERED";
+    const saveOptions = txn.session ? { session: txn.session } : {};
+    await cart.save(saveOptions);
+
+    if (txn.ownsSession) await txn.commit();
+    return cart;
+  } catch (error) {
+    if (txn.ownsSession) await txn.abort();
+    throw error;
+  } finally {
+    if (txn.ownsSession) await txn.end();
+  }
+};
+
+export const returnOrder = async (userId, orderId, payload = {}) => {
+  const txn = await createOptionalSession();
+
+  try {
+    const cartQuery = Cart.findOne({ _id: orderId, userId });
+    if (txn.session) cartQuery.session(txn.session);
+    const cart = await cartQuery;
+
+    if (!cart) {
+      throw new ApiError(404, "NOT_FOUND", "Commande non trouvée");
+    }
+
+    if (cart.status === "RETURNED") {
+      return cart;
+    }
+
+    if (!["ORDER", "DELIVERED"].includes(cart.status)) {
+      throw new ApiError(
+        400,
+        "INVALID_STATUS",
+        "Seules les commandes en cours ou livrées peuvent être retournées",
+      );
+    }
+
+    if (!cart.order?.saleId) {
+      throw new ApiError(400, "INVALID_ORDER", "Commande invalide");
+    }
+
+    const saleQuery = StockMovement.findOne({
+      _id: cart.order.saleId,
+      movementType: "SALE",
+    });
+    if (txn.session) saleQuery.session(txn.session);
+    const saleMovement = await saleQuery;
+
+    if (!saleMovement) {
+      throw new ApiError(404, "NOT_FOUND", "Mouvement de vente introuvable");
+    }
+
+    const saleLinesQuery = StockMovementLine.find({ moveId: saleMovement._id });
+    if (txn.session) saleLinesQuery.session(txn.session);
+    const saleLines = await saleLinesQuery;
+
+    if (!saleLines.length) {
+      throw new ApiError(400, "INVALID_ORDER", "Commande sans lignes de vente");
+    }
+
+    const existingReturnQuery = StockMovement.findOne({
+      movementType: "RETURN_CUSTOMER",
+      cartId: cart._id,
+    })
+      .sort({ createdAt: -1 })
+      .select("_id reference");
+    if (txn.session) existingReturnQuery.session(txn.session);
+    let returnMovement = await existingReturnQuery;
+
+    if (!returnMovement) {
+      const returnItems = saleLines.map((line) => ({
+        productId: line.productId.toString(),
+        shopId: line.shopId.toString(),
+        quantity: line.quantity,
+        unitPrice: line.unitPrice,
+      }));
+
+      const result = await createStockMovement(
+        {
+          movementType: "RETURN_CUSTOMER",
+          cartId: cart._id,
+          date: new Date(),
+          items: returnItems,
+          note:
+            payload.note ||
+            `Retour client de la commande ${cart.order.reference || cart._id}`,
+        },
+        userId,
+        { session: txn.session, cache: true },
+      );
+
+      returnMovement = result.header;
+    }
+
+    const alreadyRefundedBuyer = await hasBuyerRefundForOrder(
+      returnMovement._id,
+      cart._id,
+      txn.session,
+    );
+
+    if (!alreadyRefundedBuyer) {
+      await creditWalletByOwner(
+        { ownerId: userId, ownerModel: "User" },
+        cart.totalAmount,
+        {
+          type: "REFUND",
+          paymentMethod: "WALLET",
+          description: `Remboursement commande ${cart.order.reference || cart._id}`,
+          stockMovementId: returnMovement._id,
+          metadata: {
+            kind: "RETURN_ORDER",
+            cartId: cart._id.toString(),
+            saleId: saleMovement._id.toString(),
+            returnMovementId: returnMovement._id.toString(),
+          },
+          session: txn.session,
+        },
+      );
+    }
+
+    await reverseSaleIncomeCredits({
+      saleId: saleMovement._id.toString(),
+      returnMovementId: returnMovement._id.toString(),
+      orderReference: cart.order.reference,
+      cartId: cart._id,
+      session: txn.session,
+    });
+
+    await refundDeliveryCommissions({
+      saleId: saleMovement._id.toString(),
+      returnMovementId: returnMovement._id.toString(),
+      orderReference: cart.order.reference,
+      cartId: cart._id,
+      session: txn.session,
+    });
+
+    cart.status = "RETURNED";
     const saveOptions = txn.session ? { session: txn.session } : {};
     await cart.save(saveOptions);
 

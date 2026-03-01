@@ -252,10 +252,80 @@ export const debitWalletByOwner = async (
   };
 };
 
+export const creditWalletByOwner = async (
+  { ownerId, ownerModel = "User" },
+  amount,
+  options = {},
+) => {
+  const {
+    paymentMethod = "WALLET",
+    description = "",
+    type = "DEPOSIT",
+    stockMovementId,
+    metadata,
+    status = "COMPLETED",
+    session = null,
+  } = options;
+
+  if (amount <= 0) {
+    throw new ApiError(400, "INVALID_AMOUNT", "Le montant doit être positif");
+  }
+
+  const walletQuery = Wallet.findOne({ ownerId, ownerModel });
+  if (session) walletQuery.session(session);
+  const wallet = await walletQuery;
+
+  if (!wallet) {
+    throw new ApiError(404, "NOT_FOUND", "Portefeuille non trouvé");
+  }
+
+  const balanceBefore = wallet.balance;
+  const balanceAfter = balanceBefore + amount;
+
+  const createOptions = session ? { session } : {};
+  const [transaction] = await WalletTransaction.create(
+    [
+      {
+        walletId: wallet._id,
+        type,
+        amount,
+        balanceBefore,
+        balanceAfter,
+        status,
+        paymentMethod,
+        description,
+        stockMovementId,
+        metadata,
+      },
+    ],
+    createOptions,
+  );
+
+  await Wallet.findByIdAndUpdate(
+    wallet._id,
+    {
+      $inc: { balance: amount, totalEarned: amount },
+    },
+    session ? { session } : undefined,
+  );
+
+  return {
+    transaction: {
+      _id: transaction._id,
+      type: transaction.type,
+      amount: transaction.amount,
+      balanceAfter: transaction.balanceAfter,
+      status: transaction.status,
+    },
+    newBalance: balanceAfter,
+  };
+};
+
 export default {
   getUserWallet,
   getWalletTransactions,
   creditWallet,
   debitWallet,
   debitWalletByOwner,
+  creditWalletByOwner,
 };
