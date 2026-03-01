@@ -16,19 +16,21 @@ import { createOptionalSession } from "../utils/transaction.util.js";
 import * as settingsService from "./settings.service.js";
 
 // Fallback si les settings ne sont pas encore initialisés
-const DEFAULT_CART_TTL_MINUTES = 30;
+const DEFAULT_CART_TTL_MINUTES = 120;
 
 /**
  * Récupère la durée de vie du panier depuis les paramètres globaux
  * @returns {Promise<number>} La durée de vie du panier en minutes
  */
-const getCartTTL = async () => {
+export const getCartTTL = async () => {
   try {
     return await settingsService.getCartTTLMinutes();
   } catch {
     return DEFAULT_CART_TTL_MINUTES;
   }
 };
+
+export const DEFAULT_CART_TTL = DEFAULT_CART_TTL_MINUTES;
 
 const getExpiresAt = async () => {
   const ttl = await getCartTTL();
@@ -156,6 +158,155 @@ const findActiveCartByUser = async (userId, session = null) => {
   const query = Cart.findOne({ userId, status: "CART" });
   if (session) query.session(session);
   return (await query.exec()) || null;
+};
+
+export const releaseCartReservations = async (
+  cart,
+  { session = null, performedBy, note, skipMissingProduct = false } = {},
+) => {
+  if (!cart || !Array.isArray(cart.items) || cart.items.length === 0) {
+    return;
+  }
+
+  for (const item of cart.items) {
+    const productQuery = Product.findById(item.productId);
+    if (session) productQuery.session(session);
+
+    const product = await productQuery;
+    if (!product) {
+      if (skipMissingProduct) {
+        console.warn(
+          `[cart-expiration] Produit introuvable lors de la libération du panier ${cart._id} pour item ${item.productId}`,
+        );
+        continue;
+      }
+      throw new ApiError(404, "NOT_FOUND", "Produit non trouvé");
+    }
+
+    await createCartMovementLine(
+      {
+        productId: product._id.toString(),
+        shopId: product.shopId.toString(),
+        movementType: "RESERVATION_CANCEL",
+        quantity: item.quantity,
+        unitPrice: product.price,
+        cartId: cart._id,
+        date: new Date(),
+        note,
+      },
+      performedBy,
+      { session, product, cache: true },
+    );
+  }
+};
+
+const isCartExpiredByPolicy = (cart, now, ttlMinutes) => {
+  if (!cart) {
+    return false;
+  }
+
+  const expiresAt = cart.expiresAt ? new Date(cart.expiresAt) : null;
+  const updatedAt = cart.updatedAt ? new Date(cart.updatedAt) : null;
+
+  if (!expiresAt || !updatedAt || Number.isNaN(ttlMinutes)) {
+    return false;
+  }
+
+  const dynamicExpiresAt = new Date(
+    updatedAt.getTime() + ttlMinutes * 60 * 1000,
+  );
+  return expiresAt <= now && dynamicExpiresAt <= now;
+};
+
+const expireOneCart = async (cartId, now, ttlMinutes) => {
+  const txn = await createOptionalSession();
+
+  try {
+    const cartQuery = Cart.findOne({ _id: cartId, status: "CART" });
+    if (txn.session) {
+      cartQuery.session(txn.session);
+    }
+
+    const cart = await cartQuery;
+    if (!cart || !isCartExpiredByPolicy(cart, now, ttlMinutes)) {
+      if (txn.ownsSession) {
+        await txn.commit();
+      }
+      return { expired: false, skipped: true };
+    }
+
+    await releaseCartReservations(cart, {
+      session: txn.session,
+      note: "Cart expiration",
+      skipMissingProduct: true,
+    });
+
+    cart.status = "EXPIRED";
+    cart.items = [];
+    cart.totalAmount = 0;
+
+    const saveOptions = txn.session ? { session: txn.session } : {};
+    await cart.save(saveOptions);
+
+    if (txn.ownsSession) {
+      await txn.commit();
+    }
+
+    return { expired: true, skipped: false };
+  } catch (error) {
+    if (txn.ownsSession) {
+      await txn.abort();
+    }
+    throw error;
+  } finally {
+    if (txn.ownsSession) {
+      await txn.end();
+    }
+  }
+};
+
+export const runCartExpirationOnce = async ({ batchSize = 50 } = {}) => {
+  const ttlMinutes = await getCartTTL();
+  const now = new Date();
+
+  const candidates = await Cart.find({
+    status: "CART",
+    expiresAt: { $lte: now },
+  })
+    .select("_id expiresAt updatedAt")
+    .sort({ expiresAt: 1 })
+    .limit(batchSize)
+    .lean();
+
+  let processed = 0;
+  let errors = 0;
+
+  for (const candidate of candidates) {
+    if (!isCartExpiredByPolicy(candidate, now, ttlMinutes)) {
+      continue;
+    }
+
+    try {
+      const result = await expireOneCart(candidate._id, now, ttlMinutes);
+      if (result.expired) {
+        processed += 1;
+      }
+    } catch (error) {
+      errors += 1;
+      console.error(
+        `[cart-expiration] Echec expiration panier ${candidate._id}:`,
+        error.message,
+      );
+    }
+  }
+
+  return {
+    skipped: false,
+    processed,
+    errors,
+    inspected: candidates.length,
+    ttlMinutes,
+  };
 };
 
 export const getCart = async (userId) => {
@@ -403,27 +554,10 @@ export const clearCart = async (userId) => {
       return emptyCart;
     }
 
-    for (const item of cart.items) {
-      const productQuery = Product.findById(item.productId);
-      if (txn.session) productQuery.session(txn.session);
-      const product = await productQuery;
-      if (!product) {
-        throw new ApiError(404, "NOT_FOUND", "Produit non trouvé");
-      }
-      await createCartMovementLine(
-        {
-          productId: product._id.toString(),
-          shopId: product.shopId.toString(),
-          movementType: "RESERVATION_CANCEL",
-          quantity: item.quantity,
-          unitPrice: product.price,
-          cartId: cart._id,
-          date: new Date(),
-        },
-        userId,
-        { session: txn.session, product, cache: true },
-      );
-    }
+    await releaseCartReservations(cart, {
+      session: txn.session,
+      performedBy: userId,
+    });
 
     cart.items = [];
     cart.totalAmount = 0;
