@@ -165,29 +165,68 @@ import { ZardPaginationComponent } from '../../../shared/components/pagination';
                         />
                         En cours de livraison
                       </p>
-                      <button
-                        z-button
-                        zType="default"
-                        [disabled]="confirmingDelivery() === order._id"
-                        (click)="confirmDelivery(order)"
-                      >
-                        @if (confirmingDelivery() === order._id) {
-                          <z-spinner class="mr-2" size="sm" />
-                          Confirmation...
-                        } @else {
-                          <z-icon zType="check" class="mr-2 h-4 w-4" />
-                          Confirmer la réception
-                        }
-                      </button>
+                      <div class="flex gap-2">
+                        <button
+                          z-button
+                          zType="outline"
+                          [disabled]="returningOrder() === order._id"
+                          (click)="returnOrder(order)"
+                        >
+                          @if (returningOrder() === order._id) {
+                            <z-spinner class="mr-2" size="sm" />
+                            Retour...
+                          } @else {
+                            Retourner
+                          }
+                        </button>
+                        <button
+                          z-button
+                          zType="default"
+                          [disabled]="confirmingDelivery() === order._id"
+                          (click)="confirmDelivery(order)"
+                        >
+                          @if (confirmingDelivery() === order._id) {
+                            <z-spinner class="mr-2" size="sm" />
+                            Confirmation...
+                          } @else {
+                            <z-icon zType="check" class="mr-2 h-4 w-4" />
+                            Confirmer la réception
+                          }
+                        </button>
+                      </div>
                     </div>
                   </div>
                 }
 
                 @if (order.status === 'DELIVERED') {
                   <div class="p-4 border-t border-border bg-green-50">
-                    <p class="text-sm text-green-700 flex items-center">
-                      <z-icon zType="circle-check" class="h-4 w-4 mr-2" />
-                      Commande livrée et réceptionnée
+                    <div class="flex justify-between items-center gap-3">
+                      <p class="text-sm text-green-700 flex items-center">
+                        <z-icon zType="circle-check" class="h-4 w-4 mr-2" />
+                        Commande livrée et réceptionnée
+                      </p>
+                      <button
+                        z-button
+                        zType="outline"
+                        [disabled]="returningOrder() === order._id"
+                        (click)="returnOrder(order)"
+                      >
+                        @if (returningOrder() === order._id) {
+                          <z-spinner class="mr-2" size="sm" />
+                          Retour...
+                        } @else {
+                          Retourner la commande
+                        }
+                      </button>
+                    </div>
+                  </div>
+                }
+
+                @if (order.status === 'RETURNED') {
+                  <div class="p-4 border-t border-border bg-orange-50">
+                    <p class="text-sm text-orange-700 flex items-center">
+                      <z-icon zType="arrow-left" class="h-4 w-4 mr-2" />
+                      Commande retournée
                     </p>
                   </div>
                 }
@@ -222,6 +261,7 @@ export class OrdersComponent implements OnInit {
   totalPages = signal(1);
   isLoading = signal(false);
   confirmingDelivery = signal<string | null>(null);
+  returningOrder = signal<string | null>(null);
 
   ngOnInit(): void {
     this.loadOrders();
@@ -235,15 +275,8 @@ export class OrdersComponent implements OnInit {
     this.currentPage.set(page);
     try {
       const response = await this.cartService.getOrders(page, 10);
-      // L'API retourne { data: Cart[], pagination: Pagination }
-      // Le service retourne directement la réponse de l'API
-      const typedResponse = response as {
-        orders?: Cart[];
-        data?: Cart[];
-        pagination?: { pages: number };
-      };
-      this.orders.set(typedResponse.data || typedResponse.orders || []);
-      this.totalPages.set(typedResponse.pagination?.pages || 1);
+      this.orders.set(response.orders || []);
+      this.totalPages.set(response.pagination?.pages || 1);
     } catch {
       this.toastService.error('Erreur lors du chargement des commandes');
     } finally {
@@ -279,6 +312,30 @@ export class OrdersComponent implements OnInit {
       this.toastService.error('Erreur lors de la confirmation');
     } finally {
       this.confirmingDelivery.set(null);
+    }
+  }
+
+  returnOrder(order: Cart): void {
+    this.dialogService.create({
+      zTitle: 'Retourner la commande',
+      zDescription:
+        'Confirmez-vous le retour de cette commande ? Cette action est irréversible.',
+      zOkText: 'Retourner',
+      zCancelText: 'Annuler',
+      zOnOk: () => this.doReturnOrder(order),
+    });
+  }
+
+  async doReturnOrder(order: Cart): Promise<void> {
+    this.returningOrder.set(order._id);
+    try {
+      await this.cartService.returnOrder(order._id);
+      this.toastService.success('Commande retournée avec succès');
+      await this.loadOrders(this.currentPage());
+    } catch {
+      this.toastService.error('Erreur lors du retour de commande');
+    } finally {
+      this.returningOrder.set(null);
     }
   }
 

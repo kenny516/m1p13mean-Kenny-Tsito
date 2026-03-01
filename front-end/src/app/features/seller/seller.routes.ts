@@ -83,6 +83,13 @@ export const SELLER_ROUTES: Routes = [
             (m) => m.StockMovementLinesComponent,
           ),
       },
+      {
+        path: 'orders',
+        loadComponent: () =>
+          import('./orders/seller-orders.component').then(
+            (m) => m.SellerOrdersComponent,
+          ),
+      },
     ],
   },
 ];
