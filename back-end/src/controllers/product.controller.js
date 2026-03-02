@@ -69,12 +69,32 @@ export const create = async (req, res, next) => {
 };
 
 /**
+ * Convertit les valeurs string "true"/"false" en booléens
+ */
+const parseBooleanFilter = (value, defaultValue = true) => {
+	if (value === undefined || value === null) return defaultValue;
+	if (typeof value === "boolean") return value;
+	if (value === "true") return true;
+	if (value === "false") return false;
+	return defaultValue;
+};
+
+/**
  * Lister les produits avec filtres et pagination
  * GET /api/products
+ * 
+ * Pour les acheteurs, filtre automatiquement :
+ * - Les produits de boutiques inactives (activeShopOnly=true par défaut)
+ * - Les produits sans stock disponible (inStockOnly=true par défaut)
  */
 export const list = async (req, res, next) => {
 	try {
-		const filters = req.query;
+		const filters = {
+			...req.query,
+			// Conversion explicite des booléens pour les filtres d'acheteur
+			inStockOnly: parseBooleanFilter(req.query.inStockOnly, true),
+			activeShopOnly: parseBooleanFilter(req.query.activeShopOnly, true),
+		};
 		const { products, total, page, limit } = await productService.getProducts(filters);
 
 		res.json({
@@ -95,12 +115,19 @@ export const list = async (req, res, next) => {
 /**
  * Lister TOUS les produits pour l'admin (tous statuts)
  * GET /api/admin/products
+ * 
+ * L'admin peut voir tous les produits, y compris :
+ * - Les produits de boutiques inactives
+ * - Les produits sans stock
  */
 export const listAll = async (req, res, next) => {
 	try {
 		const filters = {
 			...req.query,
 			status: req.query.status || "ALL", // Par défaut tous les statuts
+			// L'admin peut voir tous les produits sans restrictions
+			inStockOnly: parseBooleanFilter(req.query.inStockOnly, false),
+			activeShopOnly: parseBooleanFilter(req.query.activeShopOnly, false),
 		};
 		const { products, total, page, limit } = await productService.getProducts(filters);
 
@@ -122,12 +149,17 @@ export const listAll = async (req, res, next) => {
 /**
  * Lister les produits du vendeur connecté
  * GET /api/products/my-products
+ * 
+ * Le vendeur voit tous ses produits sans restriction de stock ou statut shop
  */
 export const listMyProducts = async (req, res, next) => {
 	try {
 		const filters = {
 			...req.query,
 			sellerId: req.user._id,
+			// Le vendeur voit tous ses produits sans filtrage de stock/shop
+			inStockOnly: false,
+			activeShopOnly: false,
 		};
 		const { products, total, page, limit } = await productService.getProducts(filters);
 

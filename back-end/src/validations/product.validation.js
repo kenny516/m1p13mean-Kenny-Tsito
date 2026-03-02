@@ -203,6 +203,23 @@ export const listProductsQuerySchema = Joi.object({
       "string.pattern.base":
         "Le tri doit être au format champ_asc ou champ_desc",
     }),
+
+  // === FILTRES POUR ACHETEURS ===
+  inStockOnly: Joi.alternatives()
+    .try(Joi.boolean(), Joi.string().valid("true", "false"))
+    .default(true)
+    .optional()
+    .messages({
+      "alternatives.match": "inStockOnly doit être un booléen (true/false)",
+    }),
+
+  activeShopOnly: Joi.alternatives()
+    .try(Joi.boolean(), Joi.string().valid("true", "false"))
+    .default(true)
+    .optional()
+    .messages({
+      "alternatives.match": "activeShopOnly doit être un booléen (true/false)",
+    }),
 });
 
 /**
