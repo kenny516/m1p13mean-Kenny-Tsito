@@ -49,66 +49,76 @@ import { ZardSelectImports } from '@/shared/components/select';
       </div>
 
       <z-card class="p-6">
-        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-4">
-          <div class="grid gap-4 md:grid-cols-3">
+        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-6">
+          <section class="space-y-4 rounded-md border border-border p-4">
             <div>
-              <p class="mb-1 text-sm text-muted-foreground">Type *</p>
-              <z-select formControlName="movementType" class="w-full" (zSelectionChange)="onMovementTypeChange()">
-                @for (type of movementTypeOptions; track type) {
-                  <z-select-item [zValue]="type">{{ type }}</z-select-item>
-                }
-              </z-select>
+              <h2 class="text-sm font-semibold text-foreground">Paramètres du mouvement</h2>
+              <p class="text-xs text-muted-foreground">Type, date et contexte du mouvement.</p>
             </div>
-            <div>
-              <p class="mb-1 text-sm text-muted-foreground">Date *</p>
-              <input z-input type="datetime-local" formControlName="date" />
-            </div>
-            <div>
-              <p class="mb-1 text-sm text-muted-foreground">Note</p>
-              <input z-input formControlName="note" placeholder="Note optionnelle" />
-            </div>
-          </div>
 
-          @if (form.value.movementType === 'SUPPLY') {
-            <div class="grid gap-4 md:grid-cols-2">
+            <div class="grid gap-4 md:grid-cols-3">
               <div>
-                <p class="mb-1 text-sm text-muted-foreground">Fournisseur *</p>
-                <input z-input formControlName="supplierName" placeholder="Nom fournisseur" />
-              </div>
-              <div>
-                <p class="mb-1 text-sm text-muted-foreground">Contact fournisseur</p>
-                <input z-input formControlName="supplierContact" placeholder="Téléphone / email" />
-              </div>
-            </div>
-          }
-
-          @if (form.value.movementType === 'ADJUSTMENT_PLUS' || form.value.movementType === 'ADJUSTMENT_MINUS') {
-            <div class="grid gap-4 md:grid-cols-2">
-              <div>
-                <p class="mb-1 text-sm text-muted-foreground">Raison d'ajustement *</p>
-                <z-select formControlName="adjustmentReason" class="w-full">
-                  @for (reason of adjustmentReasons; track reason) {
-                    <z-select-item [zValue]="reason">{{ reason }}</z-select-item>
+                <p class="mb-1 text-sm text-muted-foreground">Type *</p>
+                <z-select formControlName="movementType" class="w-full" (zSelectionChange)="onMovementTypeChange()">
+                  @for (type of movementTypeOptions; track type) {
+                    <z-select-item [zValue]="type">{{ type }}</z-select-item>
                   }
                 </z-select>
               </div>
               <div>
-                <p class="mb-1 text-sm text-muted-foreground">Notes d'ajustement</p>
-                <input z-input formControlName="adjustmentNotes" placeholder="Note optionnelle" />
+                <p class="mb-1 text-sm text-muted-foreground">Date *</p>
+                <input z-input type="datetime-local" formControlName="date" />
+              </div>
+              <div>
+                <p class="mb-1 text-sm text-muted-foreground">Note</p>
+                <input z-input formControlName="note" placeholder="Note optionnelle" />
               </div>
             </div>
-          }
 
-          @if (form.value.movementType === 'RESERVATION' || form.value.movementType === 'RESERVATION_CANCEL') {
-            <div>
-              <p class="mb-1 text-sm text-muted-foreground">Cart ID *</p>
-              <input z-input formControlName="cartId" placeholder="ObjectId du panier" />
-            </div>
-          }
+            @if (form.value.movementType === 'SUPPLY') {
+              <div class="grid gap-4 md:grid-cols-2">
+                <div>
+                  <p class="mb-1 text-sm text-muted-foreground">Fournisseur *</p>
+                  <input z-input formControlName="supplierName" placeholder="Nom fournisseur" />
+                </div>
+                <div>
+                  <p class="mb-1 text-sm text-muted-foreground">Contact fournisseur</p>
+                  <input z-input formControlName="supplierContact" placeholder="Téléphone / email" />
+                </div>
+              </div>
+            }
 
-          <div class="space-y-3">
+            @if (form.value.movementType === 'ADJUSTMENT_PLUS' || form.value.movementType === 'ADJUSTMENT_MINUS') {
+              <div class="grid gap-4 md:grid-cols-2">
+                <div>
+                  <p class="mb-1 text-sm text-muted-foreground">Raison d'ajustement *</p>
+                  <z-select formControlName="adjustmentReason" class="w-full">
+                    @for (reason of adjustmentReasons; track reason) {
+                      <z-select-item [zValue]="reason">{{ reason }}</z-select-item>
+                    }
+                  </z-select>
+                </div>
+                <div>
+                  <p class="mb-1 text-sm text-muted-foreground">Notes d'ajustement</p>
+                  <input z-input formControlName="adjustmentNotes" placeholder="Note optionnelle" />
+                </div>
+              </div>
+            }
+
+            @if (form.value.movementType === 'RESERVATION' || form.value.movementType === 'RESERVATION_CANCEL') {
+              <div>
+                <p class="mb-1 text-sm text-muted-foreground">Cart ID *</p>
+                <input z-input formControlName="cartId" placeholder="ObjectId du panier" />
+              </div>
+            }
+          </section>
+
+          <section class="space-y-3 rounded-md border border-border p-4">
             <div class="flex items-center justify-between">
-              <h3 class="font-medium text-foreground">Lignes du mouvement</h3>
+              <div>
+                <h3 class="font-medium text-foreground">Lignes du mouvement</h3>
+                <p class="text-xs text-muted-foreground">Sélectionnez les produits et quantités concernées.</p>
+              </div>
               <button z-button zType="outline" type="button" (click)="addItem()">
                 Ajouter ligne
               </button>
@@ -146,9 +156,9 @@ import { ZardSelectImports } from '@/shared/components/select';
                 </button>
               </div>
             }
-          </div>
+          </section>
 
-          <div class="flex justify-end gap-2">
+          <div class="flex justify-end gap-2 border-t border-border pt-4">
             <a z-button zType="outline" routerLink="/seller/stock-movements">Annuler</a>
             <button z-button type="submit" [disabled]="isSubmitting() || form.invalid || items.length === 0">
               {{ isSubmitting() ? 'Création...' : 'Créer mouvement' }}

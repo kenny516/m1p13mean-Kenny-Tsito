@@ -7,7 +7,7 @@ import { Shop } from '@/core/models/shop.model';
 import { SaleStatus, StockMovement } from '@/core/models/stock-movement.model';
 import { ZardButtonComponent } from '@/shared/components/button';
 import { ZardCardComponent } from '@/shared/components/card';
-import { DataTableColumn, DataTableComponent } from '@/shared/components/data-table';
+import { DataTableColumnDef, TanstackDataTableComponent } from '@/shared/components/data-table';
 import { ZardSelectImports } from '@/shared/components/select';
 
 @Component({
@@ -20,19 +20,19 @@ import { ZardSelectImports } from '@/shared/components/select';
     ZardCardComponent,
     ZardButtonComponent,
     ...ZardSelectImports,
-    DataTableComponent,
+    TanstackDataTableComponent,
   ],
   template: `
     <div class="space-y-6">
       <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 class="text-2xl font-bold text-foreground">Commandes</h1>
-          <p class="text-muted-foreground">Ventes et retours clients de vos boutiques.</p>
+          <p class="text-muted-foreground">Ventes de vos boutiques.</p>
         </div>
       </div>
 
       <z-card class="p-4">
-        <div class="grid gap-4 md:grid-cols-3">
+        <div class="grid gap-4 md:grid-cols-2">
           <z-select
             [(zValue)]="selectedShopId"
             (zSelectionChange)="onFilterChange()"
@@ -46,17 +46,6 @@ import { ZardSelectImports } from '@/shared/components/select';
           </z-select>
 
           <z-select
-            [(zValue)]="selectedType"
-            (zSelectionChange)="onFilterChange()"
-            zPlaceholder="Tous types"
-            class="w-full"
-          >
-            <z-select-item zValue="">Tous types</z-select-item>
-            <z-select-item zValue="SALE">SALE</z-select-item>
-            <z-select-item zValue="RETURN_CUSTOMER">RETURN_CUSTOMER</z-select-item>
-          </z-select>
-
-          <z-select
             [(zValue)]="selectedStatus"
             (zSelectionChange)="onFilterChange()"
             zPlaceholder="Tous statuts"
@@ -65,50 +54,56 @@ import { ZardSelectImports } from '@/shared/components/select';
             <z-select-item zValue="">Tous statuts</z-select-item>
             <z-select-item zValue="CONFIRMED">CONFIRMED</z-select-item>
             <z-select-item zValue="DELIVERED">DELIVERED</z-select-item>
+            <z-select-item zValue="RETURNED">RETURNED</z-select-item>
           </z-select>
         </div>
       </z-card>
 
-      <app-data-table
-        [data]="stockMovementService.movements()"
-        [columns]="columns"
-        [rowActions]="actionsTpl"
-        emptyMessage="Aucune commande trouvée"
-      />
-
-      <ng-template #actionsTpl let-movement>
-        <a z-button zType="outline" zSize="sm" [routerLink]="['/seller/stock-movements', movement._id]">
-          Détails
-        </a>
-      </ng-template>
-
-      @if (stockMovementService.pagination(); as pagination) {
-        <div class="flex items-center justify-between rounded-md border border-border bg-card p-3">
-          <p class="text-sm text-muted-foreground">
-            Page {{ pagination.page }} / {{ pagination.pages }} · {{ pagination.total }} résultats
-          </p>
-          <div class="flex gap-2">
-            <button
-              z-button
-              zType="outline"
-              zSize="sm"
-              [disabled]="pagination.page <= 1"
-              (click)="goToPage(pagination.page - 1)"
-            >
-              Précédent
-            </button>
-            <button
-              z-button
-              zType="outline"
-              zSize="sm"
-              [disabled]="pagination.page >= pagination.pages"
-              (click)="goToPage(pagination.page + 1)"
-            >
-              Suivant
-            </button>
-          </div>
+      <z-card class="overflow-hidden">
+        <div class="p-4">
+          <app-tanstack-data-table
+            [data]="stockMovementService.movements()"
+            [columnDefs]="columns"
+            [rowActions]="actionsTpl"
+            [isLoading]="stockMovementService.isLoading()"
+            emptyMessage="Aucune commande trouvée"
+          />
         </div>
-      }
+
+        <ng-template #actionsTpl let-movement>
+          <a z-button zType="outline" zSize="sm" [routerLink]="['/seller/stock-movements', movement._id]">
+            Détails
+          </a>
+        </ng-template>
+
+        @if (stockMovementService.pagination(); as pagination) {
+          <div class="flex items-center justify-between px-4 py-3 border-t border-border bg-muted/20">
+            <p class="text-sm text-muted-foreground">
+              Page {{ pagination.page }} / {{ pagination.pages }} · {{ pagination.total }} résultats
+            </p>
+            <div class="flex gap-2">
+              <button
+                z-button
+                zType="outline"
+                zSize="sm"
+                [disabled]="pagination.page <= 1"
+                (click)="goToPage(pagination.page - 1)"
+              >
+                Précédent
+              </button>
+              <button
+                z-button
+                zType="outline"
+                zSize="sm"
+                [disabled]="pagination.page >= pagination.pages"
+                (click)="goToPage(pagination.page + 1)"
+              >
+                Suivant
+              </button>
+            </div>
+          </div>
+        }
+      </z-card>
     </div>
   `,
 })
@@ -121,11 +116,11 @@ export class SellerOrdersComponent implements OnInit {
   readonly currentPage = signal(1);
 
   selectedShopId = '';
-  selectedType: 'SALE' | 'RETURN_CUSTOMER' | '' = '';
   selectedStatus: SaleStatus | '' = '';
 
-  readonly columns: DataTableColumn[] = [
+  readonly columns: DataTableColumnDef<StockMovement>[] = [
     {
+      id: 'reference',
       accessorKey: 'reference',
       header: 'Référence',
     },
@@ -135,13 +130,12 @@ export class SellerOrdersComponent implements OnInit {
       header: 'Boutique',
     },
     {
+      id: 'movementType',
       accessorKey: 'movementType',
       header: 'Type',
     },
     {
-      accessorFn: (movement: unknown) =>
-        (movement as StockMovement).sale?.status ||
-        ((movement as StockMovement).movementType === 'RETURN_CUSTOMER' ? 'RETURNED' : '-'),
+      accessorFn: (movement: unknown) => (movement as StockMovement).sale?.status || '-',
       id: 'status',
       header: 'Statut',
     },
@@ -178,10 +172,7 @@ export class SellerOrdersComponent implements OnInit {
       await this.stockMovementService.getSellerOrders(
         {
           shopId: this.selectedShopId || undefined,
-          movementType: (this.selectedType || undefined) as
-            | 'SALE'
-            | 'RETURN_CUSTOMER'
-            | undefined,
+          movementType: 'SALE',
           status: this.selectedStatus || undefined,
         },
         this.currentPage(),
