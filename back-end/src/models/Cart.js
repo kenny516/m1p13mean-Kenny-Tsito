@@ -1,8 +1,7 @@
 import mongoose from "mongoose";
 
 /**
- * Modèle Panier avec TTL
- * Les paniers expirent automatiquement après un certain temps
+ * Modèle Panier
  */
 const cartItemSchema = new mongoose.Schema(
 	{
@@ -69,7 +68,7 @@ const cartSchema = new mongoose.Schema(
 
 // Index pour l'utilisateur
 cartSchema.index({ userId: 1 });
-// TTL index pour supprimer automatiquement les paniers expirés
-cartSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+// Index pour la détection des paniers expirés via job
+cartSchema.index({ status: 1, expiresAt: 1, updatedAt: 1 });
 
 export default mongoose.model("Cart", cartSchema);

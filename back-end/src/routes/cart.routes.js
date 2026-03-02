@@ -6,6 +6,7 @@ import {
   addCartItemSchema,
   updateCartItemSchema,
   checkoutCartSchema,
+  returnOrderSchema,
 } from "../validations/cart.validation.js";
 
 const router = Router();
@@ -79,5 +80,16 @@ router.post("/checkout", validate(checkoutCartSchema), cartController.checkout);
  * @access  Private (BUYER)
  */
 router.post("/:cartId/confirm-delivery", cartController.confirmDelivery);
+
+/**
+ * @route   POST /api/cart/orders/:orderId/return
+ * @desc    Retourner une commande livrée
+ * @access  Private (BUYER)
+ */
+router.post(
+  "/orders/:orderId/return",
+  validate(returnOrderSchema),
+  cartController.returnOrder,
+);
 
 export default router;

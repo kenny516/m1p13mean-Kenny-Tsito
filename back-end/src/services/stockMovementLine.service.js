@@ -99,18 +99,22 @@ const _applyMovementToCache = (product, movementType, quantity, direction) => {
 
 const _syncHeaderData = async (moveId, session) => {
   const lines = await StockMovementLine.find({ moveId })
-    .select("_id totalAmount")
+    .select("_id totalAmount commissionAmount")
     .session(session || null);
 
   const totalAmount = lines.reduce(
     (sum, line) => sum + (line.totalAmount || 0),
     0,
   );
+  const totalCommissionAmount = lines.reduce(
+    (sum, line) => sum + (line.commissionAmount || 0),
+    0,
+  );
   const lineIds = lines.map((line) => line._id);
 
   return StockMovement.findByIdAndUpdate(
     moveId,
-    { $set: { totalAmount, lineIds } },
+    { $set: { totalAmount, totalCommissionAmount, lineIds } },
     { new: true, session: session || undefined },
   );
 };
@@ -165,6 +169,19 @@ const _resolveProductAndShop = async (
 };
 
 const _createHeader = async (payload, performedBy, session) => {
+  const resolvedHeaderShopId =
+    payload.shopId ||
+    (() => {
+      const uniqueShopIds = [
+        ...new Set(
+          (payload.items || [])
+            .map((item) => item?.shopId?.toString())
+            .filter(Boolean),
+        ),
+      ];
+      return uniqueShopIds.length === 1 ? uniqueShopIds[0] : undefined;
+    })();
+
   const headerDoc = {
     movementType: payload.movementType,
     direction: _getDirection(payload.movementType),
@@ -172,6 +189,7 @@ const _createHeader = async (payload, performedBy, session) => {
     note: payload.note,
     date: payload.date || new Date(),
     cartId: payload.cartId,
+    shopId: resolvedHeaderShopId,
   };
 
   if (payload.movementType === "SALE") {
@@ -246,6 +264,8 @@ const _createLine = async (header, item, options) => {
     direction: header.direction,
     quantity: item.quantity,
     unitPrice: item.unitPrice || 0,
+    commissionRate: item.commissionRate || 0,
+    commissionAmount: item.commissionAmount || 0,
     totalAmount,
     stockBefore,
     stockAfter,

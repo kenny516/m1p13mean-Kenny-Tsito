@@ -122,10 +122,6 @@ import { ZardSelectImports } from '@/shared/components/select';
                   <p class="text-sm text-muted-foreground">Livrée le</p>
                   <p class="font-medium">{{ current.sale.deliveredAt ? (current.sale.deliveredAt | date: 'dd/MM/yyyy HH:mm') : '-' }}</p>
                 </div>
-                <div>
-                  <p class="text-sm text-muted-foreground">Annulée le</p>
-                  <p class="font-medium">{{ current.sale.cancelledAt ? (current.sale.cancelledAt | date: 'dd/MM/yyyy HH:mm') : '-' }}</p>
-                </div>
               </div>
 
               <div>
@@ -146,7 +142,6 @@ import { ZardSelectImports } from '@/shared/components/select';
                 <z-select [(zValue)]="selectedSaleStatus" class="w-56">
                   <z-select-item zValue="CONFIRMED">CONFIRMED</z-select-item>
                   <z-select-item zValue="DELIVERED">DELIVERED</z-select-item>
-                  <z-select-item zValue="CANCELLED">CANCELLED</z-select-item>
                 </z-select>
                 <button
                   z-button
@@ -345,19 +340,12 @@ export class StockMovementDetailComponent implements OnInit {
   }
 
   displayMovementShops(movement: StockMovement): string {
-    const names = (movement.lineIds || [])
-      .map((line) => {
-        const shop = line.shopId as unknown;
-        if (shop && typeof shop === 'object') {
-          const named = shop as { name?: string };
-          if (named.name) return named.name;
-        }
-        return null;
-      })
-      .filter((name): name is string => Boolean(name));
-
-    const uniqueNames = Array.from(new Set(names));
-    return uniqueNames.length ? uniqueNames.join(', ') : 'Boutique indisponible';
+    const shop = movement.shopId as unknown;
+    if (shop && typeof shop === 'object') {
+      const named = shop as { name?: string };
+      if (named.name) return named.name;
+    }
+    return 'Boutique indisponible';
   }
 
   displayActor(actor: unknown): string {

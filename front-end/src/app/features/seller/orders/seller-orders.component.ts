@@ -4,14 +4,14 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ShopService, StockMovementService, ToastService } from '@/core/services';
 import { Shop } from '@/core/models/shop.model';
-import { MovementType, StockMovement } from '@/core/models/stock-movement.model';
+import { SaleStatus, StockMovement } from '@/core/models/stock-movement.model';
 import { ZardButtonComponent } from '@/shared/components/button';
 import { ZardCardComponent } from '@/shared/components/card';
 import { DataTableColumn, DataTableComponent } from '@/shared/components/data-table';
 import { ZardSelectImports } from '@/shared/components/select';
 
 @Component({
-  selector: 'app-stock-movement-list',
+  selector: 'app-seller-orders',
   standalone: true,
   imports: [
     CommonModule,
@@ -26,17 +26,13 @@ import { ZardSelectImports } from '@/shared/components/select';
     <div class="space-y-6">
       <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 class="text-2xl font-bold text-foreground">Mouvements de stock</h1>
-          <p class="text-muted-foreground">Liste complète des mouvements de vos boutiques.</p>
-        </div>
-        <div class="flex flex-wrap gap-2">
-          <a z-button zType="outline" routerLink="/seller/stock-movements/lines">Lignes</a>
-          <a z-button routerLink="/seller/stock-movements/new">Nouveau mouvement</a>
+          <h1 class="text-2xl font-bold text-foreground">Commandes</h1>
+          <p class="text-muted-foreground">Ventes et retours clients de vos boutiques.</p>
         </div>
       </div>
 
       <z-card class="p-4">
-        <div class="grid gap-4 md:grid-cols-2">
+        <div class="grid gap-4 md:grid-cols-3">
           <z-select
             [(zValue)]="selectedShopId"
             (zSelectionChange)="onFilterChange()"
@@ -56,16 +52,20 @@ import { ZardSelectImports } from '@/shared/components/select';
             class="w-full"
           >
             <z-select-item zValue="">Tous types</z-select-item>
-            <z-select-item zValue="SUPPLY">SUPPLY</z-select-item>
-            <z-select-item zValue="RETURN_SUPPLIER">RETURN_SUPPLIER</z-select-item>
-            <z-select-item zValue="ADJUSTMENT_PLUS">ADJUSTMENT_PLUS</z-select-item>
-            <z-select-item zValue="ADJUSTMENT_MINUS">ADJUSTMENT_MINUS</z-select-item>
-            <z-select-item zValue="RESERVATION">RESERVATION</z-select-item>
-            <z-select-item zValue="RESERVATION_CANCEL">RESERVATION_CANCEL</z-select-item>
+            <z-select-item zValue="SALE">SALE</z-select-item>
+            <z-select-item zValue="RETURN_CUSTOMER">RETURN_CUSTOMER</z-select-item>
           </z-select>
-        </div>
-        <div class="mt-4 flex justify-end">
-          <button z-button zType="outline" (click)="resetFilters()">Réinitialiser les filtres</button>
+
+          <z-select
+            [(zValue)]="selectedStatus"
+            (zSelectionChange)="onFilterChange()"
+            zPlaceholder="Tous statuts"
+            class="w-full"
+          >
+            <z-select-item zValue="">Tous statuts</z-select-item>
+            <z-select-item zValue="CONFIRMED">CONFIRMED</z-select-item>
+            <z-select-item zValue="DELIVERED">DELIVERED</z-select-item>
+          </z-select>
         </div>
       </z-card>
 
@@ -73,7 +73,7 @@ import { ZardSelectImports } from '@/shared/components/select';
         [data]="stockMovementService.movements()"
         [columns]="columns"
         [rowActions]="actionsTpl"
-        emptyMessage="Aucun mouvement trouvé"
+        emptyMessage="Aucune commande trouvée"
       />
 
       <ng-template #actionsTpl let-movement>
@@ -112,7 +112,7 @@ import { ZardSelectImports } from '@/shared/components/select';
     </div>
   `,
 })
-export class StockMovementListComponent implements OnInit {
+export class SellerOrdersComponent implements OnInit {
   readonly stockMovementService = inject(StockMovementService);
   private readonly shopService = inject(ShopService);
   private readonly toast = inject(ToastService);
@@ -121,7 +121,8 @@ export class StockMovementListComponent implements OnInit {
   readonly currentPage = signal(1);
 
   selectedShopId = '';
-  selectedType: MovementType | '' = '';
+  selectedType: 'SALE' | 'RETURN_CUSTOMER' | '' = '';
+  selectedStatus: SaleStatus | '' = '';
 
   readonly columns: DataTableColumn[] = [
     {
@@ -129,17 +130,20 @@ export class StockMovementListComponent implements OnInit {
       header: 'Référence',
     },
     {
-      accessorFn: (movement: unknown) => this.displayMovementShops(movement as StockMovement),
-      id: 'shops',
-      header: 'Boutique(s)',
+      accessorFn: (movement: unknown) => this.displayShop(movement as StockMovement),
+      id: 'shop',
+      header: 'Boutique',
     },
     {
       accessorKey: 'movementType',
       header: 'Type',
     },
     {
-      accessorKey: 'direction',
-      header: 'Direction',
+      accessorFn: (movement: unknown) =>
+        (movement as StockMovement).sale?.status ||
+        ((movement as StockMovement).movementType === 'RETURN_CUSTOMER' ? 'RETURNED' : '-'),
+      id: 'status',
+      header: 'Statut',
     },
     {
       accessorFn: (movement: unknown) =>
@@ -157,7 +161,7 @@ export class StockMovementListComponent implements OnInit {
 
   ngOnInit(): void {
     void this.loadShops();
-    void this.loadMovements();
+    void this.loadOrders();
   }
 
   async loadShops(): Promise<void> {
@@ -169,23 +173,27 @@ export class StockMovementListComponent implements OnInit {
     }
   }
 
-  async loadMovements(): Promise<void> {
+  async loadOrders(): Promise<void> {
     try {
-      await this.stockMovementService.getMovements(
+      await this.stockMovementService.getSellerOrders(
         {
           shopId: this.selectedShopId || undefined,
-          movementType: (this.selectedType || undefined) as MovementType | undefined,
+          movementType: (this.selectedType || undefined) as
+            | 'SALE'
+            | 'RETURN_CUSTOMER'
+            | undefined,
+          status: this.selectedStatus || undefined,
         },
         this.currentPage(),
       );
     } catch {
-      this.toast.error('Impossible de charger les mouvements');
+      this.toast.error('Impossible de charger les commandes');
     }
   }
 
   onFilterChange(): void {
     this.currentPage.set(1);
-    void this.loadMovements();
+    void this.loadOrders();
   }
 
   goToPage(page: number): void {
@@ -193,17 +201,10 @@ export class StockMovementListComponent implements OnInit {
     const maxPage = pagination?.pages || 1;
     const nextPage = Math.min(Math.max(page, 1), maxPage);
     this.currentPage.set(nextPage);
-    void this.loadMovements();
+    void this.loadOrders();
   }
 
-  resetFilters(): void {
-    this.selectedShopId = '';
-    this.selectedType = '';
-    this.currentPage.set(1);
-    void this.loadMovements();
-  }
-
-  private displayMovementShops(movement: StockMovement): string {
+  private displayShop(movement: StockMovement): string {
     const shop = movement.shopId as unknown;
     if (shop && typeof shop === 'object' && 'name' in shop && typeof shop.name === 'string') {
       return shop.name;

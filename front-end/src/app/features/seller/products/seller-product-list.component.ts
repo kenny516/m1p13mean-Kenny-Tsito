@@ -97,6 +97,10 @@ import {
           </a>
           @if (product.status !== 'ARCHIVED') {
             <button z-button zType="outline" zSize="sm" (click)="archive(product)">Archiver</button>
+          } @else {
+            <button z-button zType="outline" zSize="sm" (click)="dearchive(product)">
+              Désarchiver
+            </button>
           }
           <button z-button zType="destructive" zSize="sm" (click)="remove(product)">Supprimer</button>
         </div>
@@ -236,6 +240,16 @@ export class SellerProductListComponent implements OnInit {
       await this.loadProducts();
     } catch {
       this.toast.error('Échec de l\'archivage');
+    }
+  }
+
+  async dearchive(product: Product): Promise<void> {
+    try {
+      await this.productService.updateProduct(product._id, { status: 'ACTIVE' });
+      this.toast.success('Produit désarchivé');
+      await this.loadProducts();
+    } catch {
+      this.toast.error('Échec du désarchivage');
     }
   }
 

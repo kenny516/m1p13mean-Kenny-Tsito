@@ -136,6 +136,28 @@ export const confirmDelivery = async (req, res, next) => {
 };
 
 /**
+ * Retourner une commande livrée
+ * POST /api/cart/orders/:orderId/return
+ */
+export const returnOrder = async (req, res, next) => {
+  try {
+    const cart = await cartService.returnOrder(
+      req.user._id,
+      req.params.orderId,
+      req.body,
+    );
+
+    res.json({
+      success: true,
+      data: cart,
+      message: "Commande retournée avec succès",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Récupérer les commandes de l'utilisateur
  * GET /api/cart/orders
  */

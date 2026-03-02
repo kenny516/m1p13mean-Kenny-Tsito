@@ -119,10 +119,10 @@ export const updateProductSchema = Joi.object({
 
   // === MODÉRATION ===
   status: Joi.string()
-    .valid("DRAFT", "PENDING", "ARCHIVED")
+    .valid("DRAFT", "PENDING", "ACTIVE", "ARCHIVED")
     .optional()
     .messages({
-      "any.only": "Le statut doit être DRAFT, PENDING ou ARCHIVED",
+      "any.only": "Le statut doit être DRAFT, PENDING, ACTIVE ou ARCHIVED",
     }),
 });
 
@@ -202,6 +202,23 @@ export const listProductsQuerySchema = Joi.object({
     .messages({
       "string.pattern.base":
         "Le tri doit être au format champ_asc ou champ_desc",
+    }),
+
+  // === FILTRES POUR ACHETEURS ===
+  inStockOnly: Joi.alternatives()
+    .try(Joi.boolean(), Joi.string().valid("true", "false"))
+    .default(true)
+    .optional()
+    .messages({
+      "alternatives.match": "inStockOnly doit être un booléen (true/false)",
+    }),
+
+  activeShopOnly: Joi.alternatives()
+    .try(Joi.boolean(), Joi.string().valid("true", "false"))
+    .default(true)
+    .optional()
+    .messages({
+      "alternatives.match": "activeShopOnly doit être un booléen (true/false)",
     }),
 });
 

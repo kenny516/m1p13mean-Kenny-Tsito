@@ -90,6 +90,19 @@ async function seedShops() {
 				const existingShop = await Shop.findOne({ sellerId: seller._id });
 				if (existingShop) {
 					console.log(`ℹ️  La boutique ${existingShop.name} existe déjà`);
+					const existingShopWallet = await Wallet.findOne({
+						ownerId: existingShop._id,
+						ownerModel: "Shop",
+					});
+					if (!existingShopWallet) {
+						await Wallet.create({
+							ownerId: existingShop._id,
+							ownerModel: "Shop",
+							balance: 0,
+							currency: "MGA",
+						});
+						console.log(`💳 Wallet boutique créé pour ${existingShop.name}`);
+					}
 					createdShops.push({ seller, shop: existingShop });
 					continue;
 				}
@@ -132,6 +145,20 @@ async function seedShops() {
 				status: "ACTIVE",
 				isActive: true, // Boutique déjà validée pour les tests
 			});
+
+			const shopWallet = await Wallet.findOne({
+				ownerId: shop._id,
+				ownerModel: "Shop",
+			});
+			if (!shopWallet) {
+				await Wallet.create({
+					ownerId: shop._id,
+					ownerModel: "Shop",
+					balance: 0,
+					currency: "MGA",
+				});
+				console.log(`💳 Wallet boutique créé pour ${shop.name}`);
+			}
 
 			createdShops.push({ seller, shop });
 			console.log(`✅ Boutique ${shop.name} créée`);

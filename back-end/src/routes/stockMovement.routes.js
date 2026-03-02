@@ -45,6 +45,18 @@ router.get(
 );
 
 /**
+ * @route   GET /api/stock-movements/orders
+ * @desc    Lister les commandes vendeur (SALE + RETURN_CUSTOMER)
+ * @access  Private (SELLER)
+ */
+router.get(
+	"/orders",
+	authorize("SELLER"),
+	validateQuery(listSalesQuerySchema),
+	stockMovementController.listSellerOrders,
+);
+
+/**
  * @route   GET /api/stock-movements/supplies
  * @desc    Lister les approvisionnements (mouvements de type SUPPLY)
  * @access  Private (SELLER, ADMIN)

@@ -17,7 +17,7 @@ export const MOVEMENT_TYPES = [
 
 export const IN_MOVEMENTS = ["SUPPLY", "RETURN_CUSTOMER", "ADJUSTMENT_PLUS", "RESERVATION_CANCEL"];
 
-export const SALE_STATUSES = ["CONFIRMED", "DELIVERED", "CANCELLED"];
+export const SALE_STATUSES = ["CONFIRMED", "DELIVERED", "RETURNED"];
 
 export const PAYMENT_METHODS = ["WALLET", "CARD", "MOBILE_MONEY", "CASH_ON_DELIVERY"];
 
@@ -42,9 +42,9 @@ export const REFERENCE_PREFIXES = {
 };
 
 export const VALID_SALE_TRANSITIONS = {
-	CONFIRMED: ["DELIVERED", "CANCELLED"],
-	DELIVERED: [],
-	CANCELLED: [],
+	CONFIRMED: ["DELIVERED", "RETURNED"],
+	DELIVERED: ["RETURNED"],
+	RETURNED: [],
 };
 
 /**
@@ -77,6 +77,11 @@ const stockMovementSchema = new mongoose.Schema(
 			default: 0,
 			min: 0,
 		},
+		totalCommissionAmount: {
+			type: Number,
+			default: 0,
+			min: 0,
+		},
 
 		// Lignes associées (dénormalisé)
 		lineIds: [
@@ -90,6 +95,10 @@ const stockMovementSchema = new mongoose.Schema(
 		cartId: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: "Cart",
+		},
+		shopId: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "Shop",
 		},
 
 		// ========== INFORMATIONS VENTE (movementType: SALE) ==========
@@ -122,7 +131,7 @@ const stockMovementSchema = new mongoose.Schema(
 			// Dates importantes
 			confirmedAt: Date,
 			deliveredAt: Date,
-			cancelledAt: Date,
+			returnedAt: Date,
 		},
 
 		// ========== INFORMATIONS APPROVISIONNEMENT (movementType: SUPPLY) ==========
@@ -162,6 +171,7 @@ const stockMovementSchema = new mongoose.Schema(
 // Index pour performance
 stockMovementSchema.index({ movementType: 1, createdAt: -1 });
 stockMovementSchema.index({ performedBy: 1, createdAt: -1 });
+stockMovementSchema.index({ shopId: 1, createdAt: -1 });
 stockMovementSchema.index({ cartId: 1, createdAt: -1 });
 stockMovementSchema.index({ "sale.cartId": 1, createdAt: -1 });
 stockMovementSchema.index({ "sale.status": 1 });

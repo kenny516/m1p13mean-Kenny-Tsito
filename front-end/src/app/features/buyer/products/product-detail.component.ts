@@ -94,7 +94,7 @@ import { ZardSpinnerComponent } from '../../../shared/components/spinner';
                 <div class="flex gap-2 mt-4 overflow-x-auto pb-2">
                   @for (img of p.images; track img; let i = $index) {
                     <button
-                      class="flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors"
+                      class="shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors"
                       [class.border-primary]="selectedImage() === img"
                       [class.border-border]="selectedImage() !== img"
                       (click)="selectImage(img)"
@@ -168,25 +168,25 @@ import { ZardSpinnerComponent } from '../../../shared/components/spinner';
 
               <!-- Stock -->
               <div class="mt-4">
-                @if (p.isOutOfStock) {
+                @if (isOutOfStock()) {
                   <div class="flex items-center gap-2 text-destructive">
                     <z-icon zType="circle-x" class="h-5 w-5" />
                     <span class="font-medium">Rupture de stock</span>
                   </div>
-                } @else if (p.isLowStock) {
+                } @else if (isLowStock()) {
                   <div class="flex items-center gap-2 text-yellow-600">
                     <z-icon zType="triangle-alert" class="h-5 w-5" />
                     <span class="font-medium"
-                      >Stock limité ({{
-                        p.stock.cache.available
-                      }}
+                      >Stock limité ({{ availableStock() }}
                       restant(s))</span
                     >
                   </div>
                 } @else {
                   <div class="flex items-center gap-2 text-green-600">
                     <z-icon zType="circle-check" class="h-5 w-5" />
-                    <span class="font-medium">En stock</span>
+                    <span class="font-medium"
+                      >{{ availableStock() }} disponible(s)</span
+                    >
                   </div>
                 }
               </div>
@@ -249,7 +249,7 @@ import { ZardSpinnerComponent } from '../../../shared/components/spinner';
                         zType="ghost"
                         zSize="sm"
                         zShape="square"
-                        [disabled]="quantity() <= 1"
+                        [disabled]="quantity() <= minAllowedQuantity()"
                         (click)="decrementQuantity()"
                       >
                         <z-icon zType="minus" class="h-4 w-4" />
@@ -260,15 +260,16 @@ import { ZardSpinnerComponent } from '../../../shared/components/spinner';
                         class="w-16 text-center border-0"
                         [ngModel]="quantity()"
                         (ngModelChange)="setQuantity($event)"
-                        min="1"
-                        [max]="p.stock.cache.available"
+                        [min]="minAllowedQuantity()"
+                        [max]="availableStock()"
+                        [disabled]="isOutOfStock()"
                       />
                       <button
                         z-button
                         zType="ghost"
                         zSize="sm"
                         zShape="square"
-                        [disabled]="quantity() >= p.stock.cache.available"
+                        [disabled]="quantity() >= availableStock() || isOutOfStock()"
                         (click)="incrementQuantity()"
                       >
                         <z-icon zType="plus" class="h-4 w-4" />
@@ -281,7 +282,7 @@ import { ZardSpinnerComponent } from '../../../shared/components/spinner';
                     z-button
                     class="flex-1"
                     zSize="lg"
-                    [disabled]="p.isOutOfStock || isAddingToCart()"
+                    [disabled]="isOutOfStock() || isAddingToCart()"
                     (click)="addToCart()"
                   >
                     @if (isAddingToCart()) {
@@ -415,9 +416,50 @@ export class ProductDetailComponent implements OnInit {
       if (product.images && product.images.length > 0) {
         this.selectedImage.set(product.images[0]);
       }
+      this.syncQuantityWithStock();
     } catch {
       this.toastService.error('Produit non trouvé');
     }
+  }
+
+  availableStock(): number {
+    const p = this.product();
+    if (!p) return 0;
+    return p.stock?.cache?.available ?? 0;
+  }
+
+  isOutOfStock(): boolean {
+    const p = this.product();
+    if (!p) return true;
+    return !!p.isOutOfStock || this.availableStock() <= 0;
+  }
+
+  isLowStock(): boolean {
+    const p = this.product();
+    if (!p || this.isOutOfStock()) {
+      return false;
+    }
+
+    if (p.isLowStock) {
+      return true;
+    }
+
+    const threshold = p.stock?.alert?.lowThreshold ?? 5;
+    return this.availableStock() <= threshold;
+  }
+
+  minAllowedQuantity(): number {
+    return this.isOutOfStock() ? 0 : 1;
+  }
+
+  private syncQuantityWithStock(): void {
+    if (this.isOutOfStock()) {
+      this.quantity.set(0);
+      return;
+    }
+
+    const clampedQty = Math.max(1, Math.min(this.quantity(), this.availableStock()));
+    this.quantity.set(clampedQty);
   }
 
   /**
@@ -448,8 +490,7 @@ export class ProductDetailComponent implements OnInit {
    * Incrémente la quantité
    */
   incrementQuantity(): void {
-    const p = this.product();
-    if (p && this.quantity() < p.stock.cache.available) {
+    if (!this.isOutOfStock() && this.quantity() < this.availableStock()) {
       this.quantity.update((q: number) => q + 1);
     }
   }
@@ -458,7 +499,7 @@ export class ProductDetailComponent implements OnInit {
    * Décrémente la quantité
    */
   decrementQuantity(): void {
-    if (this.quantity() > 1) {
+    if (this.quantity() > this.minAllowedQuantity()) {
       this.quantity.update((q: number) => q - 1);
     }
   }
@@ -467,9 +508,14 @@ export class ProductDetailComponent implements OnInit {
    * Définit la quantité
    */
   setQuantity(value: number): void {
-    const p = this.product();
-    if (!p) return;
-    const newQty = Math.max(1, Math.min(value, p.stock.cache.available));
+    if (this.isOutOfStock()) {
+      this.quantity.set(0);
+      return;
+    }
+
+    const parsedValue = Number(value);
+    const safeValue = Number.isFinite(parsedValue) ? parsedValue : 1;
+    const newQty = Math.max(1, Math.min(safeValue, this.availableStock()));
     this.quantity.set(newQty);
   }
 
@@ -479,6 +525,18 @@ export class ProductDetailComponent implements OnInit {
   async addToCart(): Promise<void> {
     const p = this.product();
     if (!p) return;
+
+    if (this.isOutOfStock()) {
+      this.toastService.warning('Produit en rupture de stock');
+      return;
+    }
+
+    const maxAllowed = this.availableStock();
+    if (this.quantity() > maxAllowed) {
+      this.quantity.set(maxAllowed);
+      this.toastService.warning(`Stock disponible: ${maxAllowed}`);
+      return;
+    }
 
     // Vérifier l'authentification
     if (!this.authService.isAuthenticated()) {
