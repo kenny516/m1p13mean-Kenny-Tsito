@@ -15,6 +15,8 @@ import {
   debitWallet,
   debitWalletByOwner,
   creditWalletByOwner,
+  debitWalletById,
+  creditWalletById,
 } from "./wallet.service.js";
 import { requireActiveProduct } from "./product.service.js";
 import { requireActiveShop } from "./shop.service.js";
@@ -163,6 +165,45 @@ const hasWithdrawalByType = async (
   return Boolean(existing);
 };
 
+const hasDepositByType = async (
+  stockMovementId,
+  kind,
+  shopId,
+  session = null,
+) => {
+  const query = {
+    type: "DEPOSIT",
+    stockMovementId,
+    "metadata.kind": kind,
+  };
+
+  if (shopId) {
+    query["metadata.shopId"] = shopId;
+  }
+
+  const findQuery = WalletTransaction.findOne(query).select("_id");
+  if (session) findQuery.session(session);
+
+  const existing = await findQuery;
+  return Boolean(existing);
+};
+
+const getRequiredAdminGlobalWalletId = async (session = null) => {
+  const adminGlobalWalletId = await settingsService.getAdminGlobalWalletId(
+    session,
+  );
+
+  if (!adminGlobalWalletId) {
+    throw new ApiError(
+      500,
+      "ADMIN_GLOBAL_WALLET_NOT_CONFIGURED",
+      "Wallet admin global non configuré",
+    );
+  }
+
+  return adminGlobalWalletId;
+};
+
 const creditCheckoutSalesToShops = async ({
   saleId,
   orderReference,
@@ -219,6 +260,8 @@ const debitDeliveryCommissions = async (cart, session = null) => {
     return;
   }
 
+  const adminGlobalWalletId = await getRequiredAdminGlobalWalletId(session);
+
   const commissionByShop = await groupSaleCommissionsByShop(saleId, session);
 
   for (const [shopId, totalCommission] of commissionByShop.entries()) {
@@ -227,24 +270,57 @@ const debitDeliveryCommissions = async (cart, session = null) => {
       continue;
     }
 
-    const alreadyDebited = await hasCommissionDebit(saleId, shopId, session);
-    if (alreadyDebited) {
+    const alreadyDebitedSeller = await hasCommissionDebit(
+      saleId,
+      shopId,
+      session,
+    );
+    if (!alreadyDebitedSeller) {
+      await debitWalletByOwner(
+        { ownerId: shopId, ownerModel: "Shop" },
+        amount,
+        {
+          type: "COMMISSION",
+          allowNegative: true,
+          paymentMethod: "WALLET",
+          description: `Commission commande ${cart.order.reference || cart._id}`,
+          stockMovementId: saleId,
+          metadata: {
+            kind: "DELIVERY_COMMISSION",
+            cartId: cart._id.toString(),
+            saleId,
+            shopId,
+            adminWalletId: adminGlobalWalletId.toString(),
+          },
+          session,
+        },
+      );
+    }
+
+    const alreadyCreditedAdmin = await hasDepositByType(
+      saleId,
+      "DELIVERY_COMMISSION",
+      shopId,
+      session,
+    );
+    if (alreadyCreditedAdmin) {
       continue;
     }
 
-    await debitWalletByOwner(
-      { ownerId: shopId, ownerModel: "Shop" },
+    await creditWalletById(
+      adminGlobalWalletId,
       amount,
       {
-        type: "COMMISSION",
-        allowNegative: true,
+        type: "DEPOSIT",
         paymentMethod: "WALLET",
-        description: `Commission commande ${cart.order.reference || cart._id}`,
+        description: `Encaissement commission commande ${cart.order.reference || cart._id}`,
         stockMovementId: saleId,
         metadata: {
+          kind: "DELIVERY_COMMISSION",
           cartId: cart._id.toString(),
           saleId,
           shopId,
+          adminWalletId: adminGlobalWalletId.toString(),
         },
         session,
       },
@@ -312,6 +388,8 @@ const refundDeliveryCommissions = async ({
   cartId,
   session = null,
 }) => {
+  const adminGlobalWalletId = await getRequiredAdminGlobalWalletId(session);
+
   const query = WalletTransaction.find({
     type: "COMMISSION",
     stockMovementId: saleId,
@@ -324,6 +402,39 @@ const refundDeliveryCommissions = async ({
   for (const tx of commissionTransactions) {
     const shopId = tx.metadata?.get("shopId") || tx.metadata?.shopId;
     if (!shopId) continue;
+
+    const amount = Number(tx.amount) || 0;
+    if (amount <= 0) continue;
+
+    const alreadyDebitedAdmin = await hasWithdrawalByType(
+      returnMovementId,
+      "RETURN_COMMISSION_ADMIN",
+      shopId,
+      session,
+    );
+
+    if (!alreadyDebitedAdmin) {
+      await debitWalletById(
+        adminGlobalWalletId,
+        amount,
+        {
+          type: "WITHDRAWAL",
+          allowNegative: true,
+          paymentMethod: "WALLET",
+          description: `Reverse commission commande ${orderReference || cartId}`,
+          stockMovementId: returnMovementId,
+          metadata: {
+            kind: "RETURN_COMMISSION_ADMIN",
+            cartId: cartId.toString(),
+            saleId,
+            returnMovementId,
+            shopId,
+            adminWalletId: adminGlobalWalletId.toString(),
+          },
+          session,
+        },
+      );
+    }
 
     const alreadyRefunded = await hasRefundByType(
       returnMovementId,
@@ -338,7 +449,7 @@ const refundDeliveryCommissions = async ({
 
     await creditWalletByOwner(
       { ownerId: shopId, ownerModel: "Shop" },
-      Number(tx.amount) || 0,
+      amount,
       {
         type: "REFUND",
         paymentMethod: "WALLET",
@@ -350,6 +461,7 @@ const refundDeliveryCommissions = async ({
           saleId,
           returnMovementId,
           shopId,
+          adminWalletId: adminGlobalWalletId.toString(),
         },
         session,
       },
