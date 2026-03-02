@@ -1,6 +1,23 @@
 import * as cartService from "../services/cart.service.js";
 
 /**
+ * Récupérer la liste des paniers expirés de l'utilisateur
+ * GET /api/cart/expired
+ */
+export const getExpiredCarts = async (req, res, next) => {
+  try {
+    const expiredCarts = await cartService.getExpiredCarts(req.user._id);
+
+    res.json({
+      success: true,
+      data: expiredCarts,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Récupérer le panier de l'utilisateur connecté
  * GET /api/cart
  */
@@ -90,6 +107,40 @@ export const clearCart = async (req, res, next) => {
       success: true,
       data: cart,
       message: "Panier vidé",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Restaurer un panier expiré spécifique
+ * Les items sont fusionnés avec le panier actif s'il existe
+ * POST /api/cart/restore/:cartId
+ */
+export const restoreCart = async (req, res, next) => {
+  try {
+    const cartId = req.params.cartId || null;
+    const result = await cartService.restoreExpiredCart(req.user._id, cartId);
+
+    const message =
+      result.notRestored.length > 0
+        ? `Panier partiellement restauré. ${result.notRestored.length} article(s) non disponible(s).`
+        : "Panier restauré avec succès";
+
+    res.json({
+      success: true,
+      data: {
+        cart: result.cart,
+        restored: result.restored.length,
+        notRestored: result.notRestored.map((item) => ({
+          productId: item.productId,
+          title: item.productSnapshot?.title || "Produit",
+          reason: item.reason,
+          requestedQuantity: item.originalQuantity,
+        })),
+      },
+      message,
     });
   } catch (error) {
     next(error);

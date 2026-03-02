@@ -6,6 +6,7 @@ import walletRoutes from "./wallet.routes.js";
 import shopRoutes from "./shop.routes.js";
 import stockMovementRoutes from "./stockMovement.routes.js";
 import cartRoutes from "./cart.routes.js";
+import reviewRoutes from "./review.routes.js";
 
 const router = Router();
 
@@ -29,7 +30,7 @@ router.use("/stock-movements", stockMovementRoutes);
 // Routes panier
 router.use("/cart", cartRoutes);
 
-// Routes futures
-// router.use("/orders", orderRoutes);
+// Routes reviews (avis)
+router.use("/reviews", reviewRoutes);
 
 export default router;

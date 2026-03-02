@@ -69,6 +69,43 @@ export interface UserStats {
 }
 
 /**
+ * Interface pour les statistiques de commission par boutique
+ */
+export interface ShopCommissionStats {
+  shopId: string;
+  shopName: string;
+  totalCommission: number;
+  totalSalesAmount: number;
+  salesCount: number;
+  avgCommissionRate: number;
+}
+
+/**
+ * Interface pour les statistiques de commission globales
+ */
+export interface CommissionStats {
+  totalCommission: number;
+  totalSalesAmount: number;
+  salesCount: number;
+  byShop: ShopCommissionStats[];
+}
+
+/**
+ * Interface pour les statistiques de commission par période (chart)
+ */
+export interface CommissionPeriodData {
+  period: string;
+  totalCommission: number;
+  totalSalesAmount: number;
+  salesCount: number;
+}
+
+export interface CommissionChartStats {
+  data: CommissionPeriodData[];
+  groupBy: 'day' | 'week' | 'month';
+}
+
+/**
  * Interface pour créer un utilisateur (Admin)
  */
 export interface CreateUserRequest {

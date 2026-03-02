@@ -385,3 +385,194 @@ export const reconcileProductStock = async (productId) => {
 		after: stockData,
 	};
 };
+
+// ==========================================
+// Statistiques des commissions (Admin)
+// ==========================================
+
+/**
+ * Récupère les statistiques de commission globales et par boutique
+ * Uniquement pour les ventes livrées (DELIVERED)
+ */
+export const getCommissionStats = async (filters = {}) => {
+	const { startDate, endDate } = filters;
+
+	// Construire le filtre pour les ventes DELIVERED
+	const saleMatch = {
+		movementType: "SALE",
+		"sale.status": "DELIVERED",
+	};
+
+	if (startDate || endDate) {
+		saleMatch.createdAt = {};
+		if (startDate) saleMatch.createdAt.$gte = new Date(startDate);
+		if (endDate) saleMatch.createdAt.$lte = new Date(endDate);
+	}
+
+	// Récupérer les IDs des mouvements de vente DELIVERED
+	const deliveredSales = await StockMovement.find(saleMatch).select("_id");
+	const deliveredMoveIds = deliveredSales.map((s) => s._id);
+
+	if (deliveredMoveIds.length === 0) {
+		return {
+			totalCommission: 0,
+			totalSalesAmount: 0,
+			salesCount: 0,
+			byShop: [],
+		};
+	}
+
+	// Agréger les commissions par boutique depuis les lignes
+	const byShopResult = await StockMovementLine.aggregate([
+		{
+			$match: {
+				moveId: { $in: deliveredMoveIds },
+				movementType: "SALE",
+			},
+		},
+		{
+			$group: {
+				_id: "$shopId",
+				totalCommission: { $sum: "$commissionAmount" },
+				totalSalesAmount: { $sum: "$totalAmount" },
+				salesCount: { $sum: 1 },
+				avgCommissionRate: { $avg: "$commissionRate" },
+			},
+		},
+		{
+			$lookup: {
+				from: "shops",
+				localField: "_id",
+				foreignField: "_id",
+				as: "shop",
+			},
+		},
+		{ $unwind: "$shop" },
+		{
+			$project: {
+				_id: 0,
+				shopId: "$_id",
+				shopName: "$shop.name",
+				totalCommission: { $round: ["$totalCommission", 0] },
+				totalSalesAmount: { $round: ["$totalSalesAmount", 0] },
+				salesCount: 1,
+				avgCommissionRate: { $round: ["$avgCommissionRate", 2] },
+			},
+		},
+		{ $sort: { totalCommission: -1 } },
+	]);
+
+	// Calculer les totaux globaux
+	const totals = byShopResult.reduce(
+		(acc, shop) => ({
+			totalCommission: acc.totalCommission + shop.totalCommission,
+			totalSalesAmount: acc.totalSalesAmount + shop.totalSalesAmount,
+			salesCount: acc.salesCount + shop.salesCount,
+		}),
+		{ totalCommission: 0, totalSalesAmount: 0, salesCount: 0 },
+	);
+
+	return {
+		totalCommission: totals.totalCommission,
+		totalSalesAmount: totals.totalSalesAmount,
+		salesCount: totals.salesCount,
+		byShop: byShopResult,
+	};
+};
+
+/**
+ * Récupère les statistiques de commission groupées par période
+ * Pour les charts d'évolution temporelle
+ * @param {Object} filters - Filtres (startDate, endDate, groupBy)
+ * @param {string} filters.groupBy - 'day', 'week', 'month' (default: 'day')
+ */
+export const getCommissionStatsByPeriod = async (filters = {}) => {
+	const { startDate, endDate, groupBy = "day" } = filters;
+
+	// Définir la période par défaut (30 derniers jours)
+	const defaultEndDate = new Date();
+	const defaultStartDate = new Date();
+	defaultStartDate.setDate(defaultStartDate.getDate() - 30);
+
+	const dateFilter = {
+		$gte: startDate ? new Date(startDate) : defaultStartDate,
+		$lte: endDate ? new Date(endDate) : defaultEndDate,
+	};
+
+	// Récupérer les mouvements de vente DELIVERED dans la période
+	const deliveredSales = await StockMovement.find({
+		movementType: "SALE",
+		"sale.status": "DELIVERED",
+		createdAt: dateFilter,
+	}).select("_id createdAt");
+
+	if (deliveredSales.length === 0) {
+		return { data: [], groupBy };
+	}
+
+	const deliveredMoveIds = deliveredSales.map((s) => s._id);
+
+	// Créer un map des dates pour chaque mouvement
+	const moveDateMap = {};
+	deliveredSales.forEach((sale) => {
+		moveDateMap[sale._id.toString()] = sale.createdAt;
+	});
+
+	// Récupérer les lignes avec leurs montants
+	const lines = await StockMovementLine.find({
+		moveId: { $in: deliveredMoveIds },
+		movementType: "SALE",
+	}).select("moveId commissionAmount totalAmount");
+
+	// Grouper manuellement par période
+	const groupedData = {};
+	lines.forEach((line) => {
+		const moveDate = moveDateMap[line.moveId.toString()];
+		let periodKey;
+
+		if (groupBy === "week") {
+			const weekNum = getISOWeek(moveDate);
+			const year = moveDate.getFullYear();
+			periodKey = `${year}-W${String(weekNum).padStart(2, "0")}`;
+		} else if (groupBy === "month") {
+			const year = moveDate.getFullYear();
+			const month = String(moveDate.getMonth() + 1).padStart(2, "0");
+			periodKey = `${year}-${month}`;
+		} else {
+			periodKey = moveDate.toISOString().split("T")[0];
+		}
+
+		if (!groupedData[periodKey]) {
+			groupedData[periodKey] = {
+				period: periodKey,
+				totalCommission: 0,
+				totalSalesAmount: 0,
+				salesCount: 0,
+			};
+		}
+
+		groupedData[periodKey].totalCommission += line.commissionAmount || 0;
+		groupedData[periodKey].totalSalesAmount += line.totalAmount || 0;
+		groupedData[periodKey].salesCount += 1;
+	});
+
+	// Convertir en tableau et trier par date
+	const data = Object.values(groupedData)
+		.map((item) => ({
+			...item,
+			totalCommission: Math.round(item.totalCommission),
+			totalSalesAmount: Math.round(item.totalSalesAmount),
+		}))
+		.sort((a, b) => a.period.localeCompare(b.period));
+
+	return { data, groupBy };
+};
+
+// Helper pour calculer le numéro de semaine ISO
+function getISOWeek(date) {
+	const d = new Date(date);
+	d.setHours(0, 0, 0, 0);
+	d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+	const yearStart = new Date(d.getFullYear(), 0, 1);
+	return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+}

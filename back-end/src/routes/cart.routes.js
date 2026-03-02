@@ -22,6 +22,13 @@ router.use(auth, authorize("BUYER"));
 router.get("/", cartController.getCart);
 
 /**
+ * @route   GET /api/cart/expired
+ * @desc    Lister les paniers expirés de l'utilisateur
+ * @access  Private (BUYER)
+ */
+router.get("/expired", cartController.getExpiredCarts);
+
+/**
  * @route   POST /api/cart/items
  * @desc    Ajouter un produit au panier
  * @access  Private (BUYER)
@@ -52,6 +59,20 @@ router.delete("/items/:productId", cartController.removeItem);
  * @access  Private (BUYER)
  */
 router.delete("/", cartController.clearCart);
+
+/**
+ * @route   POST /api/cart/restore
+ * @desc    Restaurer le dernier panier expiré (fusionne avec le panier actif)
+ * @access  Private (BUYER)
+ */
+router.post("/restore", cartController.restoreCart);
+
+/**
+ * @route   POST /api/cart/restore/:cartId
+ * @desc    Restaurer un panier expiré spécifique (fusionne avec le panier actif)
+ * @access  Private (BUYER)
+ */
+router.post("/restore/:cartId", cartController.restoreCart);
 
 /**
  * @route   GET /api/cart/orders

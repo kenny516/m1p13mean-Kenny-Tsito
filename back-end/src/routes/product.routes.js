@@ -1,5 +1,6 @@
 import { Router } from "express";
 import * as productController from "../controllers/product.controller.js";
+import * as reviewController from "../controllers/review.controller.js";
 import { auth, authorize } from "../middlewares/auth.middleware.js";
 import { validate, validateQuery } from "../middlewares/validate.middleware.js";
 import {
@@ -9,6 +10,11 @@ import {
 	updateStockSchema,
 	productImageIndexParamsSchema,
 } from "../validations/product.validation.js";
+import {
+	createReviewSchema,
+	updateReviewSchema,
+	sellerResponseSchema,
+} from "../validations/review.validation.js";
 import {
 	uploadProductImages,
 	parseJsonFields,
@@ -105,5 +111,36 @@ router.delete(
  * @access  Private (SELLER, ADMIN)
  */
 router.delete("/:id", auth, authorize("SELLER", "ADMIN"), productController.remove);
+
+// ==========================================
+// Routes Reviews (Avis)
+// ==========================================
+
+/**
+ * @route   GET /api/products/:productId/reviews
+ * @desc    Récupérer les avis d'un produit
+ * @access  Public
+ */
+router.get("/:productId/reviews", reviewController.getProductReviews);
+
+/**
+ * @route   GET /api/products/:productId/reviews/stats
+ * @desc    Récupérer les statistiques de rating d'un produit
+ * @access  Public
+ */
+router.get("/:productId/reviews/stats", reviewController.getProductRatingStats);
+
+/**
+ * @route   POST /api/products/:productId/reviews
+ * @desc    Créer un avis pour un produit
+ * @access  Private (BUYER)
+ */
+router.post(
+	"/:productId/reviews",
+	auth,
+	authorize("BUYER"),
+	validate(createReviewSchema),
+	reviewController.createReview,
+);
 
 export default router;

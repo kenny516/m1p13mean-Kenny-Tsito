@@ -6,3 +6,4 @@ export * from './cart.model';
 export * from './stockMovement.model';
 export * from './stock-movement.constants';
 export * from './settings.model';
+export * from './review.model';

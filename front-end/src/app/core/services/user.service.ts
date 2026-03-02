@@ -3,6 +3,8 @@ import { ApiService } from './api.service';
 import {
   User,
   UserStats,
+  CommissionStats,
+  CommissionChartStats,
   CreateUserRequest,
   UpdateUserRequest,
 } from '../models';
@@ -198,5 +200,30 @@ export class UserService {
     const stats = await this.api.get<UserStats>('/admin/users/stats');
     this.statsSignal.set(stats);
     return stats;
+  }
+
+  /**
+   * Récupère les statistiques de commission par boutique
+   * Aggrège les commissions des ventes livrées (DELIVERED)
+   */
+  async getCommissionStats(): Promise<CommissionStats> {
+    return this.api.get<CommissionStats>('/admin/stats/commissions');
+  }
+
+  /**
+   * Récupère les statistiques de commission par période pour les charts
+   * @param groupBy - Groupement par 'day', 'week' ou 'month'
+   * @param startDate - Date de début (optionnel)
+   * @param endDate - Date de fin (optionnel)
+   */
+  async getCommissionChartStats(
+    groupBy: 'day' | 'week' | 'month' = 'day',
+    startDate?: string,
+    endDate?: string
+  ): Promise<CommissionChartStats> {
+    let url = `/admin/stats/commissions/chart?groupBy=${groupBy}`;
+    if (startDate) url += `&startDate=${startDate}`;
+    if (endDate) url += `&endDate=${endDate}`;
+    return this.api.get<CommissionChartStats>(url);
   }
 }

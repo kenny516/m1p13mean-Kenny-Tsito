@@ -7,8 +7,9 @@ import {
   CartService,
   ToastService,
   AuthService,
+  ReviewService,
 } from '../../../core/services';
-import { Shop } from '../../../core/models';
+import { Shop, Review, RatingStats } from '../../../core/models';
 import { ZardCardComponent } from '../../../shared/components/card';
 import { ZardButtonComponent } from '../../../shared/components/button';
 import { ZardBadgeComponent } from '../../../shared/components/badge';
@@ -17,6 +18,7 @@ import { ZardInputDirective } from '../../../shared/components/input';
 import { ZardSkeletonComponent } from '../../../shared/components/skeleton';
 import { ZardSeparatorComponent } from '../../../shared/components/separator';
 import { ZardSpinnerComponent } from '../../../shared/components/spinner';
+import { RatingStarsComponent } from '../../../shared/components/rating';
 
 /**
  * Page de détail d'un produit
@@ -36,6 +38,7 @@ import { ZardSpinnerComponent } from '../../../shared/components/spinner';
     ZardSkeletonComponent,
     ZardSeparatorComponent,
     ZardSpinnerComponent,
+    RatingStarsComponent,
   ],
   template: `
     <div class="min-h-screen bg-muted/30 py-8">
@@ -339,6 +342,173 @@ import { ZardSpinnerComponent } from '../../../shared/components/spinner';
               }
             </div>
           </div>
+
+          <!-- Section Avis -->
+          <div class="mt-12">
+            <z-separator class="mb-8" />
+            <h2 class="text-xl font-bold text-foreground mb-6">Avis clients</h2>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <!-- Statistiques des avis -->
+              <z-card class="p-6">
+                <div class="text-center">
+                  <div class="text-4xl font-bold text-foreground">
+                    {{ ratingStats()?.average?.toFixed(1) || '0.0' }}
+                  </div>
+                  <app-rating-stars
+                    [value]="ratingStats()?.average || 0"
+                    size="6"
+                    class="justify-center mt-2"
+                  />
+                  <p class="mt-2 text-sm text-muted-foreground">
+                    {{ ratingStats()?.total || 0 }} avis
+                  </p>
+                </div>
+
+                <!-- Distribution -->
+                @if (ratingStats()) {
+                  <div class="mt-6 space-y-2">
+                    @for (star of [5, 4, 3, 2, 1]; track star) {
+                      <div class="flex items-center gap-2">
+                        <span class="text-sm text-muted-foreground w-8">{{ star }} ★</span>
+                        <div class="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                          <div
+                            class="h-full bg-yellow-400 rounded-full"
+                            [style.width.%]="getDistributionPercentage(star)"
+                          ></div>
+                        </div>
+                        <span class="text-sm text-muted-foreground w-8 text-right">
+                          {{ ratingStats()?.distribution?.[star] || 0 }}
+                        </span>
+                      </div>
+                    }
+                  </div>
+                }
+              </z-card>
+
+              <!-- Liste des avis + Formulaire -->
+              <div class="lg:col-span-2 space-y-6">
+                <!-- Formulaire d'avis (si connecté et BUYER) -->
+                @if (canReview()) {
+                  <z-card class="p-6">
+                    <h3 class="font-semibold text-foreground mb-4">Laisser un avis</h3>
+                    <div class="space-y-4">
+                      <div>
+                        <label class="text-sm text-muted-foreground mb-2 block">Votre note</label>
+                        <app-rating-stars
+                          [value]="newReviewRating()"
+                          [interactive]="true"
+                          size="6"
+                          (ratingChange)="newReviewRating.set($event)"
+                        />
+                      </div>
+                      <div>
+                        <label class="text-sm text-muted-foreground mb-2 block">Votre commentaire (optionnel)</label>
+                        <textarea
+                          class="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+                          rows="3"
+                          placeholder="Partagez votre expérience avec ce produit..."
+                          [(ngModel)]="newReviewComment"
+                          maxlength="1000"
+                        ></textarea>
+                      </div>
+                      <button
+                        z-button
+                        [disabled]="newReviewRating() === 0 || isSubmittingReview()"
+                        (click)="submitReview()"
+                      >
+                        @if (isSubmittingReview()) {
+                          <z-spinner class="mr-2" size="sm" />
+                          Envoi...
+                        } @else {
+                          Publier mon avis
+                        }
+                      </button>
+                    </div>
+                  </z-card>
+                }
+
+                <!-- Liste des avis -->
+                @if (isLoadingReviews()) {
+                  <div class="space-y-4">
+                    @for (i of [1, 2, 3]; track i) {
+                      <z-skeleton class="h-32 w-full rounded-lg" />
+                    }
+                  </div>
+                } @else if (reviews().length === 0) {
+                  <z-card class="p-6 text-center">
+                    <z-icon zType="mail" class="mx-auto h-12 w-12 text-muted-foreground" />
+                    <p class="mt-4 text-muted-foreground">Aucun avis pour ce produit</p>
+                    @if (canReview()) {
+                      <p class="text-sm text-muted-foreground mt-1">Soyez le premier à donner votre avis !</p>
+                    }
+                  </z-card>
+                } @else {
+                  <div class="space-y-4">
+                    @for (review of reviews(); track review._id) {
+                      <z-card class="p-4">
+                        <div class="flex items-start justify-between">
+                          <div>
+                            <div class="flex items-center gap-2">
+                              <span class="font-medium text-foreground">
+                                {{ getReviewerName(review) }}
+                              </span>
+                              @if (review.isVerifiedPurchase) {
+                                <z-badge zType="secondary" zShape="pill" class="text-xs">
+                                  <z-icon zType="badge-check" class="h-3 w-3 mr-1" />
+                                  Achat vérifié
+                                </z-badge>
+                              }
+                            </div>
+                            <app-rating-stars [value]="review.rating" size="4" class="mt-1" />
+                          </div>
+                          <span class="text-xs text-muted-foreground">
+                            {{ review.createdAt | date:'dd/MM/yyyy' }}
+                          </span>
+                        </div>
+                        @if (review.comment) {
+                          <p class="mt-3 text-muted-foreground">{{ review.comment }}</p>
+                        }
+                        @if (review.sellerResponse) {
+                          <div class="mt-4 pl-4 border-l-2 border-primary/30 bg-muted/30 p-3 rounded-r-md">
+                            <p class="text-sm font-medium text-foreground">Réponse du vendeur</p>
+                            <p class="mt-1 text-sm text-muted-foreground">{{ review.sellerResponse.comment }}</p>
+                          </div>
+                        }
+                      </z-card>
+                    }
+                  </div>
+
+                  <!-- Pagination des avis -->
+                  @if (reviewsPagination().pages > 1) {
+                    <div class="flex justify-center gap-2 mt-6">
+                      <button
+                        z-button
+                        zType="outline"
+                        zSize="sm"
+                        [disabled]="reviewsPagination().page <= 1"
+                        (click)="loadReviews(reviewsPagination().page - 1)"
+                      >
+                        Précédent
+                      </button>
+                      <span class="px-4 py-2 text-sm text-muted-foreground">
+                        Page {{ reviewsPagination().page }} / {{ reviewsPagination().pages }}
+                      </span>
+                      <button
+                        z-button
+                        zType="outline"
+                        zSize="sm"
+                        [disabled]="reviewsPagination().page >= reviewsPagination().pages"
+                        (click)="loadReviews(reviewsPagination().page + 1)"
+                      >
+                        Suivant
+                      </button>
+                    </div>
+                  }
+                }
+              </div>
+            </div>
+          </div>
         } @else {
           <!-- Produit non trouvé -->
           <div class="text-center py-12">
@@ -368,6 +538,7 @@ export class ProductDetailComponent implements OnInit {
   private productService = inject(ProductService);
   private cartService = inject(CartService);
   private toastService = inject(ToastService);
+  private reviewService = inject(ReviewService);
   private authService = inject(AuthService);
 
   // États
@@ -377,6 +548,15 @@ export class ProductDetailComponent implements OnInit {
   quantity = signal(1);
   selectedImage = signal<string | null>(null);
 
+  // Reviews
+  reviews = signal<Review[]>([]);
+  ratingStats = signal<RatingStats | null>(null);
+  reviewsPagination = signal({ page: 1, limit: 5, total: 0, pages: 0 });
+  isLoadingReviews = signal(false);
+  isSubmittingReview = signal(false);
+  newReviewRating = signal(0);
+  newReviewComment = '';
+
   // Extraire les infos de la boutique si peuplée
   shopInfo = computed(() => {
     const p = this.product();
@@ -385,6 +565,11 @@ export class ProductDetailComponent implements OnInit {
       return p.shopId as Shop;
     }
     return null;
+  });
+
+  // Vérifier si l'utilisateur peut laisser un avis
+  canReview = computed(() => {
+    return this.authService.isAuthenticated() && this.authService.userRole() === 'BUYER';
   });
 
   // Helper pour Object.keys dans le template
@@ -417,6 +602,9 @@ export class ProductDetailComponent implements OnInit {
         this.selectedImage.set(product.images[0]);
       }
       this.syncQuantityWithStock();
+      // Charger les avis
+      this.loadReviews(1);
+      this.loadRatingStats();
     } catch {
       this.toastService.error('Produit non trouvé');
     }
@@ -574,5 +762,95 @@ export class ProductDetailComponent implements OnInit {
   goBack(): void {
     this.productService.clearSelectedProduct();
     this.location.back();
+  }
+
+  // ==========================================
+  // Méthodes Reviews
+  // ==========================================
+
+  /**
+   * Charge les avis d'un produit
+   */
+  async loadReviews(page = 1): Promise<void> {
+    const p = this.product();
+    if (!p) return;
+
+    this.isLoadingReviews.set(true);
+    try {
+      const result = await this.reviewService.getProductReviews(p._id, page, 5);
+      this.reviews.set(result.reviews);
+      this.reviewsPagination.set(result.pagination);
+    } catch {
+      console.error('Erreur chargement avis');
+    } finally {
+      this.isLoadingReviews.set(false);
+    }
+  }
+
+  /**
+   * Charge les statistiques de rating
+   */
+  async loadRatingStats(): Promise<void> {
+    const p = this.product();
+    if (!p) return;
+
+    try {
+      const stats = await this.reviewService.getRatingStats(p._id);
+      this.ratingStats.set(stats);
+    } catch {
+      console.error('Erreur chargement stats rating');
+    }
+  }
+
+  /**
+   * Calcule le pourcentage de distribution pour une note
+   */
+  getDistributionPercentage(star: number): number {
+    const stats = this.ratingStats();
+    if (!stats || stats.total === 0) return 0;
+    const count = stats.distribution[star as keyof typeof stats.distribution] || 0;
+    return (count / stats.total) * 100;
+  }
+
+  /**
+   * Retourne le nom complet du rédacteur de l'avis
+   */
+  getReviewerName(review: Review): string {
+    const firstName = review.userId?.profile?.firstName || '';
+    const lastName = review.userId?.profile?.lastName || '';
+    return `${firstName} ${lastName}`.trim() || 'Utilisateur';
+  }
+
+  /**
+   * Soumet un nouvel avis
+   */
+  async submitReview(): Promise<void> {
+    const p = this.product();
+    if (!p || this.newReviewRating() === 0) return;
+
+    this.isSubmittingReview.set(true);
+    try {
+      await this.reviewService.createReview(p._id, {
+        rating: this.newReviewRating(),
+        comment: this.newReviewComment || undefined,
+      });
+
+      this.toastService.success('Avis publié avec succès');
+
+      // Reset form
+      this.newReviewRating.set(0);
+      this.newReviewComment = '';
+
+      // Recharger les avis et stats
+      await Promise.all([
+        this.loadReviews(1),
+        this.loadRatingStats(),
+      ]);
+    } catch (error: any) {
+      const message = error?.error?.error?.message || 'Erreur lors de la publication';
+      this.toastService.error(message);
+    } finally {
+      this.isSubmittingReview.set(false);
+    }
   }
 }
