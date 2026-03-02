@@ -3,6 +3,7 @@ import { User, Wallet } from "../models/index.js";
 import { ApiError } from "../middlewares/error.middleware.js";
 import { hashPassword, formatUserResponse } from "../utils/auth.utils.js";
 import { createOptionalSession } from "../utils/transaction.util.js";
+import * as settingsService from "./settings.service.js";
 
 /**
  * Service de gestion des utilisateurs (Admin)
@@ -100,14 +101,36 @@ export const createUser = async (userData) => {
       createUserOptions,
     );
 
-    // Créer le wallet associé
     const createWalletOptions = txn.session ? { session: txn.session } : {};
-    const [wallet] = await Wallet.create(
-      [{ ownerId: user._id, ownerModel: "User" }],
-      createWalletOptions,
-    );
+    const isAdmin = user.role === "ADMIN";
 
-    user.walletId = wallet._id;
+    if (isAdmin) {
+      let adminGlobalWalletId = await settingsService.getAdminGlobalWalletId(
+        txn.session,
+      );
+
+      if (!adminGlobalWalletId) {
+        const [wallet] = await Wallet.create(
+          [{ ownerId: user._id, ownerModel: "User" }],
+          createWalletOptions,
+        );
+        adminGlobalWalletId = wallet._id;
+        await settingsService.setAdminGlobalWalletId(
+          adminGlobalWalletId,
+          txn.session,
+        );
+      }
+
+      user.walletId = adminGlobalWalletId;
+    } else {
+      const [wallet] = await Wallet.create(
+        [{ ownerId: user._id, ownerModel: "User" }],
+        createWalletOptions,
+      );
+
+      user.walletId = wallet._id;
+    }
+
     const saveOptions = txn.session ? { session: txn.session } : {};
     await user.save(saveOptions);
 
@@ -258,7 +281,14 @@ export const deleteUser = async (userId) => {
 
   // Désactiver le wallet si existe
   if (user.walletId) {
-    await Wallet.findByIdAndUpdate(user.walletId, { isActive: false });
+    const adminGlobalWalletId = await settingsService.getAdminGlobalWalletId();
+    const isGlobalAdminWallet =
+      adminGlobalWalletId &&
+      user.walletId.toString() === adminGlobalWalletId.toString();
+
+    if (!isGlobalAdminWallet) {
+      await Wallet.findByIdAndUpdate(user.walletId, { isActive: false });
+    }
   }
 
   await User.findByIdAndDelete(userId);

@@ -1,4 +1,4 @@
-import { Wallet, WalletTransaction } from "../models/index.js";
+import { User, Wallet, WalletTransaction } from "../models/index.js";
 import { ApiError } from "../middlewares/error.middleware.js";
 
 /**
@@ -9,8 +9,22 @@ import { ApiError } from "../middlewares/error.middleware.js";
 /**
  * Récupère le wallet d'un utilisateur
  */
+const resolveUserWallet = async (userId) => {
+  const directWallet = await Wallet.findOne({ ownerId: userId, ownerModel: "User" });
+  if (directWallet) {
+    return directWallet;
+  }
+
+  const user = await User.findById(userId).select("walletId");
+  if (!user?.walletId) {
+    return null;
+  }
+
+  return await Wallet.findById(user.walletId);
+};
+
 export const getUserWallet = async (userId) => {
-  const wallet = await Wallet.findOne({ ownerId: userId, ownerModel: "User" });
+  const wallet = await resolveUserWallet(userId);
 
   if (!wallet) {
     throw new ApiError(404, "NOT_FOUND", "Portefeuille non trouvé");
@@ -55,7 +69,7 @@ export const getWalletTransactions = async (
   filters = {},
   pagination = {},
 ) => {
-  const wallet = await Wallet.findOne({ ownerId: userId, ownerModel: "User" });
+  const wallet = await resolveUserWallet(userId);
 
   if (!wallet) {
     throw new ApiError(404, "NOT_FOUND", "Portefeuille non trouvé");
@@ -341,6 +355,141 @@ export const creditWalletByOwner = async (
   };
 };
 
+export const debitWalletById = async (walletId, amount, options = {}) => {
+  const {
+    paymentMethod = "WALLET",
+    description = "",
+    type = "WITHDRAWAL",
+    allowNegative = false,
+    stockMovementId,
+    metadata,
+    status = "COMPLETED",
+    session = null,
+  } = options;
+
+  if (amount <= 0) {
+    throw new ApiError(400, "INVALID_AMOUNT", "Le montant doit être positif");
+  }
+
+  const walletQuery = Wallet.findById(walletId);
+  if (session) walletQuery.session(session);
+  const wallet = await walletQuery;
+
+  if (!wallet) {
+    throw new ApiError(404, "NOT_FOUND", "Portefeuille non trouvé");
+  }
+
+  if (!allowNegative && wallet.balance < amount) {
+    throw new ApiError(400, "INSUFFICIENT_BALANCE", "Solde insuffisant");
+  }
+
+  const balanceBefore = wallet.balance;
+  const balanceAfter = balanceBefore - amount;
+
+  const createOptions = session ? { session } : {};
+  const [transaction] = await WalletTransaction.create(
+    [
+      {
+        walletId: wallet._id,
+        type,
+        amount,
+        balanceBefore,
+        balanceAfter,
+        status,
+        paymentMethod,
+        description,
+        stockMovementId,
+        metadata,
+      },
+    ],
+    createOptions,
+  );
+
+  await Wallet.findByIdAndUpdate(
+    wallet._id,
+    {
+      $inc: { balance: -amount, totalSpent: amount },
+    },
+    session ? { session } : undefined,
+  );
+
+  return {
+    transaction: {
+      _id: transaction._id,
+      type: transaction.type,
+      amount: transaction.amount,
+      balanceAfter: transaction.balanceAfter,
+      status: transaction.status,
+    },
+    newBalance: balanceAfter,
+  };
+};
+
+export const creditWalletById = async (walletId, amount, options = {}) => {
+  const {
+    paymentMethod = "WALLET",
+    description = "",
+    type = "DEPOSIT",
+    stockMovementId,
+    metadata,
+    status = "COMPLETED",
+    session = null,
+  } = options;
+
+  if (amount <= 0) {
+    throw new ApiError(400, "INVALID_AMOUNT", "Le montant doit être positif");
+  }
+
+  const walletQuery = Wallet.findById(walletId);
+  if (session) walletQuery.session(session);
+  const wallet = await walletQuery;
+
+  if (!wallet) {
+    throw new ApiError(404, "NOT_FOUND", "Portefeuille non trouvé");
+  }
+
+  const balanceBefore = wallet.balance;
+  const balanceAfter = balanceBefore + amount;
+
+  const createOptions = session ? { session } : {};
+  const [transaction] = await WalletTransaction.create(
+    [
+      {
+        walletId: wallet._id,
+        type,
+        amount,
+        balanceBefore,
+        balanceAfter,
+        status,
+        paymentMethod,
+        description,
+        stockMovementId,
+        metadata,
+      },
+    ],
+    createOptions,
+  );
+
+  await Wallet.findByIdAndUpdate(
+    wallet._id,
+    {
+      $inc: { balance: amount, totalEarned: amount },
+    },
+    session ? { session } : undefined,
+  );
+
+  return {
+    transaction: {
+      _id: transaction._id,
+      type: transaction.type,
+      amount: transaction.amount,
+      balanceAfter: transaction.balanceAfter,
+      status: transaction.status,
+    },
+    newBalance: balanceAfter,
+  };
+};
+
 export default {
   ensureWalletByOwner,
   getUserWallet,
@@ -349,4 +498,6 @@ export default {
   debitWallet,
   debitWalletByOwner,
   creditWalletByOwner,
+  debitWalletById,
+  creditWalletById,
 };

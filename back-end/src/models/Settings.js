@@ -87,6 +87,11 @@ const settingsSchema = new mongoose.Schema(
       default: 10000, // Montant minimum de retrait
       min: 0,
     },
+    adminGlobalWalletId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Wallet",
+      default: null,
+    },
 
     // === PARAMÈTRES RETOUR ===
     returnWindowDays: {
@@ -104,19 +109,26 @@ const settingsSchema = new mongoose.Schema(
 );
 
 // Méthode statique pour récupérer les settings (crée si n'existe pas)
-settingsSchema.statics.getSettings = async function () {
-  let settings = await this.findOne();
+settingsSchema.statics.getSettings = async function (options = {}) {
+  const session = options.session || null;
+
+  const findQuery = this.findOne();
+  if (session) findQuery.session(session);
+
+  let settings = await findQuery;
   if (!settings) {
-    settings = await this.create({});
+    const createOptions = session ? { session } : {};
+    [settings] = await this.create([{}], createOptions);
   }
   return settings;
 };
 
 // Méthode statique pour mettre à jour les settings
-settingsSchema.statics.updateSettings = async function (updates) {
-  const settings = await this.getSettings();
+settingsSchema.statics.updateSettings = async function (updates, options = {}) {
+  const session = options.session || null;
+  const settings = await this.getSettings({ session });
   Object.assign(settings, updates);
-  await settings.save();
+  await settings.save(session ? { session } : {});
   return settings;
 };
 
