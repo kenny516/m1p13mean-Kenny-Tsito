@@ -12,7 +12,12 @@ export interface ShopContact {
  */
 export interface ShopStats {
   totalSales: number;
-  totalProducts: number;
+  deliveredSalesAmount: number;
+  products: {
+    pending: number;
+    active: number;
+    archived: number;
+  };
   rating: number;
 }
 
