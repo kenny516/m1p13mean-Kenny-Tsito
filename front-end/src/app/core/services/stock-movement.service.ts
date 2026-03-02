@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { ApiService } from './api.service';
 import {
   CreateStockMovementRequest,
+  ReconcileProductStockResult,
   SaleStatus,
   StockMovement,
   StockMovementFilters,
@@ -209,6 +210,13 @@ export class StockMovementService {
   async getProductStock(productId: string): Promise<{ total: number; reserved: number; available: number }> {
     return this.api.get<{ total: number; reserved: number; available: number }>(
       `/stock-movements/product/${productId}/stock`,
+    );
+  }
+
+  async reconcileProductStock(productId: string): Promise<ReconcileProductStockResult> {
+    return this.api.post<ReconcileProductStockResult>(
+      `/stock-movements/reconcile/${productId}`,
+      {},
     );
   }
 

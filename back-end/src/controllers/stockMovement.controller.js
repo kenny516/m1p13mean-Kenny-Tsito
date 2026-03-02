@@ -1,6 +1,7 @@
 import * as stockMovementService from "../services/stockMovement.service.js";
 import { listMovementLines } from "../services/stockMovementLine.service.js";
 import Shop from "../models/Shop.js";
+import Product from "../models/Product.js";
 import { ApiError } from "../middlewares/error.middleware.js";
 
 const resolveSellerShopFilter = async (user, requestedShopId) => {
@@ -256,12 +257,27 @@ export const adminListAll = async (req, res, next) => {
 };
 
 // ==========================================
-// Admin : réconcilier le cache stock d'un produit
-// POST /api/admin/stock-movements/reconcile/:productId
+// Réconcilier le cache stock d'un produit
+// POST /api/stock-movements/reconcile/:productId
 // ==========================================
 
 export const reconcile = async (req, res, next) => {
 	try {
+		if (req.user.role === "SELLER") {
+			const product = await Product.findById(req.params.productId).select("sellerId");
+			if (!product) {
+				throw new ApiError(404, "NOT_FOUND", "Produit non trouvé");
+			}
+
+			if (product.sellerId.toString() !== req.user._id.toString()) {
+				throw new ApiError(
+					403,
+					"FORBIDDEN",
+					"Vous n'êtes pas autorisé à réconcilier ce produit",
+				);
+			}
+		}
+
 		const result = await stockMovementService.reconcileProductStock(
 			req.params.productId,
 		);

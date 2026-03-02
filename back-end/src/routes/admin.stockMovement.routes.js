@@ -22,13 +22,6 @@ router.get(
 );
 
 /**
- * @route   POST /api/admin/stock-movements/reconcile/:productId
- * @desc    Réconcilier le cache stock d'un produit (recalcul depuis les mouvements)
- * @access  Admin only
- */
-router.post("/reconcile/:productId", stockMovementController.reconcile);
-
-/**
  * @route   GET /api/admin/stock-movements/lines
  * @desc    Lister toutes les lignes de mouvement de stock
  * @access  Admin only

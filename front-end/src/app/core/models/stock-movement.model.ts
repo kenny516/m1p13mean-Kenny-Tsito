@@ -164,3 +164,15 @@ export interface StockMovementFilters {
   status?: SaleStatus;
   sort?: string;
 }
+
+export interface ProductStockSnapshot {
+  total: number;
+  reserved: number;
+  available: number;
+}
+
+export interface ReconcileProductStockResult {
+  productId: string;
+  before: ProductStockSnapshot;
+  after: ProductStockSnapshot;
+}

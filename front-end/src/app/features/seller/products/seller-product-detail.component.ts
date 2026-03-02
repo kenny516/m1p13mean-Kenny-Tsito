@@ -23,6 +23,9 @@ import { DataTableColumn, DataTableComponent } from '@/shared/components/data-ta
           </div>
           <div class="flex gap-2">
             @if (product(); as currentProduct) {
+              <button z-button zType="outline" type="button" [disabled]="isReconciling()" (click)="reconcileStock()">
+                {{ isReconciling() ? 'Réconciliation...' : 'Réconcilier le stock' }}
+              </button>
               <a z-button zType="outline" [routerLink]="['/seller/products', currentProduct._id, 'edit']">
                 Modifier
               </a>
@@ -294,6 +297,7 @@ export class SellerProductDetailComponent implements OnInit {
   readonly product = signal<Product | null>(null);
   readonly movementLines = signal<StockMovementLine[]>([]);
   readonly selectedImageIndex = signal(0);
+  readonly isReconciling = signal(false);
   readonly dashboard = computed(() => {
     const lines = this.movementLines();
     const product = this.product();
@@ -423,6 +427,24 @@ export class SellerProductDetailComponent implements OnInit {
       );
     } catch {
       this.toast.error('Impossible de charger les lignes de mouvements du produit');
+    }
+  }
+
+  async reconcileStock(): Promise<void> {
+    const currentProduct = this.product();
+    if (!currentProduct || this.isReconciling()) {
+      return;
+    }
+
+    this.isReconciling.set(true);
+    try {
+      await this.stockMovementService.reconcileProductStock(currentProduct._id);
+      this.toast.success('Stock réconcilié avec succès');
+      await this.loadProductDetails(currentProduct._id);
+    } catch {
+      this.toast.error('Impossible de réconcilier le stock du produit');
+    } finally {
+      this.isReconciling.set(false);
     }
   }
 
