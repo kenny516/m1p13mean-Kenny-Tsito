@@ -136,7 +136,7 @@ interface NavItem {
               [class.justify-center]="collapsed()"
             >
               <div
-                class="w-9 h-9 rounded-lg bg-primary flex items-center justify-center flex-shrink-0"
+                class="w-9 h-9 rounded-lg bg-primary flex items-center justify-center shrink-0"
               >
                 <z-icon
                   zType="shield"
@@ -170,7 +170,7 @@ interface NavItem {
               >
                 <z-icon
                   [zType]="item.icon"
-                  class="h-5 w-5 flex-shrink-0 text-muted-foreground group-hover:text-sidebar-foreground transition-colors"
+                  class="h-5 w-5 shrink-0 text-muted-foreground group-hover:text-sidebar-foreground transition-colors"
                 />
                 @if (!collapsed()) {
                   <span class="truncate">{{ item.label }}</span>
@@ -190,7 +190,7 @@ interface NavItem {
             >
               <z-icon
                 zType="settings"
-                class="h-5 w-5 flex-shrink-0 text-muted-foreground group-hover:text-sidebar-foreground transition-colors"
+                class="h-5 w-5 shrink-0 text-muted-foreground group-hover:text-sidebar-foreground transition-colors"
               />
               @if (!collapsed()) {
                 <span class="truncate">Paramètres</span>
@@ -209,7 +209,7 @@ interface NavItem {
             >
               <z-icon
                 [zType]="collapsed() ? 'panel-left-open' : 'panel-left-close'"
-                class="h-5 w-5 flex-shrink-0"
+                class="h-5 w-5 shrink-0"
               />
               @if (!collapsed()) {
                 <span class="text-sm">Réduire</span>
@@ -224,7 +224,7 @@ interface NavItem {
               [class.px-2]="collapsed()"
               [title]="collapsed() ? 'Retour au site' : ''"
             >
-              <z-icon zType="arrow-left" class="h-5 w-5 flex-shrink-0" />
+              <z-icon zType="arrow-left" class="h-5 w-5 shrink-0" />
               @if (!collapsed()) {
                 <span class="text-sm">Retour au site</span>
               }
