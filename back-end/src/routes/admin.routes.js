@@ -1,5 +1,6 @@
 import { Router } from "express";
 import * as userController from "../controllers/user.controller.js";
+import * as stockMovementController from "../controllers/stockMovement.controller.js";
 import adminShopRoutes from "./admin.shop.routes.js";
 import adminProductRoutes from "./admin.product.routes.js";
 import adminStockMovementRoutes from "./admin.stockMovement.routes.js";
@@ -16,6 +17,25 @@ const router = Router();
 
 // Toutes les routes admin nécessitent authentification et rôle ADMIN
 router.use(auth, authorize("ADMIN"));
+
+/**
+ * @route   GET /api/admin/stats/commissions
+ * @desc    Récupérer les statistiques des commissions par boutique
+ * @access  Admin
+ * @query   startDate, endDate
+ */
+router.get("/stats/commissions", stockMovementController.getCommissionStats);
+
+/**
+ * @route   GET /api/admin/stats/commissions/chart
+ * @desc    Récupérer les statistiques des commissions par période (pour chart)
+ * @access  Admin
+ * @query   startDate, endDate, groupBy (day|week|month)
+ */
+router.get(
+  "/stats/commissions/chart",
+  stockMovementController.getCommissionStatsByPeriod,
+);
 
 /**
  * @route   GET /api/admin/users/stats

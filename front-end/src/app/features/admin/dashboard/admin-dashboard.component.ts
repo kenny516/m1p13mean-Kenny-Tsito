@@ -1,16 +1,17 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration, ChartData } from 'chart.js';
-import { UserService, ToastService, UserStats } from '../../../core';
+import { UserService, ToastService, UserStats, CommissionStats, CommissionChartStats } from '../../../core';
 import { ZardCardComponent } from '@/shared/components/card';
 import { ZardIconComponent } from '@/shared/components/icon';
 
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, BaseChartDirective, ZardCardComponent, ZardIconComponent],
+  imports: [CommonModule, RouterLink, FormsModule, BaseChartDirective, ZardCardComponent, ZardIconComponent, DecimalPipe],
   template: `
     <div class="px-6 lg:px-8">
       <!-- Header -->
@@ -30,7 +31,7 @@ import { ZardIconComponent } from '@/shared/components/icon';
           }
         </div>
       } @else if (stats()) {
-        <!-- Stats Cards - 4 colonnes -->
+        <!-- Stats Cards - 4 colonnes utilisateurs -->
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div class="bg-card rounded-lg border p-4 border-l-4 border-l-blue-500">
             <div class="flex items-center justify-between">
@@ -81,6 +82,62 @@ import { ZardIconComponent } from '@/shared/components/icon';
           </div>
         </div>
 
+        <!-- Commission Stats Cards -->
+        @if (commissionStats() || commissionError()) {
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+            <div class="bg-card rounded-lg border p-4 border-l-4 border-l-green-500">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-xs font-medium text-muted-foreground">Total Commissions</p>
+                  <p class="text-2xl font-bold text-green-600 mt-1">{{ formatCurrency(commissionStats()?.totalCommission ?? 0) }}</p>
+                </div>
+                <div class="p-2 bg-green-100 rounded-full">
+                  <z-icon zType="circle-dollar-sign" class="h-5 w-5 text-green-600" />
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-card rounded-lg border p-4 border-l-4 border-l-indigo-500">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-xs font-medium text-muted-foreground">Ventes Livrées</p>
+                  <p class="text-2xl font-bold text-foreground mt-1">{{ formatCurrency(commissionStats()?.totalSalesAmount ?? 0) }}</p>
+                </div>
+                <div class="p-2 bg-indigo-100 rounded-full">
+                  <z-icon zType="activity" class="h-5 w-5 text-indigo-600" />
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-card rounded-lg border p-4 border-l-4 border-l-cyan-500">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-xs font-medium text-muted-foreground">Nombre de Ventes</p>
+                  <p class="text-2xl font-bold text-foreground mt-1">{{ commissionStats()?.salesCount ?? 0 }}</p>
+                </div>
+                <div class="p-2 bg-cyan-100 rounded-full">
+                  <z-icon zType="circle-check" class="h-5 w-5 text-cyan-600" />
+                </div>
+              </div>
+            </div>
+          </div>
+          @if (commissionError()) {
+            <div class="mb-6 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
+              <z-icon zType="triangle-alert" class="inline-block h-4 w-4 mr-2" />
+              {{ commissionError() }}
+            </div>
+          }
+        } @else if (isLoadingCommissions()) {
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+            @for (i of [1, 2, 3]; track i) {
+              <div class="bg-card rounded-lg border p-4 animate-pulse">
+                <div class="h-3 bg-muted rounded w-1/2 mb-3"></div>
+                <div class="h-7 bg-muted rounded w-1/3"></div>
+              </div>
+            }
+          </div>
+        }
+
         <!-- Charts Row -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           <!-- Donut Chart - Répartition des rôles -->
@@ -109,6 +166,85 @@ import { ZardIconComponent } from '@/shared/components/icon';
             </div>
           </z-card>
         </div>
+
+        <!-- Commission Evolution Chart -->
+        <z-card class="p-4 mb-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-semibold text-foreground">Évolution des commissions</h3>
+            <div class="flex items-center gap-2">
+              <select
+                [(ngModel)]="commissionChartGroupBy"
+                (ngModelChange)="loadCommissionChartStats()"
+                class="text-xs bg-muted border border-border rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="day">Par jour</option>
+                <option value="week">Par semaine</option>
+                <option value="month">Par mois</option>
+              </select>
+            </div>
+          </div>
+          @if (isLoadingCommissionChart()) {
+            <div class="h-64 flex items-center justify-center">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          } @else if (commissionChartData().datasets[0]?.data?.length) {
+            <div class="h-64">
+              <canvas
+                baseChart
+                [data]="commissionChartData()"
+                [options]="lineChartOptions"
+                type="line"
+              ></canvas>
+            </div>
+          } @else {
+            <div class="h-64 flex items-center justify-center text-muted-foreground">
+              <div class="text-center">
+                <z-icon zType="activity" class="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p>Aucune donnée disponible</p>
+              </div>
+            </div>
+          }
+        </z-card>
+
+        <!-- Commission par boutique -->
+        @if (commissionStats() && commissionStats()!.byShop.length > 0) {
+          <z-card class="p-4 mb-6">
+            <h3 class="text-sm font-semibold text-foreground mb-4">Commissions par boutique</h3>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-border">
+                    <th class="text-left py-2 px-3 text-muted-foreground font-medium">Boutique</th>
+                    <th class="text-right py-2 px-3 text-muted-foreground font-medium">Ventes</th>
+                    <th class="text-right py-2 px-3 text-muted-foreground font-medium">CA Total</th>
+                    <th class="text-right py-2 px-3 text-muted-foreground font-medium">Commission</th>
+                    <th class="text-right py-2 px-3 text-muted-foreground font-medium">Taux Moyen</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (shop of commissionStats()!.byShop; track shop.shopId) {
+                    <tr class="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                      <td class="py-3 px-3 font-medium text-foreground">{{ shop.shopName }}</td>
+                      <td class="py-3 px-3 text-right text-muted-foreground">{{ shop.salesCount }}</td>
+                      <td class="py-3 px-3 text-right text-muted-foreground">{{ formatCurrency(shop.totalSalesAmount) }}</td>
+                      <td class="py-3 px-3 text-right font-medium text-green-600">{{ formatCurrency(shop.totalCommission) }}</td>
+                      <td class="py-3 px-3 text-right text-muted-foreground">{{ shop.avgCommissionRate | number:'1.1-1' }}%</td>
+                    </tr>
+                  }
+                </tbody>
+                <tfoot>
+                  <tr class="bg-muted/20">
+                    <td class="py-3 px-3 font-bold text-foreground">Total</td>
+                    <td class="py-3 px-3 text-right font-bold text-foreground">{{ commissionStats()!.salesCount }}</td>
+                    <td class="py-3 px-3 text-right font-bold text-foreground">{{ formatCurrency(commissionStats()!.totalSalesAmount) }}</td>
+                    <td class="py-3 px-3 text-right font-bold text-green-600">{{ formatCurrency(commissionStats()!.totalCommission) }}</td>
+                    <td class="py-3 px-3 text-right text-muted-foreground">-</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </z-card>
+        }
 
         <!-- Bottom Row -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -205,7 +341,13 @@ export class AdminDashboardComponent implements OnInit {
   private toastService = inject(ToastService);
 
   stats = signal<UserStats | null>(null);
+  commissionStats = signal<CommissionStats | null>(null);
+  commissionChartStats = signal<CommissionChartStats | null>(null);
+  commissionError = signal<string | null>(null);
   isLoading = signal(false);
+  isLoadingCommissions = signal(false);
+  isLoadingCommissionChart = signal(false);
+  commissionChartGroupBy: 'day' | 'week' | 'month' = 'day';
 
   // Couleurs chart vives et harmonisées (HEX direct)
   private chartColors = {
@@ -217,6 +359,7 @@ export class AdminDashboardComponent implements OnInit {
     indigo: 'rgb(99, 102, 241)',    // indigo-500
     cyan: 'rgb(6, 182, 212)',       // cyan-500
     pink: 'rgb(236, 72, 153)',      // pink-500
+    green: 'rgb(34, 197, 94)',      // green-500
   };
 
   // Doughnut Chart Data
@@ -349,6 +492,98 @@ export class AdminDashboardComponent implements OnInit {
     },
   };
 
+  // Line Chart Data pour commissions
+  commissionChartData = computed<ChartData<'line'>>(() => {
+    const chartStats = this.commissionChartStats();
+    if (!chartStats || !chartStats.data.length) {
+      return { labels: [], datasets: [] };
+    }
+
+    return {
+      labels: chartStats.data.map(d => this.formatPeriodLabel(d.period, chartStats.groupBy)),
+      datasets: [
+        {
+          label: 'Commissions (MGA)',
+          data: chartStats.data.map(d => d.totalCommission),
+          borderColor: this.chartColors.green,
+          backgroundColor: 'rgba(34, 197, 94, 0.1)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBackgroundColor: this.chartColors.green,
+          pointBorderColor: 'white',
+          pointBorderWidth: 2,
+        },
+        {
+          label: 'Ventes (MGA)',
+          data: chartStats.data.map(d => d.totalSalesAmount),
+          borderColor: this.chartColors.indigo,
+          backgroundColor: 'rgba(99, 102, 241, 0.1)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBackgroundColor: this.chartColors.indigo,
+          pointBorderColor: 'white',
+          pointBorderWidth: 2,
+        },
+      ],
+    };
+  });
+
+  lineChartOptions: ChartConfiguration<'line'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: {
+      intersect: false,
+      mode: 'index',
+    },
+    plugins: {
+      legend: {
+        position: 'top',
+        labels: {
+          usePointStyle: true,
+          padding: 16,
+          font: { size: 11 },
+          color: 'rgb(100, 116, 139)',
+        },
+      },
+      tooltip: {
+        backgroundColor: 'rgb(15, 23, 42)',
+        titleColor: 'rgb(255, 255, 255)',
+        bodyColor: 'rgb(255, 255, 255)',
+        padding: 12,
+        cornerRadius: 8,
+        callbacks: {
+          label: (context) => {
+            const value = context.raw as number;
+            return `${context.dataset.label}: ${new Intl.NumberFormat('fr-MG').format(value)} MGA`;
+          },
+        },
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        grid: { color: 'rgba(148, 163, 184, 0.15)' },
+        ticks: {
+          color: 'rgb(100, 116, 139)',
+          font: { size: 10 },
+          callback: (value) => new Intl.NumberFormat('fr-MG', { notation: 'compact' }).format(value as number),
+        },
+      },
+      x: {
+        grid: { display: false },
+        ticks: {
+          color: 'rgb(100, 116, 139)',
+          font: { size: 10 },
+          maxRotation: 45,
+        },
+      },
+    },
+  };
+
   // Progress bars data
   roleProgress = computed(() => {
     const s = this.stats();
@@ -381,7 +616,11 @@ export class AdminDashboardComponent implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
-    await this.loadStats();
+    await Promise.all([
+      this.loadStats(),
+      this.loadCommissionStats(),
+      this.loadCommissionChartStats(),
+    ]);
   }
 
   async loadStats(): Promise<void> {
@@ -395,5 +634,59 @@ export class AdminDashboardComponent implements OnInit {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  async loadCommissionStats(): Promise<void> {
+    this.isLoadingCommissions.set(true);
+    this.commissionError.set(null);
+    try {
+      const commStats = await this.userService.getCommissionStats();
+      this.commissionStats.set(commStats);
+    } catch (error: any) {
+      console.error('Erreur chargement commissions:', error);
+      this.commissionError.set(error?.message || 'Erreur lors du chargement des statistiques de commission');
+    } finally {
+      this.isLoadingCommissions.set(false);
+    }
+  }
+
+  async loadCommissionChartStats(): Promise<void> {
+    this.isLoadingCommissionChart.set(true);
+    try {
+      const chartStats = await this.userService.getCommissionChartStats(this.commissionChartGroupBy);
+      this.commissionChartStats.set(chartStats);
+    } catch (error) {
+      console.error('Erreur chargement chart commissions:', error);
+    } finally {
+      this.isLoadingCommissionChart.set(false);
+    }
+  }
+
+  /**
+   * Formate le label de période pour l'affichage
+   */
+  formatPeriodLabel(period: string, groupBy: string): string {
+    if (groupBy === 'week') {
+      return period; // 2026-W09
+    } else if (groupBy === 'month') {
+      const [year, month] = period.split('-');
+      const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+      return `${months[parseInt(month) - 1]} ${year}`;
+    } else {
+      // day: 2026-03-01 -> 01/03
+      const [, month, day] = period.split('-');
+      return `${day}/${month}`;
+    }
+  }
+
+  /**
+   * Formate un montant en devise MGA
+   */
+  formatCurrency(amount: number): string {
+    return new Intl.NumberFormat('fr-MG', {
+      style: 'decimal',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount) + ' MGA';
   }
 }

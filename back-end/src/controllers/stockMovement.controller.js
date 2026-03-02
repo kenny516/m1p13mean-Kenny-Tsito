@@ -301,3 +301,41 @@ export const listLines = async (req, res, next) => {
 		next(error);
 	}
 };
+
+// ==========================================
+// Admin : statistiques des commissions
+// GET /api/admin/stats/commissions
+// ==========================================
+
+export const getCommissionStats = async (req, res, next) => {
+	try {
+		const stats = await stockMovementService.getCommissionStats(req.query);
+
+		res.json({
+			success: true,
+			data: stats,
+		});
+	} catch (error) {
+		next(error);
+	}
+};
+
+// ==========================================
+// Admin : statistiques des commissions par période (chart)
+// GET /api/admin/stats/commissions/chart
+// ==========================================
+
+export const getCommissionStatsByPeriod = async (req, res, next) => {
+	try {
+		const stats = await stockMovementService.getCommissionStatsByPeriod(
+			req.query,
+		);
+
+		res.json({
+			success: true,
+			data: stats,
+		});
+	} catch (error) {
+		next(error);
+	}
+};
