@@ -1,8 +1,16 @@
-import { Component, Input, Output, EventEmitter, signal, computed, input } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  signal,
+  computed,
+  input,
+} from "@angular/core";
+import { CommonModule } from "@angular/common";
 
 @Component({
-  selector: 'app-rating-stars',
+  selector: "app-rating-stars",
   standalone: true,
   imports: [CommonModule],
   template: `
@@ -44,10 +52,10 @@ export class RatingStarsComponent {
   // Utiliser input() signal pour que computed() détecte les changements de valeur
   value = input(0);
   @Input() interactive = false;
-  @Input() size: '4' | '5' | '6' = '5';
+  @Input() size: "4" | "5" | "6" = "5";
   @Input() showValue = false;
-  @Input() fillColor = 'rgb(250, 204, 21)'; // yellow-400
-  @Input() strokeColor = 'rgb(156, 163, 175)'; // gray-400
+  @Input() fillColor = "rgb(250, 204, 21)"; // yellow-400
+  @Input() strokeColor = "rgb(156, 163, 175)"; // gray-400
 
   @Output() ratingChange = new EventEmitter<number>();
 

@@ -1,31 +1,31 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
-import { CommonModule, Location } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
-import { FormsModule } from '@angular/forms';
+import { Component, OnInit, inject, signal, computed } from "@angular/core";
+import { CommonModule, Location } from "@angular/common";
+import { ActivatedRoute, Router } from "@angular/router";
+import { FormsModule } from "@angular/forms";
 import {
   ProductService,
   CartService,
   ToastService,
   AuthService,
   ReviewService,
-} from '../../../core/services';
-import { Shop, Review, RatingStats } from '../../../core/models';
-import { ZardCardComponent } from '../../../shared/components/card';
-import { ZardButtonComponent } from '../../../shared/components/button';
-import { ZardBadgeComponent } from '../../../shared/components/badge';
-import { ZardIconComponent } from '../../../shared/components/icon';
-import { ZardInputDirective } from '../../../shared/components/input';
-import { ZardSkeletonComponent } from '../../../shared/components/skeleton';
-import { ZardSeparatorComponent } from '../../../shared/components/separator';
-import { ZardSpinnerComponent } from '../../../shared/components/spinner';
-import { RatingStarsComponent } from '../../../shared/components/rating';
+} from "../../../core/services";
+import { Shop, Review, RatingStats } from "../../../core/models";
+import { ZardCardComponent } from "../../../shared/components/card";
+import { ZardButtonComponent } from "../../../shared/components/button";
+import { ZardBadgeComponent } from "../../../shared/components/badge";
+import { ZardIconComponent } from "../../../shared/components/icon";
+import { ZardInputDirective } from "../../../shared/components/input";
+import { ZardSkeletonComponent } from "../../../shared/components/skeleton";
+import { ZardSeparatorComponent } from "../../../shared/components/separator";
+import { ZardSpinnerComponent } from "../../../shared/components/spinner";
+import { RatingStarsComponent } from "../../../shared/components/rating";
 
 /**
  * Page de détail d'un produit
  * Affiche toutes les informations du produit avec possibilité d'ajout au panier
  */
 @Component({
-  selector: 'app-product-detail',
+  selector: "app-product-detail",
   standalone: true,
   imports: [
     CommonModule,
@@ -157,11 +157,11 @@ import { RatingStarsComponent } from '../../../shared/components/rating';
               <!-- Prix -->
               <div class="flex items-baseline gap-3">
                 <span class="text-3xl font-bold text-foreground">
-                  {{ p.price | number: '1.0-0' }} MGA
+                  {{ p.price | number: "1.0-0" }} MGA
                 </span>
                 @if (hasDiscount()) {
                   <span class="text-lg text-muted-foreground line-through">
-                    {{ p.originalPrice | number: '1.0-0' }} MGA
+                    {{ p.originalPrice | number: "1.0-0" }} MGA
                   </span>
                   <z-badge zType="destructive">
                     -{{ discountPercentage() }}%
@@ -180,8 +180,7 @@ import { RatingStarsComponent } from '../../../shared/components/rating';
                   <div class="flex items-center gap-2 text-yellow-600">
                     <z-icon zType="triangle-alert" class="h-5 w-5" />
                     <span class="font-medium"
-                      >Stock limité ({{ availableStock() }}
-                      restant(s))</span
+                      >Stock limité ({{ availableStock() }} restant(s))</span
                     >
                   </div>
                 } @else {
@@ -272,7 +271,9 @@ import { RatingStarsComponent } from '../../../shared/components/rating';
                         zType="ghost"
                         zSize="sm"
                         zShape="square"
-                        [disabled]="quantity() >= availableStock() || isOutOfStock()"
+                        [disabled]="
+                          quantity() >= availableStock() || isOutOfStock()
+                        "
                         (click)="incrementQuantity()"
                       >
                         <z-icon zType="plus" class="h-4 w-4" />
@@ -304,7 +305,7 @@ import { RatingStarsComponent } from '../../../shared/components/rating';
                 >
                   <span class="text-muted-foreground">Total:</span>
                   <span class="text-xl font-bold text-foreground">
-                    {{ p.price * quantity() | number: '1.0-0' }} MGA
+                    {{ p.price * quantity() | number: "1.0-0" }} MGA
                   </span>
                 </div>
               </z-card>
@@ -353,13 +354,15 @@ import { RatingStarsComponent } from '../../../shared/components/rating';
               <z-card class="p-6">
                 <div class="text-center">
                   <div class="text-4xl font-bold text-foreground">
-                    {{ ratingStats()?.average?.toFixed(1) || '0.0' }}
+                    {{ ratingStats()?.average?.toFixed(1) || "0.0" }}
                   </div>
-                  <app-rating-stars
-                    [value]="ratingStats()?.average || 0"
-                    size="6"
-                    class="justify-center mt-2"
-                  />
+                  <div class="flex justify-center">
+                    <app-rating-stars
+                      [value]="ratingStats()?.average || 0"
+                      size="6"
+                      class="justify-center mt-2"
+                    />
+                  </div>
                   <p class="mt-2 text-sm text-muted-foreground">
                     {{ ratingStats()?.total || 0 }} avis
                   </p>
@@ -370,14 +373,20 @@ import { RatingStarsComponent } from '../../../shared/components/rating';
                   <div class="mt-6 space-y-2">
                     @for (star of [5, 4, 3, 2, 1]; track star) {
                       <div class="flex items-center gap-2">
-                        <span class="text-sm text-muted-foreground w-8">{{ star }} ★</span>
-                        <div class="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                        <span class="text-sm text-muted-foreground w-8"
+                          >{{ star }} ★</span
+                        >
+                        <div
+                          class="flex-1 h-2 bg-muted rounded-full overflow-hidden"
+                        >
                           <div
                             class="h-full bg-yellow-400 rounded-full"
                             [style.width.%]="getDistributionPercentage(star)"
                           ></div>
                         </div>
-                        <span class="text-sm text-muted-foreground w-8 text-right">
+                        <span
+                          class="text-sm text-muted-foreground w-8 text-right"
+                        >
                           {{ ratingStats()?.distribution?.[star] || 0 }}
                         </span>
                       </div>
@@ -391,10 +400,14 @@ import { RatingStarsComponent } from '../../../shared/components/rating';
                 <!-- Formulaire d'avis (si connecté et BUYER) -->
                 @if (canReview()) {
                   <z-card class="p-6">
-                    <h3 class="font-semibold text-foreground mb-4">Laisser un avis</h3>
+                    <h3 class="font-semibold text-foreground mb-4">
+                      Laisser un avis
+                    </h3>
                     <div class="space-y-4">
                       <div>
-                        <label class="text-sm text-muted-foreground mb-2 block">Votre note</label>
+                        <label class="text-sm text-muted-foreground mb-2 block"
+                          >Votre note</label
+                        >
                         <app-rating-stars
                           [value]="newReviewRating()"
                           [interactive]="true"
@@ -403,7 +416,9 @@ import { RatingStarsComponent } from '../../../shared/components/rating';
                         />
                       </div>
                       <div>
-                        <label class="text-sm text-muted-foreground mb-2 block">Votre commentaire (optionnel)</label>
+                        <label class="text-sm text-muted-foreground mb-2 block"
+                          >Votre commentaire (optionnel)</label
+                        >
                         <textarea
                           class="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-ring"
                           rows="3"
@@ -414,7 +429,9 @@ import { RatingStarsComponent } from '../../../shared/components/rating';
                       </div>
                       <button
                         z-button
-                        [disabled]="newReviewRating() === 0 || isSubmittingReview()"
+                        [disabled]="
+                          newReviewRating() === 0 || isSubmittingReview()
+                        "
                         (click)="submitReview()"
                       >
                         @if (isSubmittingReview()) {
@@ -437,10 +454,17 @@ import { RatingStarsComponent } from '../../../shared/components/rating';
                   </div>
                 } @else if (reviews().length === 0) {
                   <z-card class="p-6 text-center">
-                    <z-icon zType="mail" class="mx-auto h-12 w-12 text-muted-foreground" />
-                    <p class="mt-4 text-muted-foreground">Aucun avis pour ce produit</p>
+                    <z-icon
+                      zType="mail"
+                      class="mx-auto h-12 w-12 text-muted-foreground"
+                    />
+                    <p class="mt-4 text-muted-foreground">
+                      Aucun avis pour ce produit
+                    </p>
                     @if (canReview()) {
-                      <p class="text-sm text-muted-foreground mt-1">Soyez le premier à donner votre avis !</p>
+                      <p class="text-sm text-muted-foreground mt-1">
+                        Soyez le premier à donner votre avis !
+                      </p>
                     }
                   </z-card>
                 } @else {
@@ -454,25 +478,44 @@ import { RatingStarsComponent } from '../../../shared/components/rating';
                                 {{ getReviewerName(review) }}
                               </span>
                               @if (review.isVerifiedPurchase) {
-                                <z-badge zType="secondary" zShape="pill" class="text-xs">
-                                  <z-icon zType="badge-check" class="h-3 w-3 mr-1" />
+                                <z-badge
+                                  zType="secondary"
+                                  zShape="pill"
+                                  class="text-xs"
+                                >
+                                  <z-icon
+                                    zType="badge-check"
+                                    class="h-3 w-3 mr-1"
+                                  />
                                   Achat vérifié
                                 </z-badge>
                               }
                             </div>
-                            <app-rating-stars [value]="review.rating" size="4" class="mt-1" />
+                            <app-rating-stars
+                              [value]="review.rating"
+                              size="4"
+                              class="mt-1"
+                            />
                           </div>
                           <span class="text-xs text-muted-foreground">
-                            {{ review.createdAt | date:'dd/MM/yyyy' }}
+                            {{ review.createdAt | date: "dd/MM/yyyy" }}
                           </span>
                         </div>
                         @if (review.comment) {
-                          <p class="mt-3 text-muted-foreground">{{ review.comment }}</p>
+                          <p class="mt-3 text-muted-foreground">
+                            {{ review.comment }}
+                          </p>
                         }
                         @if (review.sellerResponse) {
-                          <div class="mt-4 pl-4 border-l-2 border-primary/30 bg-muted/30 p-3 rounded-r-md">
-                            <p class="text-sm font-medium text-foreground">Réponse du vendeur</p>
-                            <p class="mt-1 text-sm text-muted-foreground">{{ review.sellerResponse.comment }}</p>
+                          <div
+                            class="mt-4 pl-4 border-l-2 border-primary/30 bg-muted/30 p-3 rounded-r-md"
+                          >
+                            <p class="text-sm font-medium text-foreground">
+                              Réponse du vendeur
+                            </p>
+                            <p class="mt-1 text-sm text-muted-foreground">
+                              {{ review.sellerResponse.comment }}
+                            </p>
                           </div>
                         }
                       </z-card>
@@ -492,13 +535,16 @@ import { RatingStarsComponent } from '../../../shared/components/rating';
                         Précédent
                       </button>
                       <span class="px-4 py-2 text-sm text-muted-foreground">
-                        Page {{ reviewsPagination().page }} / {{ reviewsPagination().pages }}
+                        Page {{ reviewsPagination().page }} /
+                        {{ reviewsPagination().pages }}
                       </span>
                       <button
                         z-button
                         zType="outline"
                         zSize="sm"
-                        [disabled]="reviewsPagination().page >= reviewsPagination().pages"
+                        [disabled]="
+                          reviewsPagination().page >= reviewsPagination().pages
+                        "
                         (click)="loadReviews(reviewsPagination().page + 1)"
                       >
                         Suivant
@@ -555,13 +601,13 @@ export class ProductDetailComponent implements OnInit {
   isLoadingReviews = signal(false);
   isSubmittingReview = signal(false);
   newReviewRating = signal(0);
-  newReviewComment = '';
+  newReviewComment = "";
 
   // Extraire les infos de la boutique si peuplée
   shopInfo = computed(() => {
     const p = this.product();
     if (!p) return null;
-    if (typeof p.shopId === 'object') {
+    if (typeof p.shopId === "object") {
       return p.shopId as Shop;
     }
     return null;
@@ -569,14 +615,17 @@ export class ProductDetailComponent implements OnInit {
 
   // Vérifier si l'utilisateur peut laisser un avis
   canReview = computed(() => {
-    return this.authService.isAuthenticated() && this.authService.userRole() === 'BUYER';
+    return (
+      this.authService.isAuthenticated() &&
+      this.authService.userRole() === "BUYER"
+    );
   });
 
   // Helper pour Object.keys dans le template
   objectKeys = Object.keys;
 
   ngOnInit(): void {
-    const productId = this.route.snapshot.paramMap.get('id');
+    const productId = this.route.snapshot.paramMap.get("id");
     if (productId) {
       this.loadProduct(productId);
     }
@@ -584,7 +633,7 @@ export class ProductDetailComponent implements OnInit {
     // Charger le panier si connecté et BUYER
     if (
       this.authService.isAuthenticated() &&
-      this.authService.userRole() === 'BUYER'
+      this.authService.userRole() === "BUYER"
     ) {
       // Ignorer silencieusement les erreurs - le panier se chargera à la prochaine action
       this.cartService.getCart().catch(() => undefined);
@@ -606,7 +655,7 @@ export class ProductDetailComponent implements OnInit {
       this.loadReviews(1);
       this.loadRatingStats();
     } catch {
-      this.toastService.error('Produit non trouvé');
+      this.toastService.error("Produit non trouvé");
     }
   }
 
@@ -646,7 +695,10 @@ export class ProductDetailComponent implements OnInit {
       return;
     }
 
-    const clampedQty = Math.max(1, Math.min(this.quantity(), this.availableStock()));
+    const clampedQty = Math.max(
+      1,
+      Math.min(this.quantity(), this.availableStock()),
+    );
     this.quantity.set(clampedQty);
   }
 
@@ -715,7 +767,7 @@ export class ProductDetailComponent implements OnInit {
     if (!p) return;
 
     if (this.isOutOfStock()) {
-      this.toastService.warning('Produit en rupture de stock');
+      this.toastService.warning("Produit en rupture de stock");
       return;
     }
 
@@ -728,17 +780,17 @@ export class ProductDetailComponent implements OnInit {
 
     // Vérifier l'authentification
     if (!this.authService.isAuthenticated()) {
-      this.toastService.info('Connectez-vous pour ajouter au panier');
-      this.router.navigate(['/auth/login'], {
+      this.toastService.info("Connectez-vous pour ajouter au panier");
+      this.router.navigate(["/auth/login"], {
         queryParams: { returnUrl: this.router.url },
       });
       return;
     }
 
     // Vérifier le rôle
-    if (this.authService.userRole() !== 'BUYER') {
+    if (this.authService.userRole() !== "BUYER") {
       this.toastService.warning(
-        'Seuls les acheteurs peuvent utiliser le panier',
+        "Seuls les acheteurs peuvent utiliser le panier",
       );
       return;
     }
@@ -781,7 +833,7 @@ export class ProductDetailComponent implements OnInit {
       this.reviews.set(result.reviews);
       this.reviewsPagination.set(result.pagination);
     } catch {
-      console.error('Erreur chargement avis');
+      console.error("Erreur chargement avis");
     } finally {
       this.isLoadingReviews.set(false);
     }
@@ -798,7 +850,7 @@ export class ProductDetailComponent implements OnInit {
       const stats = await this.reviewService.getRatingStats(p._id);
       this.ratingStats.set(stats);
     } catch {
-      console.error('Erreur chargement stats rating');
+      console.error("Erreur chargement stats rating");
     }
   }
 
@@ -808,7 +860,8 @@ export class ProductDetailComponent implements OnInit {
   getDistributionPercentage(star: number): number {
     const stats = this.ratingStats();
     if (!stats || stats.total === 0) return 0;
-    const count = stats.distribution[star as keyof typeof stats.distribution] || 0;
+    const count =
+      stats.distribution[star as keyof typeof stats.distribution] || 0;
     return (count / stats.total) * 100;
   }
 
@@ -816,9 +869,9 @@ export class ProductDetailComponent implements OnInit {
    * Retourne le nom complet du rédacteur de l'avis
    */
   getReviewerName(review: Review): string {
-    const firstName = review.userId?.profile?.firstName || '';
-    const lastName = review.userId?.profile?.lastName || '';
-    return `${firstName} ${lastName}`.trim() || 'Utilisateur';
+    const firstName = review.userId?.profile?.firstName || "";
+    const lastName = review.userId?.profile?.lastName || "";
+    return `${firstName} ${lastName}`.trim() || "Utilisateur";
   }
 
   /**
@@ -835,19 +888,17 @@ export class ProductDetailComponent implements OnInit {
         comment: this.newReviewComment || undefined,
       });
 
-      this.toastService.success('Avis publié avec succès');
+      this.toastService.success("Avis publié avec succès");
 
       // Reset form
       this.newReviewRating.set(0);
-      this.newReviewComment = '';
+      this.newReviewComment = "";
 
       // Recharger les avis et stats
-      await Promise.all([
-        this.loadReviews(1),
-        this.loadRatingStats(),
-      ]);
+      await Promise.all([this.loadReviews(1), this.loadRatingStats()]);
     } catch (error: any) {
-      const message = error?.error?.error?.message || 'Erreur lors de la publication';
+      const message =
+        error?.error?.error?.message || "Erreur lors de la publication";
       this.toastService.error(message);
     } finally {
       this.isSubmittingReview.set(false);
