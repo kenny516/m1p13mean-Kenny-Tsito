@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { Product, ProductService, ProductStatus, Shop, ShopService, ToastService } from '@/core';
 import { ZardButtonComponent } from '@/shared/components/button';
 import { ZardCardComponent } from '@/shared/components/card';
-import { DataTableColumn, DataTableComponent } from '@/shared/components/data-table';
+import { DataTableColumnDef, TanstackDataTableComponent } from '@/shared/components/data-table';
 import { ZardInputDirective } from '@/shared/components/input';
 import { ZardSelectImports } from '@/shared/components/select';
 import {
@@ -24,7 +24,7 @@ import {
     ZardButtonComponent,
     ZardInputDirective,
     ...ZardSelectImports,
-    DataTableComponent,
+    TanstackDataTableComponent,
   ],
   template: `
     <div class="space-y-6">
@@ -80,59 +80,64 @@ import {
         </div>
       </z-card>
 
-      <app-data-table
-        [data]="productService.products()"
-        [columns]="columns"
-        [rowActions]="actionsTpl"
-        emptyMessage="Aucun produit trouvé"
-      />
-
-      <ng-template #actionsTpl let-product>
-        <div class="flex flex-wrap justify-end gap-2">
-          <a z-button zType="outline" zSize="sm" [routerLink]="['/seller/products', product._id]">
-            Détails
-          </a>
-          <a z-button zType="outline" zSize="sm" [routerLink]="['/seller/products', product._id, 'edit']">
-            Modifier
-          </a>
-          @if (product.status !== 'ARCHIVED') {
-            <button z-button zType="outline" zSize="sm" (click)="archive(product)">Archiver</button>
-          } @else {
-            <button z-button zType="outline" zSize="sm" (click)="dearchive(product)">
-              Désarchiver
-            </button>
-          }
-          <button z-button zType="destructive" zSize="sm" (click)="remove(product)">Supprimer</button>
+      <z-card class="overflow-hidden">
+        <div class="p-4">
+          <app-tanstack-data-table
+            [data]="productService.products()"
+            [columnDefs]="columns"
+            [rowActions]="actionsTpl"
+            [isLoading]="productService.isLoading()"
+            emptyMessage="Aucun produit trouvé"
+          />
         </div>
-      </ng-template>
 
-      @if (productService.pagination(); as pagination) {
-        <div class="flex items-center justify-between rounded-md border border-border bg-card p-3">
-          <p class="text-sm text-muted-foreground">
-            Page {{ pagination.page }} / {{ pagination.pages }} · {{ pagination.total }} résultats
-          </p>
-          <div class="flex gap-2">
-            <button
-              z-button
-              zType="outline"
-              zSize="sm"
-              [disabled]="pagination.page <= 1"
-              (click)="goToPage(pagination.page - 1)"
-            >
-              Précédent
-            </button>
-            <button
-              z-button
-              zType="outline"
-              zSize="sm"
-              [disabled]="pagination.page >= pagination.pages"
-              (click)="goToPage(pagination.page + 1)"
-            >
-              Suivant
-            </button>
+        <ng-template #actionsTpl let-product>
+          <div class="flex flex-wrap justify-end gap-2">
+            <a z-button zType="outline" zSize="sm" [routerLink]="['/seller/products', product._id]">
+              Détails
+            </a>
+            <a z-button zType="outline" zSize="sm" [routerLink]="['/seller/products', product._id, 'edit']">
+              Modifier
+            </a>
+            @if (product.status !== 'ARCHIVED') {
+              <button z-button zType="outline" zSize="sm" (click)="archive(product)">Archiver</button>
+            } @else {
+              <button z-button zType="outline" zSize="sm" (click)="dearchive(product)">
+                Désarchiver
+              </button>
+            }
+            <button z-button zType="destructive" zSize="sm" (click)="remove(product)">Supprimer</button>
           </div>
-        </div>
-      }
+        </ng-template>
+
+        @if (productService.pagination(); as pagination) {
+          <div class="flex items-center justify-between px-4 py-3 border-t border-border bg-muted/20">
+            <p class="text-sm text-muted-foreground">
+              Page {{ pagination.page }} / {{ pagination.pages }} · {{ pagination.total }} résultats
+            </p>
+            <div class="flex gap-2">
+              <button
+                z-button
+                zType="outline"
+                zSize="sm"
+                [disabled]="pagination.page <= 1"
+                (click)="goToPage(pagination.page - 1)"
+              >
+                Précédent
+              </button>
+              <button
+                z-button
+                zType="outline"
+                zSize="sm"
+                [disabled]="pagination.page >= pagination.pages"
+                (click)="goToPage(pagination.page + 1)"
+              >
+                Suivant
+              </button>
+            </div>
+          </div>
+        }
+      </z-card>
     </div>
   `,
 })
@@ -148,12 +153,14 @@ export class SellerProductListComponent implements OnInit {
   selectedStatus: Product['status'] | 'ALL' = 'ALL';
   selectedShopId = '';
 
-  readonly columns: DataTableColumn[] = [
+  readonly columns: DataTableColumnDef<Product>[] = [
     {
+      id: 'title',
       accessorKey: 'title',
       header: 'Titre',
     },
     {
+      id: 'category',
       accessorKey: 'category',
       header: 'Catégorie',
     },

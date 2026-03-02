@@ -1,9 +1,9 @@
 import mongoose from "mongoose";
 import User from "../models/User.js";
 import Shop from "../models/Shop.js";
-import Wallet from "../models/Wallet.js";
 import WalletTransaction from "../models/WalletTransaction.js";
 import config from "../config/env.js";
+import * as walletService from "../services/wallet.service.js";
 
 const SEED_TAG = "wallet-seed-2026-03";
 
@@ -50,26 +50,6 @@ const WALLET_OPERATIONS = [
   },
 ];
 
-const applyBalance = (wallet, op) => {
-  const balanceBefore = wallet.balance;
-  let balanceAfter = balanceBefore;
-
-  if (["DEPOSIT", "SALE_INCOME", "TRANSFER_IN", "REFUND"].includes(op.type)) {
-    balanceAfter += op.amount;
-    wallet.totalEarned += op.amount;
-  } else {
-    balanceAfter -= op.amount;
-    wallet.totalSpent += op.amount;
-  }
-
-  if (balanceAfter < 0) {
-    throw new Error(`Operation ${op.type} would make balance negative for ${wallet._id}`);
-  }
-
-  wallet.balance = balanceAfter;
-  return { balanceBefore, balanceAfter };
-};
-
 async function seedWallets() {
   console.log("🚀 Connecting to Mongo...");
   await mongoose.connect(config.mongoUri);
@@ -105,30 +85,42 @@ async function seedWallets() {
       ownerModel = "User";
     }
 
-    const wallet = await Wallet.findOne({ ownerId, ownerModel });
-    if (!wallet) {
-      console.log(`⚠️  Wallet for ${entry.identifier} (${ownerModel}) not found, skipping`);
-      continue;
-    }
+    await walletService.ensureWalletByOwner({ ownerId, ownerModel });
 
     for (const op of entry.operations) {
-      const { balanceBefore, balanceAfter } = applyBalance(wallet, op);
+      try {
+        const isCredit = ["DEPOSIT", "SALE_INCOME", "TRANSFER_IN", "REFUND"].includes(op.type);
 
-      await WalletTransaction.create({
-        walletId: wallet._id,
-        type: op.type,
-        amount: op.amount,
-        balanceBefore,
-        balanceAfter,
-        status: "COMPLETED",
-        description: op.description,
-        metadata: { seedTag: SEED_TAG },
-      });
-      createdTx += 1;
-      console.log(`✅ ${op.type} recorded for ${entry.identifier} (amount ${op.amount})`);
+        if (isCredit) {
+          await walletService.creditWalletByOwner(
+            { ownerId, ownerModel },
+            op.amount,
+            {
+              type: op.type,
+              paymentMethod: "WALLET",
+              description: op.description,
+              metadata: { seedTag: SEED_TAG },
+            },
+          );
+        } else {
+          await walletService.debitWalletByOwner(
+            { ownerId, ownerModel },
+            op.amount,
+            {
+              type: op.type,
+              paymentMethod: "WALLET",
+              description: op.description,
+              metadata: { seedTag: SEED_TAG },
+            },
+          );
+        }
+
+        createdTx += 1;
+        console.log(`✅ ${op.type} recorded for ${entry.identifier} (amount ${op.amount})`);
+      } catch (error) {
+        console.log(`⏭️  Skipping ${op.type} for ${entry.identifier}: ${error.message}`);
+      }
     }
-
-    await wallet.save();
   }
 
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");

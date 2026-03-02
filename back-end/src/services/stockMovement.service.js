@@ -6,14 +6,14 @@ import Shop from "../models/Shop.js";
 import { ApiError } from "../middlewares/error.middleware.js";
 import { parseSortOption } from "../utils/request.util.js";
 import { createStockMovement } from "./stockMovementLine.service.js";
+import { applyDeliveredStatsForSaleMovement } from "./stats.service.js";
 
 const INTERNAL_MOVEMENT_TYPES = [
 	"SUPPLY",
+	"RETURN_CUSTOMER",
 	"RETURN_SUPPLIER",
 	"ADJUSTMENT_PLUS",
 	"ADJUSTMENT_MINUS",
-	"RESERVATION",
-	"RESERVATION_CANCEL",
 ];
 
 const MOVEMENT_POPULATE = [
@@ -81,6 +81,24 @@ const _listMovementsByIds = async (moveIds, filters = {}) => {
 	]);
 
 	return { movements, total, page, limit };
+};
+
+const _buildPeriodFormat = (groupBy = "day") => {
+	if (groupBy === "month") return "%Y-%m";
+	if (groupBy === "week") return "%G-W%V";
+	return "%Y-%m-%d";
+};
+
+const _resolveDateRange = ({ startDate, endDate } = {}) => {
+	const resolvedEndDate = endDate ? new Date(endDate) : new Date();
+	const resolvedStartDate = startDate
+		? new Date(startDate)
+		: new Date(resolvedEndDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+	return {
+		startDate: resolvedStartDate,
+		endDate: resolvedEndDate,
+	};
 };
 
 // ==========================================
@@ -298,6 +316,518 @@ export const listSellerOrders = async (sellerId, filters = {}) => {
 };
 
 // ==========================================
+// Dashboard vendeur
+// ==========================================
+
+export const getSellerDashboardSummary = async (sellerId, filters = {}) => {
+	const { groupBy = "day" } = filters;
+	const topLimit = Number(filters.topLimit) || 5;
+	const { startDate, endDate } = _resolveDateRange(filters);
+
+	const sellerShops = await Shop.find({ sellerId })
+		.select("_id name status stats")
+		.lean();
+	const shopIds = sellerShops.map((shop) => shop._id);
+
+	if (!shopIds.length) {
+		return {
+			meta: {
+				startDate,
+				endDate,
+				groupBy,
+				topLimit,
+			},
+			kpis: {
+				netSalesAmount: 0,
+				grossSalesAmount: 0,
+				returnAmount: 0,
+				deliveredSalesAmount: 0,
+				salesCount: 0,
+				deliveredCount: 0,
+				returnCount: 0,
+				suppliesCount: 0,
+				activeProducts: 0,
+				pendingProducts: 0,
+				archivedProducts: 0,
+				lowStockProducts: 0,
+				outOfStockProducts: 0,
+				activeShops: 0,
+				pendingShops: 0,
+				archivedShops: 0,
+				totalShops: 0,
+			},
+			orderStatus: {
+				confirmed: 0,
+				delivered: 0,
+				returned: 0,
+			},
+			trend: [],
+			rankings: {
+				topProductsByRevenue: [],
+				topProductsByUnits: [],
+				topShopsByRevenue: [],
+			},
+			recent: {
+				orders: [],
+				supplies: [],
+			},
+		};
+	}
+
+	const [productStatsAgg, movementTotalsAgg, saleStatusAgg, trendAgg] =
+		await Promise.all([
+			Product.aggregate([
+				{ $match: { shopId: { $in: shopIds } } },
+				{
+					$group: {
+						_id: null,
+						activeProducts: {
+							$sum: { $cond: [{ $eq: ["$status", "ACTIVE"] }, 1, 0] },
+						},
+						pendingProducts: {
+							$sum: { $cond: [{ $eq: ["$status", "PENDING"] }, 1, 0] },
+						},
+						archivedProducts: {
+							$sum: { $cond: [{ $eq: ["$status", "ARCHIVED"] }, 1, 0] },
+						},
+						lowStockProducts: {
+							$sum: {
+								$cond: [
+									{
+										$and: [
+											{ $eq: ["$status", "ACTIVE"] },
+											{
+												$lte: [
+													"$stock.cache.available",
+													"$stock.alert.lowThreshold",
+												],
+											},
+											{ $gt: ["$stock.cache.available", 0] },
+										],
+									},
+									1,
+									0,
+								],
+							},
+						},
+						outOfStockProducts: {
+							$sum: {
+								$cond: [
+									{
+										$and: [
+											{ $eq: ["$status", "ACTIVE"] },
+											{ $lte: ["$stock.cache.available", 0] },
+										],
+									},
+									1,
+									0,
+								],
+							},
+						},
+					},
+				},
+			]),
+			StockMovement.aggregate([
+				{
+					$match: {
+						shopId: { $in: shopIds },
+						createdAt: { $gte: startDate, $lte: endDate },
+						movementType: { $in: ["SALE", "RETURN_CUSTOMER", "SUPPLY"] },
+					},
+				},
+				{
+					$group: {
+						_id: null,
+						grossSalesAmount: {
+							$sum: {
+								$cond: [{ $eq: ["$movementType", "SALE"] }, "$totalAmount", 0],
+							},
+						},
+						returnAmount: {
+							$sum: {
+								$cond: [
+									{ $eq: ["$movementType", "RETURN_CUSTOMER"] },
+									"$totalAmount",
+									0,
+								],
+							},
+						},
+						deliveredSalesAmount: {
+							$sum: {
+								$cond: [
+									{
+										$and: [
+											{ $eq: ["$movementType", "SALE"] },
+											{ $eq: ["$sale.status", "DELIVERED"] },
+										],
+									},
+									"$totalAmount",
+									0,
+								],
+							},
+						},
+						salesCount: {
+							$sum: {
+								$cond: [{ $eq: ["$movementType", "SALE"] }, 1, 0],
+							},
+						},
+						returnCount: {
+							$sum: {
+								$cond: [{ $eq: ["$movementType", "RETURN_CUSTOMER"] }, 1, 0],
+							},
+						},
+						suppliesCount: {
+							$sum: {
+								$cond: [{ $eq: ["$movementType", "SUPPLY"] }, 1, 0],
+							},
+						},
+						deliveredCount: {
+							$sum: {
+								$cond: [
+									{
+										$and: [
+											{ $eq: ["$movementType", "SALE"] },
+											{ $eq: ["$sale.status", "DELIVERED"] },
+										],
+									},
+									1,
+									0,
+								],
+							},
+						},
+					},
+				},
+			]),
+			StockMovement.aggregate([
+				{
+					$match: {
+						shopId: { $in: shopIds },
+						movementType: "SALE",
+						createdAt: { $gte: startDate, $lte: endDate },
+					},
+				},
+				{
+					$group: {
+						_id: "$sale.status",
+						count: { $sum: 1 },
+					},
+				},
+			]),
+			StockMovement.aggregate([
+				{
+					$match: {
+						shopId: { $in: shopIds },
+						createdAt: { $gte: startDate, $lte: endDate },
+						movementType: { $in: ["SALE", "RETURN_CUSTOMER", "SUPPLY"] },
+					},
+				},
+				{
+					$group: {
+						_id: {
+							period: {
+								$dateToString: {
+									format: _buildPeriodFormat(groupBy),
+									date: "$createdAt",
+								},
+							},
+						},
+						grossSalesAmount: {
+							$sum: {
+								$cond: [{ $eq: ["$movementType", "SALE"] }, "$totalAmount", 0],
+							},
+						},
+						returnAmount: {
+							$sum: {
+								$cond: [
+									{ $eq: ["$movementType", "RETURN_CUSTOMER"] },
+									"$totalAmount",
+									0,
+								],
+							},
+						},
+						deliveredSalesAmount: {
+							$sum: {
+								$cond: [
+									{
+										$and: [
+											{ $eq: ["$movementType", "SALE"] },
+											{ $eq: ["$sale.status", "DELIVERED"] },
+										],
+									},
+									"$totalAmount",
+									0,
+								],
+							},
+						},
+						salesCount: {
+							$sum: {
+								$cond: [{ $eq: ["$movementType", "SALE"] }, 1, 0],
+							},
+						},
+						returnCount: {
+							$sum: {
+								$cond: [{ $eq: ["$movementType", "RETURN_CUSTOMER"] }, 1, 0],
+							},
+						},
+						suppliesCount: {
+							$sum: {
+								$cond: [{ $eq: ["$movementType", "SUPPLY"] }, 1, 0],
+							},
+						},
+					},
+				},
+				{ $sort: { "_id.period": 1 } },
+			]),
+		]);
+
+	const [topProductsAgg, topShopsAgg, recentOrders, recentSupplies] =
+		await Promise.all([
+			StockMovementLine.aggregate([
+				{
+					$match: {
+						shopId: { $in: shopIds },
+						createdAt: { $gte: startDate, $lte: endDate },
+						movementType: { $in: ["SALE", "RETURN_CUSTOMER"] },
+					},
+				},
+				{
+					$group: {
+						_id: "$productId",
+						saleUnits: {
+							$sum: {
+								$cond: [{ $eq: ["$movementType", "SALE"] }, "$quantity", 0],
+							},
+						},
+						returnUnits: {
+							$sum: {
+								$cond: [
+									{ $eq: ["$movementType", "RETURN_CUSTOMER"] },
+									"$quantity",
+									0,
+								],
+							},
+						},
+						saleAmount: {
+							$sum: {
+								$cond: [{ $eq: ["$movementType", "SALE"] }, "$totalAmount", 0],
+							},
+						},
+						returnAmount: {
+							$sum: {
+								$cond: [
+									{ $eq: ["$movementType", "RETURN_CUSTOMER"] },
+									"$totalAmount",
+									0,
+								],
+							},
+						},
+					},
+				},
+				{
+					$project: {
+						_id: 1,
+						saleUnits: 1,
+						returnUnits: 1,
+						netUnits: { $subtract: ["$saleUnits", "$returnUnits"] },
+						saleAmount: 1,
+						returnAmount: 1,
+						netRevenue: { $subtract: ["$saleAmount", "$returnAmount"] },
+					},
+				},
+				{
+					$lookup: {
+						from: "products",
+						localField: "_id",
+						foreignField: "_id",
+						as: "product",
+					},
+				},
+				{ $unwind: "$product" },
+				{
+					$project: {
+						_id: "$product._id",
+						title: "$product.title",
+						sku: "$product.sku",
+						status: "$product.status",
+						netRevenue: 1,
+						netUnits: 1,
+						saleUnits: 1,
+						returnUnits: 1,
+						saleAmount: 1,
+						returnAmount: 1,
+						views: "$product.stats.views",
+						stockAvailable: "$product.stock.cache.available",
+					},
+				},
+				{ $sort: { netRevenue: -1 } },
+				{ $limit: topLimit },
+			]),
+			StockMovementLine.aggregate([
+				{
+					$match: {
+						shopId: { $in: shopIds },
+						createdAt: { $gte: startDate, $lte: endDate },
+						movementType: { $in: ["SALE", "RETURN_CUSTOMER"] },
+					},
+				},
+				{
+					$group: {
+						_id: "$shopId",
+						saleAmount: {
+							$sum: {
+								$cond: [{ $eq: ["$movementType", "SALE"] }, "$totalAmount", 0],
+							},
+						},
+						returnAmount: {
+							$sum: {
+								$cond: [
+									{ $eq: ["$movementType", "RETURN_CUSTOMER"] },
+									"$totalAmount",
+									0,
+								],
+							},
+						},
+						saleUnits: {
+							$sum: {
+								$cond: [{ $eq: ["$movementType", "SALE"] }, "$quantity", 0],
+							},
+						},
+						returnUnits: {
+							$sum: {
+								$cond: [
+									{ $eq: ["$movementType", "RETURN_CUSTOMER"] },
+									"$quantity",
+									0,
+								],
+							},
+						},
+					},
+				},
+				{
+					$lookup: {
+						from: "shops",
+						localField: "_id",
+						foreignField: "_id",
+						as: "shop",
+					},
+				},
+				{ $unwind: "$shop" },
+				{
+					$project: {
+						_id: "$shop._id",
+						name: "$shop.name",
+						netRevenue: { $subtract: ["$saleAmount", "$returnAmount"] },
+						saleAmount: 1,
+						returnAmount: 1,
+						netUnits: { $subtract: ["$saleUnits", "$returnUnits"] },
+						saleUnits: 1,
+						returnUnits: 1,
+						deliveredSalesAmount: "$shop.stats.deliveredSalesAmount",
+					},
+				},
+				{ $sort: { netRevenue: -1 } },
+				{ $limit: topLimit },
+			]),
+			StockMovement.find({
+				shopId: { $in: shopIds },
+				movementType: { $in: ["SALE", "RETURN_CUSTOMER"] },
+				createdAt: { $gte: startDate, $lte: endDate },
+			})
+				.select("_id reference movementType totalAmount sale createdAt shopId")
+				.populate("shopId", "name")
+				.sort({ createdAt: -1 })
+				.limit(6)
+				.lean(),
+			StockMovement.find({
+				shopId: { $in: shopIds },
+				movementType: "SUPPLY",
+				createdAt: { $gte: startDate, $lte: endDate },
+			})
+				.select("_id reference totalAmount createdAt supply shopId")
+				.populate("shopId", "name")
+				.sort({ createdAt: -1 })
+				.limit(6)
+				.lean(),
+		]);
+
+	const productStats = productStatsAgg[0] || {};
+	const movementTotals = movementTotalsAgg[0] || {};
+	const orderStatus = {
+		confirmed:
+			saleStatusAgg.find((item) => item._id === "CONFIRMED")?.count || 0,
+		delivered:
+			saleStatusAgg.find((item) => item._id === "DELIVERED")?.count || 0,
+		returned:
+			saleStatusAgg.find((item) => item._id === "RETURNED")?.count || 0,
+	};
+
+	const trend = trendAgg.map((item) => {
+		const grossSalesAmount = Number(item.grossSalesAmount || 0);
+		const returnAmount = Number(item.returnAmount || 0);
+		return {
+			period: item._id.period,
+			grossSalesAmount,
+			returnAmount,
+			netSalesAmount: grossSalesAmount - returnAmount,
+			deliveredSalesAmount: Number(item.deliveredSalesAmount || 0),
+			salesCount: Number(item.salesCount || 0),
+			returnCount: Number(item.returnCount || 0),
+			suppliesCount: Number(item.suppliesCount || 0),
+		};
+	});
+
+	const grossSalesAmount = Number(movementTotals.grossSalesAmount || 0);
+	const returnAmount = Number(movementTotals.returnAmount || 0);
+
+	const activeShops = sellerShops.filter((shop) => shop.status === "ACTIVE").length;
+	const pendingShops = sellerShops.filter((shop) => shop.status === "PENDING").length;
+	const archivedShops = sellerShops.filter(
+		(shop) => shop.status === "ARCHIVED",
+	).length;
+
+	return {
+		meta: {
+			startDate,
+			endDate,
+			groupBy,
+			topLimit,
+		},
+		kpis: {
+			netSalesAmount: grossSalesAmount - returnAmount,
+			grossSalesAmount,
+			returnAmount,
+			deliveredSalesAmount: Number(movementTotals.deliveredSalesAmount || 0),
+			salesCount: Number(movementTotals.salesCount || 0),
+			deliveredCount: Number(movementTotals.deliveredCount || 0),
+			returnCount: Number(movementTotals.returnCount || 0),
+			suppliesCount: Number(movementTotals.suppliesCount || 0),
+			activeProducts: Number(productStats.activeProducts || 0),
+			pendingProducts: Number(productStats.pendingProducts || 0),
+			archivedProducts: Number(productStats.archivedProducts || 0),
+			lowStockProducts: Number(productStats.lowStockProducts || 0),
+			outOfStockProducts: Number(productStats.outOfStockProducts || 0),
+			activeShops,
+			pendingShops,
+			archivedShops,
+			totalShops: sellerShops.length,
+		},
+		orderStatus,
+		trend,
+		rankings: {
+			topProductsByRevenue: topProductsAgg,
+			topProductsByUnits: [...topProductsAgg].sort(
+				(a, b) => (b.netUnits || 0) - (a.netUnits || 0),
+			),
+			topShopsByRevenue: topShopsAgg,
+		},
+		recent: {
+			orders: recentOrders,
+			supplies: recentSupplies,
+		},
+	};
+};
+
+// ==========================================
 // Mise à jour du statut de vente
 // ==========================================
 
@@ -316,6 +846,8 @@ export const updateSaleStatus = async (movementId, statusData, performedBy, opti
 
 	const currentStatus = movement.sale.status;
 	const newStatus = statusData.status;
+	const isEnteringDelivered = currentStatus !== "DELIVERED" && newStatus === "DELIVERED";
+	const isDeliveredToReturned = currentStatus === "DELIVERED" && newStatus === "RETURNED";
 
 	const allowed = VALID_SALE_TRANSITIONS[currentStatus] || [];
 	if (!allowed.includes(newStatus)) {
@@ -336,6 +868,19 @@ export const updateSaleStatus = async (movementId, statusData, performedBy, opti
 
 	const saveOptions = options.session ? { session: options.session } : {};
 	await movement.save(saveOptions);
+
+	if (isEnteringDelivered) {
+		await applyDeliveredStatsForSaleMovement(movement._id, {
+			session: options.session || null,
+		});
+	}
+
+	if (isDeliveredToReturned) {
+		await applyDeliveredStatsForSaleMovement(movement._id, {
+			reverse: true,
+			session: options.session || null,
+		});
+	}
 
 	return movement;
 };

@@ -1,8 +1,7 @@
-import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 import User from "../models/User.js";
-import Wallet from "../models/Wallet.js";
 import config from "../config/env.js";
+import * as userService from "../services/user.service.js";
 
 /**
  * Script de seed pour créer le compte administrateur initial
@@ -37,42 +36,25 @@ async function seedAdmin() {
       return;
     }
 
-    console.log("📝 Création du compte administrateur...");
+    console.log("📝 Création du compte administrateur via service...");
 
-    // Hasher le mot de passe
-    const salt = await bcrypt.genSalt(12);
-    const passwordHash = await bcrypt.hash(ADMIN_DATA.password, salt);
-
-    // Créer l'utilisateur admin (sans transaction pour développement local)
-    const admin = await User.create({
+    const admin = await userService.createUser({
       email: ADMIN_DATA.email,
-      passwordHash,
+      password: ADMIN_DATA.password,
       role: ADMIN_DATA.role,
       profile: ADMIN_DATA.profile,
       isValidated: ADMIN_DATA.isValidated,
       isActive: ADMIN_DATA.isActive,
     });
 
-    // Créer le wallet pour l'admin
-    const wallet = await Wallet.create({
-      ownerId: admin._id,
-      ownerModel: "User",
-      balance: 0,
-      currency: "MGA",
-    });
-
-    // Lier le wallet à l'admin
-    admin.walletId = wallet._id;
-    await admin.save();
-
     console.log("✅ Compte admin créé avec succès!");
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     console.log(`📧 Email: ${ADMIN_DATA.email}`);
     console.log(`🔑 Mot de passe: ${ADMIN_DATA.password}`);
     console.log(
-      `👤 Nom: ${admin.profile.firstName} ${admin.profile.lastName}`,
+      `👤 Nom: ${admin.profile?.firstName || ""} ${admin.profile?.lastName || ""}`,
     );
-    console.log(`💰 Wallet ID: ${wallet._id}`);
+    console.log(`💰 Wallet ID: ${admin.walletId}`);
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     console.log(
       "⚠️  Pensez à changer le mot de passe après la première connexion",

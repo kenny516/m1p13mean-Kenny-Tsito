@@ -44,56 +44,73 @@ import { FilePickerComponent } from '@/shared/components/file-picker/file-picker
       </div>
 
       <z-card class="p-6">
-        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-4">
-          <div class="grid gap-4 md:grid-cols-2">
+        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-6">
+          <section class="space-y-4 rounded-md border border-border p-4">
             <div>
-              <p class="mb-1 text-sm text-muted-foreground">Boutique *</p>
-              <z-select formControlName="shopId" zPlaceholder="Choisir une boutique" class="w-full">
-                @for (shop of shops(); track shop._id) {
-                  <z-select-item [zValue]="shop._id">{{ shop.name }}</z-select-item>
-                }
-              </z-select>
+              <h2 class="text-sm font-semibold text-foreground">Informations produit</h2>
+              <p class="text-xs text-muted-foreground">Positionnement du produit dans votre catalogue.</p>
             </div>
+
+            <div class="grid gap-4 md:grid-cols-2">
+              <div>
+                <p class="mb-1 text-sm text-muted-foreground">Boutique *</p>
+                <z-select formControlName="shopId" zPlaceholder="Choisir une boutique" class="w-full">
+                  @for (shop of shops(); track shop._id) {
+                    <z-select-item [zValue]="shop._id">{{ shop.name }}</z-select-item>
+                  }
+                </z-select>
+              </div>
+              <div>
+                <p class="mb-1 text-sm text-muted-foreground">Catégorie *</p>
+                <input z-input formControlName="category" placeholder="Catégorie produit" />
+              </div>
+            </div>
+
             <div>
-              <p class="mb-1 text-sm text-muted-foreground">Catégorie *</p>
-              <input z-input formControlName="category" placeholder="Catégorie produit" />
+              <p class="mb-1 text-sm text-muted-foreground">Titre *</p>
+              <input z-input formControlName="title" placeholder="Titre du produit" />
             </div>
-          </div>
 
-          <div>
-            <p class="mb-1 text-sm text-muted-foreground">Titre *</p>
-            <input z-input formControlName="title" placeholder="Titre du produit" />
-          </div>
-
-          <div>
-            <p class="mb-1 text-sm text-muted-foreground">Description *</p>
-            <textarea
-              rows="4"
-              formControlName="description"
-              class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              placeholder="Description du produit"
-            ></textarea>
-          </div>
-
-          <div class="grid gap-4 md:grid-cols-2">
             <div>
-              <p class="mb-1 text-sm text-muted-foreground">Prix *</p>
-              <input z-input type="number" formControlName="price" min="0" />
+              <p class="mb-1 text-sm text-muted-foreground">Description *</p>
+              <textarea
+                rows="4"
+                formControlName="description"
+                class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="Description du produit"
+              ></textarea>
             </div>
+          </section>
+
+          <section class="space-y-4 rounded-md border border-border p-4">
             <div>
-              <p class="mb-1 text-sm text-muted-foreground">Prix original</p>
-              <input z-input type="number" formControlName="originalPrice" min="0" />
+              <h2 class="text-sm font-semibold text-foreground">Tarification et tags</h2>
+              <p class="text-xs text-muted-foreground">Définissez le prix affiché et les marqueurs de recherche.</p>
             </div>
-          </div>
 
-          <div>
-            <p class="mb-1 text-sm text-muted-foreground">Tags (virgules)</p>
-            <input z-input formControlName="tags" placeholder="promotion, nouveauté" />
-          </div>
+            <div class="grid gap-4 md:grid-cols-2">
+              <div>
+                <p class="mb-1 text-sm text-muted-foreground">Prix *</p>
+                <input z-input type="number" formControlName="price" min="0" />
+              </div>
+              <div>
+                <p class="mb-1 text-sm text-muted-foreground">Prix original</p>
+                <input z-input type="number" formControlName="originalPrice" min="0" />
+              </div>
+            </div>
 
-          <div class="space-y-3">
+            <div>
+              <p class="mb-1 text-sm text-muted-foreground">Tags (virgules)</p>
+              <input z-input formControlName="tags" placeholder="promotion, nouveauté" />
+            </div>
+          </section>
+
+          <section class="space-y-3 rounded-md border border-border p-4">
             <div class="flex items-center justify-between">
-              <p class="text-sm text-muted-foreground">Galerie produit</p>
+              <div>
+                <h2 class="text-sm font-semibold text-foreground">Galerie produit</h2>
+                <p class="text-xs text-muted-foreground">Images existantes et nouveaux médias à ajouter.</p>
+              </div>
               <app-file-picker
                 label="Ajouter des images"
                 [multiple]="true"
@@ -161,9 +178,9 @@ import { FilePickerComponent } from '@/shared/components/file-picker/file-picker
             @if (existingImages().length === 0 && pendingImagePreviewUrls().length === 0) {
               <p class="text-xs text-muted-foreground">Aucune image pour le moment.</p>
             }
-          </div>
+          </section>
 
-          <div class="flex justify-end gap-2">
+          <div class="flex justify-end gap-2 border-t border-border pt-4">
             <a z-button zType="outline" routerLink="/seller/products">Annuler</a>
             <button z-button type="submit" [disabled]="isSubmitting() || form.invalid">
               {{ isSubmitting() ? 'Enregistrement...' : isEditMode() ? 'Mettre à jour' : 'Créer' }}

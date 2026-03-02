@@ -4,7 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ImageManagementService, Product, ProductService, Shop, ShopService, ToastService } from '@/core';
 import { ZardButtonComponent } from '@/shared/components/button';
 import { ZardCardComponent } from '@/shared/components/card';
-import { DataTableColumn, DataTableComponent } from '@/shared/components/data-table';
+import { DataTableColumnDef, TanstackDataTableComponent } from '@/shared/components/data-table';
 import { FilePickerComponent } from '@/shared/components/file-picker/file-picker.component';
 import { IKImageDirective } from '@imagekit/angular';
 
@@ -16,13 +16,12 @@ import { IKImageDirective } from '@imagekit/angular';
     RouterLink,
     ZardCardComponent,
     ZardButtonComponent,
-    DataTableComponent,
+    TanstackDataTableComponent,
     FilePickerComponent,
     IKImageDirective,
   ],
   template: `
-    <div class="min-h-screen bg-muted/30 py-6">
-      <div class="mx-auto max-w-6xl space-y-6 px-4 sm:px-6 lg:px-8">
+    <div class="space-y-6">
         <div class="flex items-center justify-between">
           <div>
             <h1 class="text-2xl font-bold text-foreground">Détail boutique</h1>
@@ -48,6 +47,12 @@ import { IKImageDirective } from '@imagekit/angular';
               <span class="rounded-md bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground">
                 {{ currentShop.status }}
               </span>
+            </div>
+
+          <section class="space-y-4">
+            <div>
+              <h3 class="text-sm font-semibold text-foreground">Résumé</h3>
+              <p class="text-xs text-muted-foreground">État général et métadonnées de la boutique.</p>
             </div>
 
           <div class="grid gap-4 md:grid-cols-4">
@@ -88,8 +93,15 @@ import { IKImageDirective } from '@imagekit/angular';
               <p class="font-medium">{{ currentShop.rejectionReason }}</p>
             </div>
           }
+          </section>
 
-          <div class="mt-6 grid gap-4 md:grid-cols-2">
+          <section class="mt-6 space-y-4 border-t border-border pt-6">
+            <div>
+              <h3 class="text-sm font-semibold text-foreground">Médias</h3>
+              <p class="text-xs text-muted-foreground">Gestion du logo et de la bannière de la boutique.</p>
+            </div>
+
+          <div class="grid gap-4 md:grid-cols-2">
             <div class="space-y-2">
               <p class="text-sm text-muted-foreground">Logo</p>
               <div class="group relative">
@@ -189,8 +201,15 @@ import { IKImageDirective } from '@imagekit/angular';
               </div>
             </div>
           </div>
+          </section>
 
-          <div class="mt-6 grid gap-4 md:grid-cols-2">
+          <section class="mt-6 space-y-4 border-t border-border pt-6">
+            <div>
+              <h3 class="text-sm font-semibold text-foreground">Contact et catégories</h3>
+              <p class="text-xs text-muted-foreground">Coordonnées publiques et catégorisation.</p>
+            </div>
+
+          <div class="grid gap-4 md:grid-cols-2">
             <div>
               <p class="text-sm text-muted-foreground">Email</p>
               <p class="font-medium">{{ currentShop.contact?.email || '-' }}</p>
@@ -209,35 +228,67 @@ import { IKImageDirective } from '@imagekit/angular';
             <p class="text-sm text-muted-foreground">Catégories</p>
             <p class="mt-1">{{ (currentShop.categories || []).join(', ') || '-' }}</p>
           </div>
+          </section>
 
-          <div class="mt-6">
+          <section class="mt-6 space-y-4 border-t border-border pt-6">
             <h2 class="text-lg font-semibold text-foreground">Statistiques</h2>
-            <div class="mt-3 grid gap-4 md:grid-cols-3">
+            <div class="mt-3 grid gap-4 md:grid-cols-4">
               <div>
-                <p class="text-sm text-muted-foreground">Ventes totales</p>
+                <p class="text-sm text-muted-foreground">CA net</p>
                 <p class="font-medium">{{ currentShop.stats.totalSales }}</p>
               </div>
               <div>
+                <p class="text-sm text-muted-foreground">CA livré</p>
+                <p class="font-medium">{{ currentShop.stats.deliveredSalesAmount }}</p>
+              </div>
+              <div>
                 <p class="text-sm text-muted-foreground">Produits totaux</p>
-                <p class="font-medium">{{ currentShop.stats.totalProducts }}</p>
+                <p class="font-medium">
+                  {{
+                    (currentShop.stats.products.active || 0) +
+                    (currentShop.stats.products.pending || 0) +
+                    (currentShop.stats.products.archived || 0)
+                  }}
+                </p>
               </div>
               <div>
                 <p class="text-sm text-muted-foreground">Note</p>
                 <p class="font-medium">{{ currentShop.stats.rating | number: '1.1-2' }}</p>
               </div>
             </div>
-          </div>
+
+            <div class="mt-3 grid gap-3 md:grid-cols-3">
+              <div class="rounded-md border border-border p-3">
+                <p class="text-xs text-muted-foreground">Produits actifs</p>
+                <p class="text-sm font-semibold text-foreground">{{ currentShop.stats.products.active || 0 }}</p>
+              </div>
+              <div class="rounded-md border border-border p-3">
+                <p class="text-xs text-muted-foreground">Produits en attente</p>
+                <p class="text-sm font-semibold text-foreground">{{ currentShop.stats.products.pending || 0 }}</p>
+              </div>
+              <div class="rounded-md border border-border p-3">
+                <p class="text-xs text-muted-foreground">Produits archivés</p>
+                <p class="text-sm font-semibold text-foreground">{{ currentShop.stats.products.archived || 0 }}</p>
+              </div>
+            </div>
+          </section>
         </z-card>
 
         <z-card class="p-6">
-          <div class="mb-4">
+          <div class="mb-4 flex items-end justify-between gap-3">
+            <div>
             <h2 class="text-lg font-semibold text-foreground">Produits de la boutique</h2>
             <p class="text-sm text-muted-foreground">Vue synthétique des produits liés à cette boutique.</p>
+            </div>
+            <p class="text-xs text-muted-foreground">{{ products().length }} produit(s)</p>
           </div>
-          <app-data-table [data]="products()" [columns]="productColumns" emptyMessage="Aucun produit pour cette boutique" />
+          <app-tanstack-data-table
+            [data]="products()"
+            [columnDefs]="productColumns"
+            emptyMessage="Aucun produit pour cette boutique"
+          />
         </z-card>
         }
-      </div>
     </div>
   `,
 })
@@ -253,9 +304,9 @@ export class ShopDetailComponent implements OnInit {
   readonly isLogoBusy = signal(false);
   readonly isBannerBusy = signal(false);
 
-  readonly productColumns: DataTableColumn[] = [
-    { accessorKey: 'title', header: 'Produit' },
-    { accessorKey: 'status', header: 'Statut' },
+  readonly productColumns: DataTableColumnDef<Product>[] = [
+    { id: 'title', accessorKey: 'title', header: 'Produit' },
+    { id: 'status', accessorKey: 'status', header: 'Statut' },
     {
       accessorFn: (product: unknown) => `${(product as Product).price.toLocaleString('fr-FR')} MGA`,
       id: 'price',

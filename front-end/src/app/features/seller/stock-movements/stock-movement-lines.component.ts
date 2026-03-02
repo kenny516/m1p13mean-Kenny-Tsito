@@ -6,7 +6,7 @@ import { ShopService, StockMovementService, ToastService } from '@/core/services
 import { Shop } from '@/core/models/shop.model';
 import { MovementType, StockMovementLine } from '@/core/models/stock-movement.model';
 import { ZardCardComponent } from '@/shared/components/card';
-import { DataTableColumn, DataTableComponent } from '@/shared/components/data-table';
+import { DataTableColumnDef, TanstackDataTableComponent } from '@/shared/components/data-table';
 import { ZardSelectImports } from '@/shared/components/select';
 import { ZardButtonComponent } from '@/shared/components/button';
 
@@ -20,21 +20,28 @@ import { ZardButtonComponent } from '@/shared/components/button';
     ZardCardComponent,
     ...ZardSelectImports,
     ZardButtonComponent,
-    DataTableComponent,
+    TanstackDataTableComponent,
   ],
   template: `
     <div class="space-y-6">
-      <div>
-        <h1 class="text-2xl font-bold text-foreground">Lignes de mouvement</h1>
-        <p class="text-muted-foreground">Page dédiée à la consultation des lignes de stock.</p>
-      </div>
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 class="text-2xl font-bold text-foreground">Lignes de mouvement</h1>
+          <p class="text-muted-foreground">Page dédiée à la consultation des lignes de stock.</p>
+        </div>
 
-      <div class="flex flex-wrap gap-2">
-        <a z-button zType="outline" routerLink="/seller/stock-movements">Voir les mouvements</a>
-        <button z-button zType="outline" (click)="resetFilters()">Réinitialiser les filtres</button>
+        <div class="flex flex-wrap gap-2">
+          <a z-button zType="outline" routerLink="/seller/stock-movements">Voir les mouvements</a>
+          <button z-button zType="outline" (click)="resetFilters()">Réinitialiser les filtres</button>
+        </div>
       </div>
 
       <z-card class="p-4">
+        <div class="mb-3">
+          <h2 class="text-sm font-semibold text-foreground">Filtres</h2>
+          <p class="text-xs text-muted-foreground">Affinez les lignes par boutique et type de mouvement.</p>
+        </div>
+
         <div class="grid gap-4 md:grid-cols-2">
           <z-select
             [(zValue)]="selectedShopId"
@@ -67,39 +74,52 @@ import { ZardButtonComponent } from '@/shared/components/button';
         </div>
       </z-card>
 
-      <app-data-table
-        [data]="stockMovementService.lines()"
-        [columns]="columns"
-        emptyMessage="Aucune ligne trouvée"
-      />
-
-      @if (stockMovementService.pagination(); as pagination) {
-        <div class="flex items-center justify-between rounded-md border border-border bg-card p-3">
-          <p class="text-sm text-muted-foreground">
-            Page {{ pagination.page }} / {{ pagination.pages }} · {{ pagination.total }} lignes
-          </p>
-          <div class="flex gap-2">
-            <button
-              z-button
-              zType="outline"
-              zSize="sm"
-              [disabled]="pagination.page <= 1"
-              (click)="goToPage(pagination.page - 1)"
-            >
-              Précédent
-            </button>
-            <button
-              z-button
-              zType="outline"
-              zSize="sm"
-              [disabled]="pagination.page >= pagination.pages"
-              (click)="goToPage(pagination.page + 1)"
-            >
-              Suivant
-            </button>
+      <z-card class="overflow-hidden">
+        <div class="p-4 space-y-3">
+          <div class="flex items-end justify-between gap-3">
+            <div>
+              <h2 class="text-sm font-semibold text-foreground">Résultats</h2>
+              <p class="text-xs text-muted-foreground">Lignes correspondant aux filtres actifs.</p>
+            </div>
+            <p class="text-xs text-muted-foreground">{{ stockMovementService.lines().length }} ligne(s) affichée(s)</p>
           </div>
+
+          <app-tanstack-data-table
+            [data]="stockMovementService.lines()"
+            [columnDefs]="columns"
+            [isLoading]="stockMovementService.isLoading()"
+            emptyMessage="Aucune ligne trouvée"
+          />
         </div>
-      }
+
+        @if (stockMovementService.pagination(); as pagination) {
+          <div class="flex items-center justify-between px-4 py-3 border-t border-border bg-muted/20">
+            <p class="text-sm text-muted-foreground">
+              Page {{ pagination.page }} / {{ pagination.pages }} · {{ pagination.total }} lignes
+            </p>
+            <div class="flex gap-2">
+              <button
+                z-button
+                zType="outline"
+                zSize="sm"
+                [disabled]="pagination.page <= 1"
+                (click)="goToPage(pagination.page - 1)"
+              >
+                Précédent
+              </button>
+              <button
+                z-button
+                zType="outline"
+                zSize="sm"
+                [disabled]="pagination.page >= pagination.pages"
+                (click)="goToPage(pagination.page + 1)"
+              >
+                Suivant
+              </button>
+            </div>
+          </div>
+        }
+      </z-card>
     </div>
   `,
 })
@@ -114,10 +134,10 @@ export class StockMovementLinesComponent implements OnInit {
   selectedShopId = '';
   selectedType: MovementType | '' = '';
 
-  readonly columns: DataTableColumn[] = [
-    { accessorKey: 'reference', header: 'Référence' },
-    { accessorKey: 'movementType', header: 'Type' },
-    { accessorKey: 'direction', header: 'Direction' },
+  readonly columns: DataTableColumnDef<StockMovementLine>[] = [
+    { id: 'reference', accessorKey: 'reference', header: 'Référence' },
+    { id: 'movementType', accessorKey: 'movementType', header: 'Type' },
+    { id: 'direction', accessorKey: 'direction', header: 'Direction' },
     {
       accessorFn: (line: unknown) => this.displayProduct(line as StockMovementLine),
       id: 'product',
@@ -128,7 +148,7 @@ export class StockMovementLinesComponent implements OnInit {
       id: 'shop',
       header: 'Boutique',
     },
-    { accessorKey: 'quantity', header: 'Qté' },
+    { id: 'quantity', accessorKey: 'quantity', header: 'Qté' },
     {
       accessorFn: (line: unknown) =>
         `${(line as StockMovementLine).unitPrice.toLocaleString('fr-FR')} MGA`,

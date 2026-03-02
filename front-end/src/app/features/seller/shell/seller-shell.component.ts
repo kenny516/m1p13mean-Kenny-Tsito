@@ -202,28 +202,27 @@ interface NavItem {
         [class.lg:ml-64]="!collapsed()"
         [class.lg:ml-16]="collapsed()"
       >
-        <div class="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-          <!-- Breadcrumb desktop -->
-          <div class="hidden lg:block mb-4">
-            <nav class="flex items-center gap-2 text-sm">
-              <a
-                routerLink="/seller"
-                class="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Espace vendeur
-              </a>
-              @if (currentPageTitle() && currentPageTitle() !== "Mes boutiques") {
-                <z-icon
-                  zType="chevron-right"
-                  class="h-4 w-4 text-muted-foreground"
-                />
-                <span class="text-foreground font-medium">{{
-                  currentPageTitle()
-                }}</span>
-              }
-            </nav>
-          </div>
+        <div class="hidden lg:block px-6 lg:px-8 mb-4">
+          <nav class="flex items-center gap-2 text-sm">
+            <a
+              routerLink="/seller"
+              class="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Espace vendeur
+            </a>
+            @if (currentPageTitle() && currentPageTitle() !== "Mes boutiques") {
+              <z-icon
+                zType="chevron-right"
+                class="h-4 w-4 text-muted-foreground"
+              />
+              <span class="text-foreground font-medium">{{
+                currentPageTitle()
+              }}</span>
+            }
+          </nav>
+        </div>
 
+        <div class="px-6 lg:px-8">
           <router-outlet />
         </div>
       </main>
@@ -241,10 +240,15 @@ export class SellerShellComponent implements OnInit, OnDestroy {
 
   navItems: NavItem[] = [
     {
+      label: 'Dashboard',
+      icon: 'layout-dashboard',
+      route: '/seller/dashboard',
+      exact: true,
+    },
+    {
       label: "Mes boutiques",
       icon: "store",
       route: "/seller/shops",
-      exact: true,
     },
     { label: "Produits", icon: "package", route: "/seller/products" },
     { label: "Commandes", icon: "shopping-cart", route: "/seller/orders" },
@@ -289,6 +293,7 @@ export class SellerShellComponent implements OnInit, OnDestroy {
 
   private updatePageTitle(url: string): void {
     const titles: Record<string, string> = {
+      '/seller/dashboard': 'Dashboard',
       "/seller/shops": "Mes boutiques",
       "/seller/products": "Produits",
       "/seller/orders": "Commandes",

@@ -11,7 +11,7 @@ import {
 } from '@/core/models/stock-movement.model';
 import { ZardButtonComponent } from '@/shared/components/button';
 import { ZardCardComponent } from '@/shared/components/card';
-import { DataTableColumn, DataTableComponent } from '@/shared/components/data-table';
+import { DataTableColumnDef, TanstackDataTableComponent } from '@/shared/components/data-table';
 import { ZardSelectImports } from '@/shared/components/select';
 
 @Component({
@@ -23,7 +23,7 @@ import { ZardSelectImports } from '@/shared/components/select';
     ZardCardComponent,
     ZardButtonComponent,
     ...ZardSelectImports,
-    DataTableComponent,
+    TanstackDataTableComponent,
   ],
   template: `
     <div class="space-y-6">
@@ -39,6 +39,11 @@ import { ZardSelectImports } from '@/shared/components/select';
 
       @if (movement(); as current) {
         <z-card class="p-4">
+          <div class="mb-4">
+            <h2 class="text-sm font-semibold text-foreground">Résumé du mouvement</h2>
+            <p class="text-xs text-muted-foreground">Vue consolidée des informations principales.</p>
+          </div>
+
           <div class="grid gap-4 md:grid-cols-4">
             <div>
               <p class="text-sm text-muted-foreground">Référence</p>
@@ -83,14 +88,14 @@ import { ZardSelectImports } from '@/shared/components/select';
           </div>
 
           @if (current.note) {
-            <div class="mt-4">
+            <div class="mt-4 border-t border-border pt-4">
               <p class="text-sm text-muted-foreground">Note</p>
               <p class="font-medium">{{ current.note }}</p>
             </div>
           }
 
           @if (current.movementType === movementTypes.SALE && current.sale) {
-            <div class="mt-4 rounded-md border border-border p-4 space-y-3">
+            <div class="mt-6 rounded-md border border-border p-4 space-y-3">
               <h2 class="font-semibold">Informations vente</h2>
               <div class="grid gap-3 md:grid-cols-2">
                 <div>
@@ -155,7 +160,7 @@ import { ZardSelectImports } from '@/shared/components/select';
           }
 
           @if (current.movementType === movementTypes.SUPPLY && current.supply) {
-            <div class="mt-4 rounded-md border border-border p-4">
+            <div class="mt-6 rounded-md border border-border p-4">
               <h2 class="mb-3 font-semibold">Informations approvisionnement</h2>
               <div class="grid gap-3 md:grid-cols-2">
                 <div>
@@ -189,7 +194,7 @@ import { ZardSelectImports } from '@/shared/components/select';
               current.movementType === movementTypes.ADJUSTMENT_MINUS) &&
             current.adjustment
           ) {
-            <div class="mt-4 rounded-md border border-border p-4">
+            <div class="mt-6 rounded-md border border-border p-4">
               <h2 class="mb-3 font-semibold">Informations ajustement</h2>
               <div>
                 <p class="text-sm text-muted-foreground">Raison</p>
@@ -208,7 +213,7 @@ import { ZardSelectImports } from '@/shared/components/select';
             current.movementType === movementTypes.RESERVATION ||
             current.movementType === movementTypes.RESERVATION_CANCEL
           ) {
-            <div class="mt-4 rounded-md border border-border p-4">
+            <div class="mt-6 rounded-md border border-border p-4">
               <h2 class="mb-3 font-semibold">Informations réservation</h2>
               <div>
                 <p class="text-sm text-muted-foreground">Panier</p>
@@ -221,7 +226,7 @@ import { ZardSelectImports } from '@/shared/components/select';
             current.movementType === movementTypes.RETURN_CUSTOMER ||
             current.movementType === movementTypes.RETURN_SUPPLIER
           ) {
-            <div class="mt-4 rounded-md border border-border p-4">
+            <div class="mt-6 rounded-md border border-border p-4">
               <h2 class="mb-3 font-semibold">Informations retour</h2>
               @if (current.cartId || current.sale?.cartId) {
                 <div>
@@ -236,10 +241,16 @@ import { ZardSelectImports } from '@/shared/components/select';
         </z-card>
 
         <z-card class="p-4">
-          <h2 class="mb-4 text-lg font-semibold">Lignes</h2>
-          <app-data-table
+          <div class="mb-4 flex items-end justify-between gap-3">
+            <div>
+              <h2 class="text-lg font-semibold">Lignes</h2>
+              <p class="text-sm text-muted-foreground">Détail des lignes rattachées au mouvement.</p>
+            </div>
+            <p class="text-xs text-muted-foreground">{{ (current.lineIds || []).length }} ligne(s)</p>
+          </div>
+          <app-tanstack-data-table
             [data]="current.lineIds || []"
-            [columns]="lineColumns"
+            [columnDefs]="lineColumns"
             emptyMessage="Aucune ligne sur ce mouvement"
           />
         </z-card>
@@ -265,14 +276,14 @@ export class StockMovementDetailComponent implements OnInit {
   } as const;
   selectedSaleStatus: SaleStatus = 'CONFIRMED';
 
-  readonly lineColumns: DataTableColumn[] = [
-    { accessorKey: 'reference', header: 'Référence' },
+  readonly lineColumns: DataTableColumnDef<StockMovementLine>[] = [
+    { id: 'reference', accessorKey: 'reference', header: 'Référence' },
     {
       accessorFn: (line: unknown) => this.displayProduct(line as StockMovementLine),
       id: 'product',
       header: 'Produit',
     },
-    { accessorKey: 'quantity', header: 'Quantité' },
+    { id: 'quantity', accessorKey: 'quantity', header: 'Quantité' },
     {
       accessorFn: (line: unknown) =>
         `${(line as StockMovementLine).unitPrice.toLocaleString('fr-FR')} MGA`,

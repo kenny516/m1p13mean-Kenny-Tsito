@@ -27,6 +27,26 @@ export const getUserWallet = async (userId) => {
   };
 };
 
+export const ensureWalletByOwner = async (
+  { ownerId, ownerModel = "User" },
+  options = {},
+) => {
+  const session = options.session || null;
+
+  const findQuery = Wallet.findOne({ ownerId, ownerModel });
+  if (session) findQuery.session(session);
+  const existingWallet = await findQuery;
+  if (existingWallet) return existingWallet;
+
+  const createOptions = session ? { session } : {};
+  const [wallet] = await Wallet.create(
+    [{ ownerId, ownerModel }],
+    createOptions,
+  );
+
+  return wallet;
+};
+
 /**
  * Récupère l'historique des transactions d'un wallet
  */
@@ -322,6 +342,7 @@ export const creditWalletByOwner = async (
 };
 
 export default {
+  ensureWalletByOwner,
   getUserWallet,
   getWalletTransactions,
   creditWallet,
