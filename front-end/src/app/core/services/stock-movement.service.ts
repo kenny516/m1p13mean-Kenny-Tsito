@@ -148,6 +148,35 @@ export class StockMovementService {
     }
   }
 
+  async getSellerOrders(
+    filters?: StockMovementFilters,
+    page = 1,
+    limit = 10,
+  ): Promise<StockMovementsResponse> {
+    this.isLoadingSignal.set(true);
+    try {
+      const params = this.buildListParams(filters, page, limit);
+      const response = await this.api.getWithPagination<StockMovement[]>(
+        '/stock-movements/orders',
+        params,
+      );
+
+      if (!response.success || !response.data || !response.pagination) {
+        throw new Error('Erreur lors du chargement des commandes vendeur');
+      }
+
+      this.movementsSignal.set(response.data);
+      this.paginationSignal.set(response.pagination);
+
+      return {
+        movements: response.data,
+        pagination: response.pagination,
+      };
+    } finally {
+      this.isLoadingSignal.set(false);
+    }
+  }
+
   async getSupplies(
     filters?: StockMovementFilters,
     page = 1,

@@ -11,7 +11,7 @@ export const MOVEMENT_TYPES = [
 
 export const RESERVATION_MOVEMENT_TYPES = ['RESERVATION', 'RESERVATION_CANCEL'] as const;
 
-export const SALE_STATUSES = ['CONFIRMED', 'DELIVERED', 'CANCELLED'] as const;
+export const SALE_STATUSES = ['CONFIRMED', 'DELIVERED'] as const;
 
 export const PAYMENT_METHODS = ['WALLET', 'CARD', 'MOBILE_MONEY', 'CASH_ON_DELIVERY'] as const;
 

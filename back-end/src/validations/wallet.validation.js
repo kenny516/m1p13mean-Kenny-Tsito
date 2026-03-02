@@ -35,10 +35,9 @@ export const withdrawSchema = Joi.object({
 
   paymentMethod: Joi.string()
     .valid("CARD", "MOBILE_MONEY", "BANK_TRANSFER", "CASH")
-    .required()
+    .optional()
     .messages({
       "any.only": "Méthode de paiement invalide",
-      "any.required": "La méthode de paiement est requise",
     }),
 
   description: Joi.string().trim().max(500).allow("", null),

@@ -14,6 +14,7 @@ import {
   ImageManagementService,
   ToastService,
   User,
+  WalletOperationRequest,
   WalletService,
   WalletTransaction,
 } from '../../core';
@@ -28,6 +29,7 @@ import {
   ZardTabGroupComponent,
   ZardTabComponent,
 } from '@/shared/components/tabs';
+import { ZardSelectImports } from '@/shared/components/select';
 import { FilePickerComponent } from '@/shared/components/file-picker/file-picker.component';
 import { IKImageDirective } from '@imagekit/angular';
 
@@ -47,6 +49,7 @@ import { IKImageDirective } from '@imagekit/angular';
     ZardSpinnerComponent,
     ZardTabGroupComponent,
     ZardTabComponent,
+    ...ZardSelectImports,
     FilePickerComponent,
     IKImageDirective,
   ],
@@ -171,16 +174,6 @@ import { IKImageDirective } from '@imagekit/angular';
                     class="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center"
                   >
                     <z-icon zType="wallet" class="h-6 w-6 text-green-600" />
-                  </div>
-                </div>
-                <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
-                  <div class="text-green-600">
-                    +{{ userData.wallet.totalEarned || 0 | number: '1.0-0' }}
-                    gagné
-                  </div>
-                  <div class="text-red-600 text-right">
-                    -{{ userData.wallet.totalSpent || 0 | number: '1.0-0' }}
-                    dépensé
                   </div>
                 </div>
               </z-card>
@@ -346,62 +339,93 @@ import { IKImageDirective } from '@imagekit/angular';
             @if (userData.wallet) {
               <z-tab label="Transactions">
                 <div class="p-6">
-                  <div class="flex justify-between items-center mb-4">
-                    <h3 class="font-semibold text-foreground">
-                      Historique des transactions
-                    </h3>
-                    <button
-                      z-button
-                      zType="ghost"
-                      zSize="sm"
-                      (click)="loadTransactions()"
-                      [disabled]="isLoadingTransactions()"
-                    >
-                      @if (isLoadingTransactions()) {
-                        <z-spinner class="h-4 w-4" />
-                      } @else {
-                        <z-icon zType="loader-circle" class="h-4 w-4" />
-                      }
-                    </button>
-                  </div>
-
-                  @if (isLoadingTransactions() && transactions().length === 0) {
-                    <div class="space-y-2">
-                      @for (i of [1, 2, 3]; track i) {
-                        <z-skeleton class="h-14 w-full" />
-                      }
-                    </div>
-                  } @else if (transactions().length === 0) {
-                    <div class="text-center py-8 text-muted-foreground">
-                      <z-icon zType="file-text" class="mx-auto h-10 w-10" />
-                      <p class="mt-2 text-sm">Aucune transaction</p>
-                    </div>
-                  } @else {
-                    <div class="space-y-2">
-                      @for (
-                        transaction of transactions();
-                        track transaction._id
-                      ) {
-                        <div
-                          class="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                  <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                    <div class="xl:col-span-2">
+                      <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-semibold text-foreground">
+                          Historique des transactions
+                        </h3>
+                        <button
+                          z-button
+                          zType="ghost"
+                          zSize="sm"
+                          (click)="loadTransactions()"
+                          [disabled]="isLoadingTransactions()"
                         >
-                          <div class="flex items-center gap-3">
+                          @if (isLoadingTransactions()) {
+                            <z-spinner class="h-4 w-4" />
+                          } @else {
+                            <z-icon zType="loader-circle" class="h-4 w-4" />
+                          }
+                        </button>
+                      </div>
+
+                      @if (isLoadingTransactions() && transactions().length === 0) {
+                        <div class="space-y-2">
+                          @for (i of [1, 2, 3]; track i) {
+                            <z-skeleton class="h-14 w-full" />
+                          }
+                        </div>
+                      } @else if (transactions().length === 0) {
+                        <div class="text-center py-8 text-muted-foreground">
+                          <z-icon zType="file-text" class="mx-auto h-10 w-10" />
+                          <p class="mt-2 text-sm">Aucune transaction</p>
+                        </div>
+                      } @else {
+                        <div class="space-y-2">
+                          @for (
+                            transaction of transactions();
+                            track transaction._id
+                          ) {
                             <div
-                              class="w-8 h-8 rounded-full flex items-center justify-center"
-                              [ngClass]="{
-                                'bg-green-100 dark:bg-green-900':
-                                  isPositiveTransaction(transaction.type),
-                                'bg-red-100 dark:bg-red-900':
-                                  !isPositiveTransaction(transaction.type),
-                              }"
+                              class="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                             >
-                              <z-icon
-                                [zType]="
-                                  isPositiveTransaction(transaction.type)
-                                    ? 'plus'
-                                    : 'minus'
-                                "
-                                class="h-4 w-4"
+                              <div class="flex items-center gap-3">
+                                <div
+                                  class="w-8 h-8 rounded-full flex items-center justify-center"
+                                  [ngClass]="{
+                                    'bg-green-100 dark:bg-green-900':
+                                      isPositiveTransaction(transaction.type),
+                                    'bg-red-100 dark:bg-red-900':
+                                      !isPositiveTransaction(transaction.type),
+                                  }"
+                                >
+                                  <z-icon
+                                    [zType]="
+                                      isPositiveTransaction(transaction.type)
+                                        ? 'plus'
+                                        : 'minus'
+                                    "
+                                    class="h-4 w-4"
+                                    [ngClass]="{
+                                      'text-green-600': isPositiveTransaction(
+                                        transaction.type
+                                      ),
+                                      'text-red-600': !isPositiveTransaction(
+                                        transaction.type
+                                      ),
+                                    }"
+                                  />
+                                </div>
+                                <div>
+                                  <p class="font-medium text-sm text-foreground">
+                                    {{ getTransactionLabel(transaction.type) }}
+                                  </p>
+                                  <p class="text-xs text-muted-foreground">
+                                    {{
+                                      transaction.createdAt
+                                        | date: 'dd/MM/yyyy HH:mm'
+                                    }}
+                                  </p>
+                                  @if (transaction.description) {
+                                    <p class="text-xs text-muted-foreground line-clamp-1">
+                                      {{ transaction.description }}
+                                    </p>
+                                  }
+                                </div>
+                              </div>
+                              <p
+                                class="font-semibold text-sm"
                                 [ngClass]="{
                                   'text-green-600': isPositiveTransaction(
                                     transaction.type
@@ -410,54 +434,171 @@ import { IKImageDirective } from '@imagekit/angular';
                                     transaction.type
                                   ),
                                 }"
-                              />
-                            </div>
-                            <div>
-                              <p class="font-medium text-sm text-foreground">
-                                {{ getTransactionLabel(transaction.type) }}
-                              </p>
-                              <p class="text-xs text-muted-foreground">
+                              >
                                 {{
-                                  transaction.createdAt
-                                    | date: 'dd/MM/yyyy HH:mm'
-                                }}
+                                  isPositiveTransaction(transaction.type)
+                                    ? '+'
+                                    : '-'
+                                }}{{ transaction.amount | number: '1.0-0' }} MGA
                               </p>
                             </div>
-                          </div>
-                          <p
-                            class="font-semibold text-sm"
-                            [ngClass]="{
-                              'text-green-600': isPositiveTransaction(
-                                transaction.type
-                              ),
-                              'text-red-600': !isPositiveTransaction(
-                                transaction.type
-                              ),
-                            }"
-                          >
-                            {{
-                              isPositiveTransaction(transaction.type)
-                                ? '+'
-                                : '-'
-                            }}{{ transaction.amount | number: '1.0-0' }} MGA
-                          </p>
+                          }
                         </div>
+                        @if (hasMoreTransactions()) {
+                          <div class="mt-4 text-center">
+                            <button
+                              z-button
+                              zType="ghost"
+                              zSize="sm"
+                              (click)="loadMoreTransactions()"
+                              [disabled]="isLoadingTransactions()"
+                            >
+                              Voir plus
+                            </button>
+                          </div>
+                        }
                       }
                     </div>
-                    @if (hasMoreTransactions()) {
-                      <div class="mt-4 text-center">
-                        <button
-                          z-button
-                          zType="ghost"
-                          zSize="sm"
-                          (click)="loadMoreTransactions()"
-                          [disabled]="isLoadingTransactions()"
+
+                    <div class="xl:col-span-1">
+                      <div class="rounded-lg border border-border bg-card p-4">
+                        <h3 class="font-semibold text-foreground">
+                          Opération wallet
+                        </h3>
+                        <p class="mt-1 text-xs text-muted-foreground">
+                          Recharger votre wallet ou retirer de l'argent.
+                        </p>
+
+                        <form
+                          [formGroup]="walletOperationForm"
+                          (ngSubmit)="submitWalletOperation()"
+                          class="mt-4 space-y-4"
                         >
-                          Voir plus
-                        </button>
+                          <div>
+                            <label
+                              z-label
+                              for="operationType"
+                              class="text-xs text-muted-foreground"
+                            >
+                              Type d'opération
+                            </label>
+                            <z-select
+                              formControlName="operationType"
+                              zPlaceholder="Choisir une opération"
+                              class="mt-1 w-full"
+                            >
+                              <z-select-item zValue="DEPOSIT">
+                                Recharge
+                              </z-select-item>
+                              <z-select-item zValue="WITHDRAWAL">
+                                Retrait
+                              </z-select-item>
+                            </z-select>
+                          </div>
+
+                          <div>
+                            <label
+                              z-label
+                              for="walletAmount"
+                              class="text-xs text-muted-foreground"
+                            >
+                              Montant (MGA)
+                            </label>
+                            <input
+                              z-input
+                              id="walletAmount"
+                              type="number"
+                              min="1"
+                              formControlName="amount"
+                              class="mt-1 w-full"
+                              placeholder="Ex: 50000"
+                            />
+                            @if (isWalletFieldInvalid('amount')) {
+                              <p class="mt-1 text-xs text-destructive">
+                                Entrez un montant valide supérieur à 0
+                              </p>
+                            }
+                          </div>
+
+                          @if (isDepositOperation()) {
+                            <div>
+                              <label
+                                z-label
+                                for="paymentMethod"
+                                class="text-xs text-muted-foreground"
+                              >
+                                Méthode de paiement
+                              </label>
+                              <z-select
+                                formControlName="paymentMethod"
+                                zPlaceholder="Choisir une méthode"
+                                class="mt-1 w-full"
+                              >
+                                <z-select-item zValue="CARD">Carte</z-select-item>
+                                <z-select-item zValue="MOBILE_MONEY">
+                                  Mobile Money
+                                </z-select-item>
+                                <z-select-item zValue="BANK_TRANSFER">
+                                  Virement bancaire
+                                </z-select-item>
+                                <z-select-item zValue="CASH">Espèces</z-select-item>
+                              </z-select>
+                              @if (isWalletFieldInvalid('paymentMethod')) {
+                                <p class="mt-1 text-xs text-destructive">
+                                  La méthode de paiement est requise
+                                </p>
+                              }
+                            </div>
+                          }
+
+                          <div>
+                            <label
+                              z-label
+                              for="walletDescription"
+                              class="text-xs text-muted-foreground"
+                            >
+                              Description (optionnel)
+                            </label>
+                            <textarea
+                              id="walletDescription"
+                              formControlName="description"
+                              rows="3"
+                              class="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                              placeholder="Ajouter une note"
+                            ></textarea>
+                            @if (isWalletFieldInvalid('description')) {
+                              <p class="mt-1 text-xs text-destructive">
+                                La description ne doit pas dépasser 500 caractères
+                              </p>
+                            }
+                          </div>
+
+                          <button
+                            z-button
+                            type="submit"
+                            class="w-full"
+                            [disabled]="
+                              walletOperationForm.invalid ||
+                              isSubmittingWalletOperation()
+                            "
+                          >
+                            @if (isSubmittingWalletOperation()) {
+                              <span class="inline-flex items-center gap-2">
+                                <z-spinner class="h-4 w-4"></z-spinner>
+                                Traitement...
+                              </span>
+                            } @else {
+                              {{
+                                currentWalletOperationType() === 'DEPOSIT'
+                                  ? 'Recharger le wallet'
+                                  : 'Retirer de l’argent'
+                              }}
+                            }
+                          </button>
+                        </form>
                       </div>
-                    }
-                  }
+                    </div>
+                  </div>
                 </div>
               </z-tab>
             }
@@ -554,12 +695,14 @@ export class ProfileComponent implements OnInit {
   // Transactions
   transactions = signal<WalletTransaction[]>([]);
   isLoadingTransactions = signal(false);
+  isSubmittingWalletOperation = signal(false);
   isAvatarBusy = signal(false);
   hasMoreTransactions = signal(false);
   transactionPage = 1;
 
   profileForm!: FormGroup;
   passwordForm!: FormGroup;
+  walletOperationForm!: FormGroup;
 
   ngOnInit(): void {
     this.initForms();
@@ -597,6 +740,19 @@ export class ProfileComponent implements OnInit {
       },
       { validators: this.passwordMatchValidator },
     );
+
+    this.walletOperationForm = this.fb.group({
+      operationType: ['DEPOSIT', [Validators.required]],
+      amount: [null, [Validators.required, Validators.min(1)]],
+      paymentMethod: ['MOBILE_MONEY'],
+      description: ['', [Validators.maxLength(500)]],
+    });
+
+    this.walletOperationForm
+      .get('operationType')
+      ?.valueChanges.subscribe(() => this.updateWalletPaymentMethodValidation());
+
+    this.updateWalletPaymentMethodValidation();
   }
 
   private async loadProfile(): Promise<void> {
@@ -646,6 +802,11 @@ export class ProfileComponent implements OnInit {
 
   isPasswordFieldInvalid(field: string): boolean {
     const control = this.passwordForm.get(field);
+    return !!(control && control.invalid && (control.dirty || control.touched));
+  }
+
+  isWalletFieldInvalid(field: string): boolean {
+    const control = this.walletOperationForm.get(field);
     return !!(control && control.invalid && (control.dirty || control.touched));
   }
 
@@ -769,6 +930,107 @@ export class ProfileComponent implements OnInit {
     } finally {
       this.isLoadingTransactions.set(false);
     }
+  }
+
+  currentWalletOperationType(): string {
+    return this.walletOperationForm.get('operationType')?.value || 'DEPOSIT';
+  }
+
+  isDepositOperation(): boolean {
+    return this.currentWalletOperationType() === 'DEPOSIT';
+  }
+
+  async submitWalletOperation(): Promise<void> {
+    if (this.walletOperationForm.invalid) {
+      this.walletOperationForm.markAllAsTouched();
+      return;
+    }
+
+    this.isSubmittingWalletOperation.set(true);
+    try {
+      const operationType = this.currentWalletOperationType();
+      const payload: WalletOperationRequest = {
+        amount: Number(this.walletOperationForm.get('amount')?.value),
+        description:
+          this.walletOperationForm.get('description')?.value?.trim() || '',
+      };
+
+      if (operationType === 'DEPOSIT') {
+        payload.paymentMethod = this.walletOperationForm.get('paymentMethod')?.value;
+      }
+
+      if (operationType === 'DEPOSIT') {
+        await this.walletService.deposit(payload);
+      } else {
+        await this.walletService.withdraw(payload);
+      }
+
+      this.toastService.success(
+        operationType === 'DEPOSIT'
+          ? 'Recharge effectuée avec succès'
+          : 'Retrait effectué avec succès',
+      );
+
+      this.walletOperationForm.patchValue({
+        amount: null,
+        description: '',
+      });
+
+      await this.loadProfile();
+      await this.loadTransactions();
+    } catch (error) {
+      this.toastService.error(this.extractWalletErrorMessage(error));
+    } finally {
+      this.isSubmittingWalletOperation.set(false);
+    }
+  }
+
+  private extractWalletErrorMessage(error: unknown): string {
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+
+    if (typeof error === 'object' && error !== null) {
+      const err = error as {
+        message?: unknown;
+        error?: {
+          message?: unknown;
+          error?: { message?: unknown };
+        };
+      };
+
+      if (typeof err.error?.error?.message === 'string') {
+        return err.error.error.message;
+      }
+
+      if (typeof err.error?.message === 'string') {
+        return err.error.message;
+      }
+
+      if (typeof err.message === 'string') {
+        return err.message;
+      }
+    }
+
+    return 'Une erreur est survenue lors de l\'opération wallet';
+  }
+
+  private updateWalletPaymentMethodValidation(): void {
+    const paymentMethodControl = this.walletOperationForm.get('paymentMethod');
+    if (!paymentMethodControl) {
+      return;
+    }
+
+    if (this.isDepositOperation()) {
+      paymentMethodControl.setValidators([Validators.required]);
+      if (!paymentMethodControl.value) {
+        paymentMethodControl.setValue('MOBILE_MONEY');
+      }
+    } else {
+      paymentMethodControl.clearValidators();
+    }
+
+    paymentMethodControl.updateValueAndValidity({ emitEvent: false });
   }
 
   getTransactionLabel(type: string): string {

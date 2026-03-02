@@ -26,7 +26,6 @@ export interface StockMovementSaleInfo {
   paymentMethod: StockMovementPaymentMethod;
   confirmedAt?: string;
   deliveredAt?: string;
-  cancelledAt?: string;
 }
 
 export interface StockMovementSupplyInfo {
@@ -49,8 +48,15 @@ export interface StockMovement {
   movementType: MovementType;
   direction: MovementDirection;
   totalAmount: number;
+  totalCommissionAmount?: number;
   lineIds: StockMovementLine[];
   cartId?: string;
+  shopId?:
+    | string
+    | {
+        _id: string;
+        name?: string;
+      };
   sale?: StockMovementSaleInfo;
   supply?: StockMovementSupplyInfo;
   adjustment?: StockMovementAdjustmentInfo;

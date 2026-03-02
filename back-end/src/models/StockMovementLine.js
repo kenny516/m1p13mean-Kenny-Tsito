@@ -47,6 +47,16 @@ const stockMovementLineSchema = new mongoose.Schema(
 			default: 0,
 			min: 0,
 		},
+		commissionRate: {
+			type: Number,
+			default: 0,
+			min: 0,
+			max: 100,
+		},
+		commissionAmount: {
+			type: Number,
+			default: 0,
+		},
 		totalAmount: {
 			type: Number,
 			default: 0,

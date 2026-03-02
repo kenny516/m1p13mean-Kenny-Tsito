@@ -83,6 +83,7 @@ export const createStockMovementSchema = Joi.object({
 		"any.required": "La date est requise",
 	}),
 	note: Joi.string().max(1000).allow(""),
+	shopId: objectId.optional(),
 	cartId: Joi.when("movementType", {
 		is: Joi.valid("RESERVATION", "RESERVATION_CANCEL"),
 		then: objectId.required().messages({
