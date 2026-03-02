@@ -106,11 +106,20 @@ import { AuthService, CartService, NavigationContextService } from "../../../cor
                   <button
                     class="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
                   >
-                    <div
-                      class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-medium"
-                    >
-                      {{ getInitials(userData) }}
-                    </div>
+                    @if (userData.profile.avatar) {
+                      <img
+                        [src]="userData.profile.avatar"
+                        alt="Avatar utilisateur"
+                        class="w-8 h-8 rounded-full border border-gray-200 object-cover"
+                        loading="lazy"
+                      />
+                    } @else {
+                      <div
+                        class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-medium"
+                      >
+                        {{ getInitials(userData) }}
+                      </div>
+                    }
                     <span
                       class="hidden sm:block text-sm font-medium text-gray-700"
                     >

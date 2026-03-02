@@ -563,13 +563,6 @@ export const getCart = async (userId) => {
 
     return created;
   }
-
-  if (cart.expiresAt <= new Date()) {
-    cart.status = "EXPIRED";
-    await cart.save();
-    throw new ApiError(400, "CART_EXPIRED", "Le panier a expiré");
-  }
-
   return cart;
 };
 
