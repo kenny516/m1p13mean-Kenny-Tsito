@@ -1093,6 +1093,15 @@ export const returnOrder = async (userId, orderId, payload = {}) => {
       session: txn.session,
     });
 
+    if (saleMovement.sale?.status !== "RETURNED") {
+      await updateSaleStatus(
+        saleMovement._id,
+        { status: "RETURNED" },
+        userId,
+        { session: txn.session },
+      );
+    }
+
     cart.status = "RETURNED";
     const saveOptions = txn.session ? { session: txn.session } : {};
     await cart.save(saveOptions);

@@ -17,7 +17,7 @@ export const MOVEMENT_TYPES = [
 
 export const IN_MOVEMENTS = ["SUPPLY", "RETURN_CUSTOMER", "ADJUSTMENT_PLUS", "RESERVATION_CANCEL"];
 
-export const SALE_STATUSES = ["CONFIRMED", "DELIVERED"];
+export const SALE_STATUSES = ["CONFIRMED", "DELIVERED", "RETURNED"];
 
 export const PAYMENT_METHODS = ["WALLET", "CARD", "MOBILE_MONEY", "CASH_ON_DELIVERY"];
 
@@ -42,8 +42,9 @@ export const REFERENCE_PREFIXES = {
 };
 
 export const VALID_SALE_TRANSITIONS = {
-	CONFIRMED: ["DELIVERED"],
-	DELIVERED: [],
+	CONFIRMED: ["DELIVERED", "RETURNED"],
+	DELIVERED: ["RETURNED"],
+	RETURNED: [],
 };
 
 /**
@@ -130,6 +131,7 @@ const stockMovementSchema = new mongoose.Schema(
 			// Dates importantes
 			confirmedAt: Date,
 			deliveredAt: Date,
+			returnedAt: Date,
 		},
 
 		// ========== INFORMATIONS APPROVISIONNEMENT (movementType: SUPPLY) ==========

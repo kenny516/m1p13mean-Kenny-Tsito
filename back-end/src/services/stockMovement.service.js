@@ -332,6 +332,7 @@ export const updateSaleStatus = async (movementId, statusData, performedBy, opti
 	// Dates automatiques
 	if (newStatus === "CONFIRMED") movement.sale.confirmedAt = new Date();
 	if (newStatus === "DELIVERED") movement.sale.deliveredAt = new Date();
+	if (newStatus === "RETURNED") movement.sale.returnedAt = new Date();
 
 	const saveOptions = options.session ? { session: options.session } : {};
 	await movement.save(saveOptions);
