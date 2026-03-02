@@ -119,10 +119,10 @@ export const updateProductSchema = Joi.object({
 
   // === MODÉRATION ===
   status: Joi.string()
-    .valid("DRAFT", "PENDING", "ARCHIVED")
+    .valid("DRAFT", "PENDING", "ACTIVE", "ARCHIVED")
     .optional()
     .messages({
-      "any.only": "Le statut doit être DRAFT, PENDING ou ARCHIVED",
+      "any.only": "Le statut doit être DRAFT, PENDING, ACTIVE ou ARCHIVED",
     }),
 });
 

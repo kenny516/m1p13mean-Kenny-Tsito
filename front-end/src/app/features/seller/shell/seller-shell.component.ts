@@ -247,6 +247,7 @@ export class SellerShellComponent implements OnInit, OnDestroy {
       exact: true,
     },
     { label: "Produits", icon: "package", route: "/seller/products" },
+    { label: "Commandes", icon: "shopping-cart", route: "/seller/orders" },
     { label: "Mouvements de stock", icon: "activity", route: "/seller/stock-movements" },
   ];
 
@@ -290,6 +291,7 @@ export class SellerShellComponent implements OnInit, OnDestroy {
     const titles: Record<string, string> = {
       "/seller/shops": "Mes boutiques",
       "/seller/products": "Produits",
+      "/seller/orders": "Commandes",
       "/seller/stock-movements": "Mouvements de stock",
       '/seller/stock-movements/lines': 'Lignes de mouvement',
     };

@@ -7,7 +7,7 @@ import StockMovementLine from "../models/StockMovementLine.js";
 import config from "../config/env.js";
 
 // Seed tag to keep runs traceable
-const SEED_NOTE = "seed-stock-2026-02";
+const SEED_NOTE = "seed-stock-2026-03";
 
 // Minimal movement plan per product SKU
 const MOVEMENT_PLAN = [
@@ -21,6 +21,13 @@ const MOVEMENT_PLAN = [
 				unitPrice: 5500000,
 				buyerEmail: "buyer@test.com",
 				paymentMethod: "CARD",
+				saleStatus: "DELIVERED",
+			},
+			{
+				type: "RETURN_CUSTOMER",
+				quantity: 1,
+				unitPrice: 5500000,
+				notes: "Customer returned one item",
 			},
 		],
 	},
@@ -34,6 +41,7 @@ const MOVEMENT_PLAN = [
 				unitPrice: 450000,
 				buyerEmail: "buyer@test.com",
 				paymentMethod: "MOBILE_MONEY",
+				saleStatus: "CONFIRMED",
 			},
 		],
 	},
@@ -59,7 +67,7 @@ async function seedStockMovements() {
 	console.log("✅ Connected");
 
 	// Clean previous seed batch to stay idempotent
-	const previousHeaders = await StockMovement.find({ note: SEED_NOTE }).select("_id");
+	const previousHeaders = await StockMovement.find({ note: /seed-stock-2026-/ }).select("_id");
 	const headerIds = previousHeaders.map((header) => header._id);
 	if (headerIds.length) {
 		await StockMovementLine.deleteMany({ moveId: { $in: headerIds } });
@@ -96,15 +104,18 @@ async function seedStockMovements() {
 				movementType: move.type,
 				direction,
 				performedBy: product.sellerId,
+				shopId: product.shopId,
 				note: SEED_NOTE,
 				date: new Date(),
 			};
 
 			if (move.type === "SALE") {
+				const saleStatus = move.saleStatus || "CONFIRMED";
 				movementDoc.sale = {
 					paymentMethod: move.paymentMethod,
-					status: "CONFIRMED",
+					status: saleStatus,
 					confirmedAt: new Date(),
+					deliveredAt: saleStatus === "DELIVERED" ? new Date() : undefined,
 				};
 			}
 

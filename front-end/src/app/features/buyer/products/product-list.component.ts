@@ -482,6 +482,14 @@ export class ProductListComponent implements OnInit {
    * Gère l'ajout au panier
    */
   async handleAddToCart(product: Product): Promise<void> {
+    const availableStock = product.stock?.cache?.available ?? 0;
+    const isOutOfStock = !!product.isOutOfStock || availableStock <= 0;
+
+    if (isOutOfStock) {
+      this.toastService.warning('Produit en rupture de stock');
+      return;
+    }
+
     // Vérifier l'authentification
     if (!this.authService.isAuthenticated()) {
       this.toastService.info('Connectez-vous pour ajouter au panier');

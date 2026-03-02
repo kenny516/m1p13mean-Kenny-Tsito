@@ -58,27 +58,11 @@ export const getOne = async (req, res, next) => {
 		if (req.user.role === "SELLER") {
 			const shops = await Shop.find({ sellerId: req.user._id }, "_id").lean();
 			const ownedShopIds = new Set(shops.map((shop) => shop._id.toString()));
-			const lineShopIds = (movement.lineIds || [])
-				.map((line) => {
-					const lineShop = line?.shopId;
-					if (!lineShop) return null;
+			const movementShopId = movement?.shopId?._id
+				? movement.shopId._id.toString()
+				: movement?.shopId?.toString?.() || null;
 
-					if (typeof lineShop === "string") {
-						return lineShop;
-					}
-
-					if (typeof lineShop === "object") {
-						if (lineShop._id) return lineShop._id.toString();
-						const raw = lineShop.toString?.();
-						if (raw && raw !== "[object Object]") return raw;
-					}
-
-					return null;
-				})
-				.filter(Boolean);
-
-			const hasForeignShop = lineShopIds.some((shopId) => !ownedShopIds.has(shopId));
-			if (hasForeignShop) {
+			if (!movementShopId || !ownedShopIds.has(movementShopId)) {
 				throw new ApiError(403, "FORBIDDEN", "Accès interdit à ce mouvement");
 			}
 		}
@@ -135,6 +119,35 @@ export const listSales = async (req, res, next) => {
 		res.json({
 			success: true,
 			data: sales,
+			pagination: {
+				page,
+				limit,
+				total,
+				pages: Math.ceil(total / limit),
+			},
+		});
+	} catch (error) {
+		next(error);
+	}
+};
+
+// ==========================================
+// Lister les commandes vendeur (SALE + RETURN_CUSTOMER)
+// GET /api/stock-movements/orders
+// ==========================================
+
+export const listSellerOrders = async (req, res, next) => {
+	try {
+		if (req.user.role !== "SELLER") {
+			throw new ApiError(403, "FORBIDDEN", "Accès réservé aux vendeurs");
+		}
+
+		const { orders, total, page, limit } =
+			await stockMovementService.listSellerOrders(req.user._id, req.query);
+
+		res.json({
+			success: true,
+			data: orders,
 			pagination: {
 				page,
 				limit,

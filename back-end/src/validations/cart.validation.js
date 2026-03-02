@@ -44,3 +44,7 @@ export const checkoutCartSchema = Joi.object({
 		}),
 	notes: Joi.string().max(500).allow(""),
 }).strict();
+
+export const returnOrderSchema = Joi.object({
+	note: Joi.string().max(500).allow(""),
+}).strict();

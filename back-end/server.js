@@ -1,6 +1,10 @@
 import app from "./app.js";
 import config from "./src/config/env.js";
 import connectDB from "./src/config/db.js";
+import {
+  startCartExpirationJob,
+  stopCartExpirationJob,
+} from "./src/jobs/cartExpiration.job.js";
 
 /**
  * Point d'entrée de l'application
@@ -10,6 +14,9 @@ const startServer = async () => {
   try {
     // Connexion à MongoDB
     await connectDB();
+
+    // Démarrage des jobs
+    startCartExpirationJob();
 
     // Démarrage du serveur
     app.listen(config.port, () => {
@@ -31,13 +38,25 @@ const startServer = async () => {
 
 // Gestion des erreurs non capturées
 process.on("unhandledRejection", (err) => {
+  stopCartExpirationJob();
   console.error("❌ Erreur non gérée:", err);
   process.exit(1);
 });
 
 process.on("uncaughtException", (err) => {
+  stopCartExpirationJob();
   console.error("❌ Exception non capturée:", err);
   process.exit(1);
+});
+
+process.on("SIGTERM", () => {
+  stopCartExpirationJob();
+  process.exit(0);
+});
+
+process.on("SIGINT", () => {
+  stopCartExpirationJob();
+  process.exit(0);
 });
 
 // Démarrer le serveur

@@ -11,6 +11,7 @@ import {
   DeliveryAddress,
   OrdersResponse,
 } from '../models';
+import { Pagination } from '../models/api.model';
 
 /**
  * Service de gestion du panier
@@ -198,6 +199,22 @@ export class CartService {
   }
 
   /**
+   * Retourne une commande livrée
+   * @param orderId - Identifiant de la commande
+   * @param note - Note optionnelle
+   */
+  async returnOrder(orderId: string, note?: string): Promise<Cart> {
+    this.isLoadingSignal.set(true);
+    try {
+      return await this.api.post<Cart>(`/cart/orders/${orderId}/return`, {
+        note,
+      });
+    } finally {
+      this.isLoadingSignal.set(false);
+    }
+  }
+
+  /**
    * Récupère les commandes de l'utilisateur
    * @param page - Numéro de page
    * @param limit - Nombre d'éléments par page
@@ -215,11 +232,23 @@ export class CartService {
     if (status) {
       params.append('status', status);
     }
-    const response = await this.api.get<Cart[]>(
+    const response = await this.api.getWithPagination<Cart[]>(
       `/cart/orders?${params.toString()}`,
     );
-    // L'API retourne data directement avec pagination
-    return response as unknown as OrdersResponse;
+
+    const pagination: Pagination = response.pagination || {
+      page,
+      limit,
+      total: (response.data || []).length,
+      pages: 1,
+      hasNext: false,
+      hasPrev: page > 1,
+    };
+
+    return {
+      orders: response.data || [],
+      pagination,
+    };
   }
 
   /**

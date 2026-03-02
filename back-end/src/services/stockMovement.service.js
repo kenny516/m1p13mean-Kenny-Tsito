@@ -7,6 +7,15 @@ import { ApiError } from "../middlewares/error.middleware.js";
 import { parseSortOption } from "../utils/request.util.js";
 import { createStockMovement } from "./stockMovementLine.service.js";
 
+const INTERNAL_MOVEMENT_TYPES = [
+	"SUPPLY",
+	"RETURN_SUPPLIER",
+	"ADJUSTMENT_PLUS",
+	"ADJUSTMENT_MINUS",
+	"RESERVATION",
+	"RESERVATION_CANCEL",
+];
+
 const MOVEMENT_POPULATE = [
 	{
 		path: "lineIds",
@@ -15,6 +24,7 @@ const MOVEMENT_POPULATE = [
 			{ path: "shopId", select: "name" },
 		],
 	},
+	{ path: "shopId", select: "name" },
 	{ path: "performedBy", select: "email profile" },
 ];
 
@@ -139,12 +149,33 @@ export const listMyShopMovements = async (sellerId, filters = {}) => {
 		scopedShopFilter = requestedShopId;
 	}
 
-	const moveIds = await _resolveMoveIdsFromLineFilters({
-		...filters,
+	const headerQuery = {
 		shopId: scopedShopFilter,
-	});
+		movementType: filters.movementType || { $in: INTERNAL_MOVEMENT_TYPES },
+	};
 
-	return _listMovementsByIds(moveIds, filters);
+	if (filters.direction) headerQuery.direction = filters.direction;
+	if (filters.startDate || filters.endDate) {
+		headerQuery.createdAt = {};
+		if (filters.startDate) headerQuery.createdAt.$gte = new Date(filters.startDate);
+		if (filters.endDate) headerQuery.createdAt.$lte = new Date(filters.endDate);
+	}
+
+	const page = Number(filters.page) || 1;
+	const limit = Number(filters.limit) || 10;
+	const skip = (page - 1) * limit;
+	const sortOptions = parseSortOption(filters.sort);
+
+	const [movements, total] = await Promise.all([
+		StockMovement.find(headerQuery)
+			.populate(MOVEMENT_POPULATE)
+			.sort(sortOptions)
+			.skip(skip)
+			.limit(limit),
+		StockMovement.countDocuments(headerQuery),
+	]);
+
+	return { movements, total, page, limit };
 };
 
 // ==========================================
@@ -152,15 +183,28 @@ export const listMyShopMovements = async (sellerId, filters = {}) => {
 // ==========================================
 
 export const listSales = async (filters = {}) => {
-	const moveIds = await _resolveMoveIdsFromLineFilters({
-		shopId: filters.shopId,
-		movementType: "SALE",
-	});
+	const query = { movementType: "SALE" };
+	if (filters.shopId) query.shopId = filters.shopId;
+	if (filters.status) query["sale.status"] = filters.status;
+	if (filters.startDate || filters.endDate) {
+		query.createdAt = {};
+		if (filters.startDate) query.createdAt.$gte = new Date(filters.startDate);
+		if (filters.endDate) query.createdAt.$lte = new Date(filters.endDate);
+	}
 
-	const { movements, total, page, limit } = await _listMovementsByIds(moveIds, {
-		...filters,
-		movementType: "SALE",
-	});
+	const page = Number(filters.page) || 1;
+	const limit = Number(filters.limit) || 10;
+	const skip = (page - 1) * limit;
+	const sortOptions = parseSortOption(filters.sort);
+
+	const [movements, total] = await Promise.all([
+		StockMovement.find(query)
+			.populate(MOVEMENT_POPULATE)
+			.sort(sortOptions)
+			.skip(skip)
+			.limit(limit),
+		StockMovement.countDocuments(query),
+	]);
 
 	return { sales: movements, total, page, limit };
 };
@@ -170,17 +214,87 @@ export const listSales = async (filters = {}) => {
 // ==========================================
 
 export const listSupplies = async (filters = {}) => {
-	const moveIds = await _resolveMoveIdsFromLineFilters({
-		shopId: filters.shopId,
-		movementType: "SUPPLY",
-	});
+	const query = { movementType: "SUPPLY" };
+	if (filters.shopId) query.shopId = filters.shopId;
+	if (filters.startDate || filters.endDate) {
+		query.createdAt = {};
+		if (filters.startDate) query.createdAt.$gte = new Date(filters.startDate);
+		if (filters.endDate) query.createdAt.$lte = new Date(filters.endDate);
+	}
 
-	const { movements, total, page, limit } = await _listMovementsByIds(moveIds, {
-		...filters,
-		movementType: "SUPPLY",
-	});
+	const page = Number(filters.page) || 1;
+	const limit = Number(filters.limit) || 10;
+	const skip = (page - 1) * limit;
+	const sortOptions = parseSortOption(filters.sort);
+
+	const [movements, total] = await Promise.all([
+		StockMovement.find(query)
+			.populate(MOVEMENT_POPULATE)
+			.sort(sortOptions)
+			.skip(skip)
+			.limit(limit),
+		StockMovement.countDocuments(query),
+	]);
 
 	return { supplies: movements, total, page, limit };
+};
+
+export const listSellerOrders = async (sellerId, filters = {}) => {
+	const shops = await Shop.find({ sellerId }, "_id");
+	const ownedShopIds = shops.map((shop) => shop._id.toString());
+
+	if (!ownedShopIds.length) {
+		return {
+			orders: [],
+			total: 0,
+			page: Number(filters.page) || 1,
+			limit: Number(filters.limit) || 10,
+		};
+	}
+
+	let scopedShopFilter = { $in: ownedShopIds };
+	if (filters.shopId) {
+		const requestedShopId = filters.shopId.toString();
+		if (!ownedShopIds.includes(requestedShopId)) {
+			return {
+				orders: [],
+				total: 0,
+				page: Number(filters.page) || 1,
+				limit: Number(filters.limit) || 10,
+			};
+		}
+		scopedShopFilter = requestedShopId;
+	}
+
+	const query = {
+		shopId: scopedShopFilter,
+		movementType: { $in: ["SALE", "RETURN_CUSTOMER"] },
+	};
+
+	if (filters.status) {
+		query["sale.status"] = filters.status;
+	}
+	if (filters.startDate || filters.endDate) {
+		query.createdAt = {};
+		if (filters.startDate) query.createdAt.$gte = new Date(filters.startDate);
+		if (filters.endDate) query.createdAt.$lte = new Date(filters.endDate);
+	}
+
+	const page = Number(filters.page) || 1;
+	const limit = Number(filters.limit) || 10;
+	const skip = (page - 1) * limit;
+	const sortOptions = parseSortOption(filters.sort);
+
+	const [movements, total] = await Promise.all([
+		StockMovement.find(query)
+			.populate(MOVEMENT_POPULATE)
+			.sort(sortOptions)
+			.skip(skip)
+			.limit(limit),
+		StockMovement.countDocuments(query),
+	]);
+
+	return { orders: movements, total, page, limit };
 };
 
 // ==========================================
@@ -191,7 +305,7 @@ export const listSupplies = async (filters = {}) => {
  * Met à jour le statut d'une vente.
  * Gère les transitions valides et les effets de bord (annulation → retour stock).
  */
-export const updateSaleStatus = async (movementId, statusData, performedBy) => {
+export const updateSaleStatus = async (movementId, statusData, performedBy, options = {}) => {
 	const movement = await StockMovement.findById(movementId);
 	if (!movement) {
 		throw new ApiError(404, "NOT_FOUND", "Mouvement non trouvé");
@@ -218,32 +332,9 @@ export const updateSaleStatus = async (movementId, statusData, performedBy) => {
 	// Dates automatiques
 	if (newStatus === "CONFIRMED") movement.sale.confirmedAt = new Date();
 	if (newStatus === "DELIVERED") movement.sale.deliveredAt = new Date();
-	if (newStatus === "CANCELLED") movement.sale.cancelledAt = new Date();
 
-	await movement.save();
-
-	// Effet de bord : annulation → créer un retour client
-	if (newStatus === "CANCELLED") {
-		const lines = await StockMovementLine.find({ moveId: movement._id });
-		if (lines.length) {
-			const items = lines.map((line) => ({
-				productId: line.productId.toString(),
-				shopId: line.shopId.toString(),
-				quantity: line.quantity,
-				unitPrice: line.unitPrice,
-			}));
-
-			await createStockMovement(
-				{
-					movementType: "RETURN_CUSTOMER",
-					items,
-					note: `Retour automatique suite a annulation de la vente ${movement.reference}`,
-					date : new Date(),
-				},
-				performedBy,
-			);
-		}
-	}
+	const saveOptions = options.session ? { session: options.session } : {};
+	await movement.save(saveOptions);
 
 	return movement;
 };
