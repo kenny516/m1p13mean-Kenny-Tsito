@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { CartService, ToastService } from '../../../core/services';
+import { CartService, ToastService, SettingsService } from '../../../core/services';
 import { Cart, CartStatus } from '../../../core/models';
 import { ZardCardComponent } from '../../../shared/components/card';
 import { ZardButtonComponent } from '../../../shared/components/button';
@@ -201,23 +201,42 @@ import { ZardPaginationComponent } from '../../../shared/components/pagination';
                 @if (order.status === 'DELIVERED') {
                   <div class="p-4 border-t border-border bg-green-50">
                     <div class="flex justify-between items-center gap-3">
-                      <p class="text-sm text-green-700 flex items-center">
-                        <z-icon zType="circle-check" class="h-4 w-4 mr-2" />
-                        Commande livrée et réceptionnée
-                      </p>
-                      <button
-                        z-button
-                        zType="outline"
-                        [disabled]="returningOrder() === order._id"
-                        (click)="returnOrder(order)"
-                      >
-                        @if (returningOrder() === order._id) {
-                          <z-spinner class="mr-2" size="sm" />
-                          Retour...
-                        } @else {
-                          Retourner la commande
+                      <div>
+                        <p class="text-sm text-green-700 flex items-center">
+                          <z-icon zType="circle-check" class="h-4 w-4 mr-2" />
+                          Commande livrée et réceptionnée
+                        </p>
+                        @if (order.deliveredAt) {
+                          @if (isReturnAllowed(order)) {
+                            <p class="text-xs text-muted-foreground mt-1 ml-6">
+                              Retour possible jusqu'au {{ getReturnDeadline(order) }}
+                            </p>
+                          } @else {
+                            <p class="text-xs text-red-500 mt-1 ml-6">
+                              Délai de retour expiré le {{ getReturnDeadline(order) }}
+                            </p>
+                          }
                         }
-                      </button>
+                      </div>
+                      @if (isReturnAllowed(order)) {
+                        <button
+                          z-button
+                          zType="outline"
+                          [disabled]="returningOrder() === order._id"
+                          (click)="returnOrder(order)"
+                        >
+                          @if (returningOrder() === order._id) {
+                            <z-spinner class="mr-2" size="sm" />
+                            Retour...
+                          } @else {
+                            Retourner la commande
+                          }
+                        </button>
+                      } @else {
+                        <span class="text-xs text-muted-foreground italic">
+                          Retour non disponible
+                        </span>
+                      }
                     </div>
                   </div>
                 }
@@ -254,6 +273,7 @@ export class OrdersComponent implements OnInit {
   private cartService = inject(CartService);
   private toastService = inject(ToastService);
   private dialogService = inject(ZardDialogService);
+  private settingsService = inject(SettingsService);
 
   // États
   orders = signal<Cart[]>([]);
@@ -262,9 +282,24 @@ export class OrdersComponent implements OnInit {
   isLoading = signal(false);
   confirmingDelivery = signal<string | null>(null);
   returningOrder = signal<string | null>(null);
+  /** Délai de retour en jours (depuis les settings) */
+  returnWindowDays = signal<number>(7);
 
   ngOnInit(): void {
     this.loadOrders();
+    this.loadReturnWindow();
+  }
+
+  /**
+   * Charge le délai de retour depuis les settings de la plateforme
+   */
+  async loadReturnWindow(): Promise<void> {
+    try {
+      const settings = await this.settingsService.getSettings();
+      this.returnWindowDays.set(settings.returnWindowDays ?? 7);
+    } catch {
+      // Garder la valeur par défaut si erreur
+    }
   }
 
   /**
@@ -337,6 +372,35 @@ export class OrdersComponent implements OnInit {
     } finally {
       this.returningOrder.set(null);
     }
+  }
+
+  /**
+   * Vérifie si le délai de retour est encore valide pour une commande livrée
+   */
+  isReturnAllowed(order: Cart): boolean {
+    if (!order.deliveredAt) {
+      // Si deliveredAt n'est pas défini (anciennes commandes), on autorise le retour
+      return true;
+    }
+    const deliveredAt = new Date(order.deliveredAt).getTime();
+    const windowMs = this.returnWindowDays() * 24 * 60 * 60 * 1000;
+    return Date.now() <= deliveredAt + windowMs;
+  }
+
+  /**
+   * Retourne la date limite de retour formatée pour une commande livrée
+   */
+  getReturnDeadline(order: Cart): string {
+    if (!order.deliveredAt) return '';
+    const deadline = new Date(
+      new Date(order.deliveredAt).getTime() +
+        this.returnWindowDays() * 24 * 60 * 60 * 1000,
+    );
+    return deadline.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    });
   }
 
   /**

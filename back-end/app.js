@@ -105,8 +105,8 @@ if (config.nodeEnv === "development") {
 
 // Rate limiter global
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // max 100 requêtes par IP
+  windowMs: 60 * 60 * 1000, // 1 heure
+  max: 1000, // max 1000 requêtes par IP
   message: {
     success: false,
     error: {
@@ -122,7 +122,7 @@ app.use("/api/", globalLimiter);
 // Rate limiter strict pour l'authentification
 const authLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 heure
-  max: 10, // max 10 tentatives
+  max: 50, // max 50 tentatives
   message: {
     success: false,
     error: {

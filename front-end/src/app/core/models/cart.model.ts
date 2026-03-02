@@ -70,6 +70,7 @@ export interface Cart {
   items: CartItem[];
   totalAmount: number;
   expiresAt?: string;
+  deliveredAt?: string;
   createdAt: string;
   updatedAt?: string;
 }

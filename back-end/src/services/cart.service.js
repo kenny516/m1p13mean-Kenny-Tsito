@@ -958,6 +958,7 @@ export const confirmDelivery = async (userId, cartId) => {
     await debitDeliveryCommissions(cart, txn.session);
  
     cart.status = "DELIVERED";
+    cart.deliveredAt = new Date();
     const saveOptions = txn.session ? { session: txn.session } : {};
     await cart.save(saveOptions);
 
@@ -993,6 +994,19 @@ export const returnOrder = async (userId, orderId, payload = {}) => {
         "INVALID_STATUS",
         "Seules les commandes en cours ou livrées peuvent être retournées",
       );
+    }
+
+    // Vérifier le délai de retour pour les commandes déjà livrées
+    if (cart.status === "DELIVERED" && cart.deliveredAt) {
+      const settings = await settingsService.getSettings();
+      const returnWindowMs = (settings.returnWindowDays ?? 7) * 24 * 60 * 60 * 1000;
+      if (Date.now() - new Date(cart.deliveredAt).getTime() > returnWindowMs) {
+        throw new ApiError(
+          400,
+          "RETURN_WINDOW_EXPIRED",
+          `Le délai de retour de ${settings.returnWindowDays ?? 7} jour(s) est dépassé`,
+        );
+      }
     }
 
     if (!cart.order?.saleId) {

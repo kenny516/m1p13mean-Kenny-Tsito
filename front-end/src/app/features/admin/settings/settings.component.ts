@@ -111,6 +111,22 @@ import { ZardSpinnerComponent } from "@/shared/components/spinner";
                     />
                     <span class="text-muted-foreground text-sm">min</span>
                   </div>
+                  <div class="mt-4">
+                    <z-label for="returnWindowDays">Délai de retour (jours)</z-label>
+                    <div class="flex items-center gap-2 mt-1">
+                      <input
+                        z-input
+                        type="number"
+                        id="returnWindowDays"
+                        [(ngModel)]="formData.returnWindowDays"
+                        name="returnWindowDays"
+                        min="1"
+                        max="365"
+                        class="w-24"
+                      />
+                      <span class="text-muted-foreground text-sm">jours après livraison</span>
+                    </div>
+                  </div>
                 </div>
               </z-card>
 
@@ -309,6 +325,7 @@ export class AdminSettingsComponent implements OnInit {
   formData = {
     defaultCommissionRate: 10,
     cartTTLMinutes: 30,
+    returnWindowDays: 7,
     lowStockThreshold: 10,
     outOfStockThreshold: 0,
     currency: "MGA",
@@ -346,6 +363,7 @@ export class AdminSettingsComponent implements OnInit {
     this.formData = {
       defaultCommissionRate: settings.defaultCommissionRate,
       cartTTLMinutes: settings.cartTTLMinutes,
+      returnWindowDays: settings.returnWindowDays ?? 7,
       lowStockThreshold: settings.lowStockThreshold,
       outOfStockThreshold: settings.outOfStockThreshold,
       currency: settings.currency,

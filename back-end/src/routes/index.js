@@ -7,6 +7,7 @@ import shopRoutes from "./shop.routes.js";
 import stockMovementRoutes from "./stockMovement.routes.js";
 import cartRoutes from "./cart.routes.js";
 import reviewRoutes from "./review.routes.js";
+import settingsRoutes from "./settings.routes.js";
 
 const router = Router();
 
@@ -32,5 +33,8 @@ router.use("/cart", cartRoutes);
 
 // Routes reviews (avis)
 router.use("/reviews", reviewRoutes);
+
+// Routes settings (paramètres publics)
+router.use("/settings", settingsRoutes);
 
 export default router;

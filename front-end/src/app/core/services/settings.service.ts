@@ -26,7 +26,7 @@ export class SettingsService {
   async getSettings(): Promise<Settings> {
     this.isLoadingSignal.set(true);
     try {
-      const settings = await this.api.get<Settings>('/admin/settings');
+      const settings = await this.api.get<Settings>('/settings');
       this.settingsSignal.set(settings);
       return settings;
     } finally {

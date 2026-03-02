@@ -87,6 +87,14 @@ const settingsSchema = new mongoose.Schema(
       default: 10000, // Montant minimum de retrait
       min: 0,
     },
+
+    // === PARAMÈTRES RETOUR ===
+    returnWindowDays: {
+      type: Number,
+      default: 7, // Délai en jours pour retourner une commande après livraison
+      min: 1,
+      max: 365,
+    },
   },
   {
     timestamps: true,
