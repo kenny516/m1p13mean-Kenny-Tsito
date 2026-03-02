@@ -355,3 +355,28 @@ export const getCommissionStatsByPeriod = async (req, res, next) => {
 		next(error);
 	}
 };
+
+// ==========================================
+// Dashboard vendeur : résumé analytique
+// GET /api/stock-movements/dashboard/summary
+// ==========================================
+
+export const getSellerDashboardSummary = async (req, res, next) => {
+	try {
+		if (req.user.role !== "SELLER") {
+			throw new ApiError(403, "FORBIDDEN", "Accès réservé aux vendeurs");
+		}
+
+		const summary = await stockMovementService.getSellerDashboardSummary(
+			req.user._id,
+			req.query,
+		);
+
+		res.json({
+			success: true,
+			data: summary,
+		});
+	} catch (error) {
+		next(error);
+	}
+};

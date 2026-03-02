@@ -8,6 +8,7 @@ import {
 	listStockMovementsQuerySchema,
 	listSalesQuerySchema,
 	listSuppliesQuerySchema,
+	sellerDashboardSummaryQuerySchema,
 } from "../validations/stockMovement.validation.js";
 import { listStockMovementLineQuerySchema } from "../validations/stockMovementLine.validation.js";
 
@@ -65,6 +66,17 @@ router.get(
 	"/supplies",
 	validateQuery(listSuppliesQuerySchema),
 	stockMovementController.listSupplies,
+);
+
+/**
+ * @route   GET /api/stock-movements/dashboard/summary
+ * @desc    Récupérer un résumé analytique pour le dashboard vendeur
+ * @access  Private (SELLER)
+ */
+router.get(
+	"/dashboard/summary",
+	validateQuery(sellerDashboardSummaryQuerySchema),
+	stockMovementController.getSellerDashboardSummary,
 );
 
 /**
