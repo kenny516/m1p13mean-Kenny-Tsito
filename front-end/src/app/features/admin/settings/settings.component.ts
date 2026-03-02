@@ -1,19 +1,18 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { SettingsService, ToastService } from '@/core';
-import { Settings, SETTINGS_GROUPS } from '@/core/models/settings.model';
-import { ZardCardComponent } from '@/shared/components/card';
-import { ZardButtonComponent } from '@/shared/components/button';
-import { ZardInputDirective } from '@/shared/components/input';
-import { ZardLabelComponent } from '@/shared/components/label';
-import { ZardIconComponent } from '@/shared/components/icon';
-import { ZardSkeletonComponent } from '@/shared/components/skeleton';
-import { ZardSpinnerComponent } from '@/shared/components/spinner';
-import { ZardSwitchComponent } from '@/shared/components/switch';
+import { Component, inject, OnInit, signal } from "@angular/core";
+import { CommonModule } from "@angular/common";
+import { FormsModule } from "@angular/forms";
+import { SettingsService, ToastService } from "@/core";
+import { Settings, SETTINGS_GROUPS } from "@/core/models/settings.model";
+import { ZardCardComponent } from "@/shared/components/card";
+import { ZardButtonComponent } from "@/shared/components/button";
+import { ZardInputDirective } from "@/shared/components/input";
+import { ZardLabelComponent } from "@/shared/components/label";
+import { ZardIconComponent } from "@/shared/components/icon";
+import { ZardSkeletonComponent } from "@/shared/components/skeleton";
+import { ZardSpinnerComponent } from "@/shared/components/spinner";
 
 @Component({
-  selector: 'app-admin-settings',
+  selector: "app-admin-settings",
   standalone: true,
   imports: [
     CommonModule,
@@ -25,7 +24,6 @@ import { ZardSwitchComponent } from '@/shared/components/switch';
     ZardIconComponent,
     ZardSkeletonComponent,
     ZardSpinnerComponent,
-    ZardSwitchComponent,
   ],
   template: `
     <div class="px-6 lg:px-8">
@@ -56,7 +54,6 @@ import { ZardSwitchComponent } from '@/shared/components/switch';
         <form (ngSubmit)="onSubmit()">
           <!-- Grille principale 2 colonnes -->
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
             <!-- Colonne gauche -->
             <div class="space-y-6">
               <!-- Section Commission -->
@@ -92,7 +89,10 @@ import { ZardSwitchComponent } from '@/shared/components/switch';
               <z-card class="overflow-hidden">
                 <div class="px-4 py-3 bg-muted/50 border-b border-border">
                   <div class="flex items-center gap-2">
-                    <z-icon zType="shopping-cart" class="h-4 w-4 text-orange-500" />
+                    <z-icon
+                      zType="shopping-cart"
+                      class="h-4 w-4 text-orange-500"
+                    />
                     <h2 class="font-semibold text-foreground">Panier</h2>
                   </div>
                 </div>
@@ -217,13 +217,18 @@ import { ZardSwitchComponent } from '@/shared/components/switch';
               <z-card class="overflow-hidden">
                 <div class="px-4 py-3 bg-muted/50 border-b border-border">
                   <div class="flex items-center gap-2">
-                    <z-icon zType="credit-card" class="h-4 w-4 text-green-500" />
+                    <z-icon
+                      zType="credit-card"
+                      class="h-4 w-4 text-green-500"
+                    />
                     <h2 class="font-semibold text-foreground">Paiement</h2>
                   </div>
                 </div>
                 <div class="p-4 grid grid-cols-3 gap-3">
                   <div>
-                    <z-label for="minOrderAmount" class="text-xs">Min commande</z-label>
+                    <z-label for="minOrderAmount" class="text-xs"
+                      >Min commande</z-label
+                    >
                     <input
                       z-input
                       type="number"
@@ -235,7 +240,9 @@ import { ZardSwitchComponent } from '@/shared/components/switch';
                     />
                   </div>
                   <div>
-                    <z-label for="maxOrderAmount" class="text-xs">Max commande</z-label>
+                    <z-label for="maxOrderAmount" class="text-xs"
+                      >Max commande</z-label
+                    >
                     <input
                       z-input
                       type="number"
@@ -247,7 +254,9 @@ import { ZardSwitchComponent } from '@/shared/components/switch';
                     />
                   </div>
                   <div>
-                    <z-label for="minWithdrawalAmount" class="text-xs">Retrait min</z-label>
+                    <z-label for="minWithdrawalAmount" class="text-xs"
+                      >Retrait min</z-label
+                    >
                     <input
                       z-input
                       type="number"
@@ -258,40 +267,6 @@ import { ZardSwitchComponent } from '@/shared/components/switch';
                       class="mt-1"
                     />
                   </div>
-                </div>
-              </z-card>
-
-              <!-- Section Maintenance -->
-              <z-card class="overflow-hidden">
-                <div class="px-4 py-3 bg-muted/50 border-b border-border">
-                  <div class="flex items-center gap-2">
-                    <z-icon zType="settings" class="h-4 w-4 text-red-500" />
-                    <h2 class="font-semibold text-foreground">Maintenance</h2>
-                  </div>
-                </div>
-                <div class="p-4 space-y-3">
-                  <div class="flex items-center justify-between">
-                    <div>
-                      <span class="font-medium text-sm">Mode maintenance</span>
-                    </div>
-                    <z-switch
-                      [(ngModel)]="formData.maintenanceMode"
-                      name="maintenanceMode"
-                    />
-                  </div>
-                  @if (formData.maintenanceMode) {
-                    <div>
-                      <z-label for="maintenanceMessage">Message</z-label>
-                      <textarea
-                        z-input
-                        id="maintenanceMessage"
-                        [(ngModel)]="formData.maintenanceMessage"
-                        name="maintenanceMessage"
-                        rows="2"
-                        class="mt-1 w-full"
-                      ></textarea>
-                    </div>
-                  }
                 </div>
               </z-card>
             </div>
@@ -336,12 +311,12 @@ export class AdminSettingsComponent implements OnInit {
     cartTTLMinutes: 30,
     lowStockThreshold: 10,
     outOfStockThreshold: 0,
-    currency: 'MGA',
-    platformName: 'Marketplace',
+    currency: "MGA",
+    platformName: "Marketplace",
     maintenanceMode: false,
-    maintenanceMessage: '',
-    contactEmail: '',
-    supportEmail: '',
+    maintenanceMessage: "",
+    contactEmail: "",
+    supportEmail: "",
     minOrderAmount: 0,
     maxOrderAmount: 0,
     minWithdrawalAmount: 10000,
@@ -360,7 +335,7 @@ export class AdminSettingsComponent implements OnInit {
       this.settings.set(settings);
       this.populateForm(settings);
     } catch (error) {
-      this.toastService.error('Erreur lors du chargement des paramètres');
+      this.toastService.error("Erreur lors du chargement des paramètres");
       console.error(error);
     } finally {
       this.isLoading.set(false);
@@ -376,9 +351,9 @@ export class AdminSettingsComponent implements OnInit {
       currency: settings.currency,
       platformName: settings.platformName,
       maintenanceMode: settings.maintenanceMode,
-      maintenanceMessage: settings.maintenanceMessage || '',
-      contactEmail: settings.contactEmail || '',
-      supportEmail: settings.supportEmail || '',
+      maintenanceMessage: settings.maintenanceMessage || "",
+      contactEmail: settings.contactEmail || "",
+      supportEmail: settings.supportEmail || "",
       minOrderAmount: settings.minOrderAmount,
       maxOrderAmount: settings.maxOrderAmount,
       minWithdrawalAmount: settings.minWithdrawalAmount,
@@ -388,7 +363,7 @@ export class AdminSettingsComponent implements OnInit {
   resetForm(): void {
     if (this.settings()) {
       this.populateForm(this.settings()!);
-      this.toastService.info('Modifications annulées');
+      this.toastService.info("Modifications annulées");
     }
   }
 
@@ -397,7 +372,7 @@ export class AdminSettingsComponent implements OnInit {
     try {
       const settings = await this.settingsService.updateSettings(this.formData);
       this.settings.set(settings);
-      this.toastService.success('Paramètres enregistrés avec succès');
+      this.toastService.success("Paramètres enregistrés avec succès");
     } catch (error) {
       this.toastService.error("Erreur lors de l'enregistrement des paramètres");
       console.error(error);
