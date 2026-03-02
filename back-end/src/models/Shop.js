@@ -51,7 +51,12 @@ const shopSchema = new mongoose.Schema(
     },
     stats: {
       totalSales: { type: Number, default: 0 },
-      totalProducts: { type: Number, default: 0 },
+      deliveredSalesAmount: { type: Number, default: 0 },
+      products: {
+        pending: { type: Number, default: 0 },
+        active: { type: Number, default: 0 },
+        archived: { type: Number, default: 0 },
+      },
       rating: { type: Number, default: 0 },
     },
   },

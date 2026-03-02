@@ -6,6 +6,7 @@ import Shop from "../models/Shop.js";
 import { ApiError } from "../middlewares/error.middleware.js";
 import { parseSortOption } from "../utils/request.util.js";
 import { createStockMovement } from "./stockMovementLine.service.js";
+import { applyDeliveredStatsForSaleMovement } from "./stats.service.js";
 
 const INTERNAL_MOVEMENT_TYPES = [
 	"SUPPLY",
@@ -316,6 +317,8 @@ export const updateSaleStatus = async (movementId, statusData, performedBy, opti
 
 	const currentStatus = movement.sale.status;
 	const newStatus = statusData.status;
+	const isEnteringDelivered = currentStatus !== "DELIVERED" && newStatus === "DELIVERED";
+	const isDeliveredToReturned = currentStatus === "DELIVERED" && newStatus === "RETURNED";
 
 	const allowed = VALID_SALE_TRANSITIONS[currentStatus] || [];
 	if (!allowed.includes(newStatus)) {
@@ -336,6 +339,19 @@ export const updateSaleStatus = async (movementId, statusData, performedBy, opti
 
 	const saveOptions = options.session ? { session: options.session } : {};
 	await movement.save(saveOptions);
+
+	if (isEnteringDelivered) {
+		await applyDeliveredStatsForSaleMovement(movement._id, {
+			session: options.session || null,
+		});
+	}
+
+	if (isDeliveredToReturned) {
+		await applyDeliveredStatsForSaleMovement(movement._id, {
+			reverse: true,
+			session: options.session || null,
+		});
+	}
 
 	return movement;
 };

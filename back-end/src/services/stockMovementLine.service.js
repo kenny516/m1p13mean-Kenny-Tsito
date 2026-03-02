@@ -6,6 +6,7 @@ import Product from "../models/Product.js";
 import { ApiError } from "../middlewares/error.middleware.js";
 import { requireActiveProduct } from "./product.service.js";
 import { requireActiveShop } from "./shop.service.js";
+import { applySaleOrReturnLineStats } from "./stats.service.js";
 import { parseSortOption } from "../utils/request.util.js";
 import { createOptionalSession } from "../utils/transaction.util.js";
 
@@ -283,13 +284,16 @@ const _createLine = async (header, item, options) => {
   );
   await product.save({ session });
 
-  if (header.movementType === "SALE") {
-    await Product.findByIdAndUpdate(
-      product._id,
-      { $inc: { "stats.sales": item.quantity } },
-      { session },
-    );
-  }
+  await applySaleOrReturnLineStats(
+    {
+      movementType: header.movementType,
+      productId: product._id,
+      shopId: resolvedShopId,
+      quantity: item.quantity,
+      totalAmount,
+    },
+    session,
+  );
 
   return line;
 };
