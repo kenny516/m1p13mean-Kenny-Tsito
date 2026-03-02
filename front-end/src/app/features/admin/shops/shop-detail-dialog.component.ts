@@ -126,10 +126,14 @@ export interface ShopDetailDialogData {
         }
 
         <!-- Statistiques -->
-        <div class="grid grid-cols-3 gap-4">
+        <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
           <div class="text-center">
             <p class="text-2xl font-bold text-foreground">
-              {{ shop.stats.totalProducts }}
+              {{
+                (shop.stats.products.active || 0) +
+                (shop.stats.products.pending || 0) +
+                (shop.stats.products.archived || 0)
+              }}
             </p>
             <p class="text-xs text-muted-foreground">Produits</p>
           </div>
@@ -137,13 +141,34 @@ export interface ShopDetailDialogData {
             <p class="text-2xl font-bold text-foreground">
               {{ shop.stats.totalSales }}
             </p>
-            <p class="text-xs text-muted-foreground">Ventes</p>
+            <p class="text-xs text-muted-foreground">CA net</p>
+          </div>
+          <div class="text-center">
+            <p class="text-2xl font-bold text-foreground">
+              {{ shop.stats.deliveredSalesAmount }}
+            </p>
+            <p class="text-xs text-muted-foreground">CA livré</p>
           </div>
           <div class="text-center">
             <p class="text-2xl font-bold text-foreground">
               {{ shop.stats.rating | number: '1.1-1' }}
             </p>
             <p class="text-xs text-muted-foreground">Note</p>
+          </div>
+        </div>
+
+        <div class="mt-4 grid grid-cols-3 gap-3 text-center">
+          <div class="rounded-md border border-border p-2">
+            <p class="text-xs text-muted-foreground">Actifs</p>
+            <p class="text-sm font-semibold text-foreground">{{ shop.stats.products.active || 0 }}</p>
+          </div>
+          <div class="rounded-md border border-border p-2">
+            <p class="text-xs text-muted-foreground">En attente</p>
+            <p class="text-sm font-semibold text-foreground">{{ shop.stats.products.pending || 0 }}</p>
+          </div>
+          <div class="rounded-md border border-border p-2">
+            <p class="text-xs text-muted-foreground">Archivés</p>
+            <p class="text-sm font-semibold text-foreground">{{ shop.stats.products.archived || 0 }}</p>
           </div>
         </div>
 
