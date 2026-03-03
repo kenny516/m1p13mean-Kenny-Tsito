@@ -212,5 +212,6 @@ export const listSuppliesQuerySchema = Joi.object({
 		startDate: Joi.date().iso(),
 		endDate: Joi.date().iso().min(Joi.ref("startDate")),
 		groupBy: Joi.string().valid("day", "week", "month").default("day"),
+		shopId: objectId,
 		topLimit: Joi.number().integer().min(3).max(20).default(5),
 	});

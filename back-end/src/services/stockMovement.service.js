@@ -321,15 +321,16 @@ export const listSellerOrders = async (sellerId, filters = {}) => {
 
 export const getSellerDashboardSummary = async (sellerId, filters = {}) => {
 	const { groupBy = "day" } = filters;
+	const requestedShopId = filters.shopId ? filters.shopId.toString() : null;
 	const topLimit = Number(filters.topLimit) || 5;
 	const { startDate, endDate } = _resolveDateRange(filters);
 
 	const sellerShops = await Shop.find({ sellerId })
 		.select("_id name status stats")
 		.lean();
-	const shopIds = sellerShops.map((shop) => shop._id);
+	const sellerShopIds = sellerShops.map((shop) => shop._id);
 
-	if (!shopIds.length) {
+	if (!sellerShopIds.length) {
 		return {
 			meta: {
 				startDate,
@@ -374,10 +375,23 @@ export const getSellerDashboardSummary = async (sellerId, filters = {}) => {
 		};
 	}
 
+	let scopedShopIds = sellerShopIds;
+	if (requestedShopId) {
+		const requestedShop = sellerShops.find(
+			(shop) => shop._id.toString() === requestedShopId,
+		);
+
+		if (!requestedShop) {
+			throw new ApiError(403, "FORBIDDEN", "Accès interdit à cette boutique");
+		}
+
+		scopedShopIds = [requestedShop._id];
+	}
+
 	const [productStatsAgg, movementTotalsAgg, saleStatusAgg, trendAgg] =
 		await Promise.all([
 			Product.aggregate([
-				{ $match: { shopId: { $in: shopIds } } },
+				{ $match: { shopId: { $in: scopedShopIds } } },
 				{
 					$group: {
 						_id: null,
@@ -430,7 +444,7 @@ export const getSellerDashboardSummary = async (sellerId, filters = {}) => {
 			StockMovement.aggregate([
 				{
 					$match: {
-						shopId: { $in: shopIds },
+						shopId: { $in: scopedShopIds },
 						createdAt: { $gte: startDate, $lte: endDate },
 						movementType: { $in: ["SALE", "RETURN_CUSTOMER", "SUPPLY"] },
 					},
@@ -501,7 +515,7 @@ export const getSellerDashboardSummary = async (sellerId, filters = {}) => {
 			StockMovement.aggregate([
 				{
 					$match: {
-						shopId: { $in: shopIds },
+						shopId: { $in: scopedShopIds },
 						movementType: "SALE",
 						createdAt: { $gte: startDate, $lte: endDate },
 					},
@@ -516,7 +530,7 @@ export const getSellerDashboardSummary = async (sellerId, filters = {}) => {
 			StockMovement.aggregate([
 				{
 					$match: {
-						shopId: { $in: shopIds },
+						shopId: { $in: scopedShopIds },
 						createdAt: { $gte: startDate, $lte: endDate },
 						movementType: { $in: ["SALE", "RETURN_CUSTOMER", "SUPPLY"] },
 					},
@@ -585,7 +599,7 @@ export const getSellerDashboardSummary = async (sellerId, filters = {}) => {
 			StockMovementLine.aggregate([
 				{
 					$match: {
-						shopId: { $in: shopIds },
+						shopId: { $in: scopedShopIds },
 						createdAt: { $gte: startDate, $lte: endDate },
 						movementType: { $in: ["SALE", "RETURN_CUSTOMER"] },
 					},
@@ -665,7 +679,7 @@ export const getSellerDashboardSummary = async (sellerId, filters = {}) => {
 			StockMovementLine.aggregate([
 				{
 					$match: {
-						shopId: { $in: shopIds },
+						shopId: { $in: sellerShopIds },
 						createdAt: { $gte: startDate, $lte: endDate },
 						movementType: { $in: ["SALE", "RETURN_CUSTOMER"] },
 					},
@@ -729,7 +743,7 @@ export const getSellerDashboardSummary = async (sellerId, filters = {}) => {
 				{ $limit: topLimit },
 			]),
 			StockMovement.find({
-				shopId: { $in: shopIds },
+				shopId: { $in: scopedShopIds },
 				movementType: { $in: ["SALE", "RETURN_CUSTOMER"] },
 				createdAt: { $gte: startDate, $lte: endDate },
 			})
@@ -739,7 +753,7 @@ export const getSellerDashboardSummary = async (sellerId, filters = {}) => {
 				.limit(6)
 				.lean(),
 			StockMovement.find({
-				shopId: { $in: shopIds },
+				shopId: { $in: scopedShopIds },
 				movementType: "SUPPLY",
 				createdAt: { $gte: startDate, $lte: endDate },
 			})
