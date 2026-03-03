@@ -365,19 +365,24 @@ export const updateProduct = async (
     delete updateData.stock;
   }
 
-  // Si vendeur modifie un produit ACTIVE, repasser en PENDING pour re-validation
-  // Sauf si c'est juste un changement de statut vers ARCHIVED
-  const isStatusChangeOnly =
-    Object.keys(updateData).length === 1 && updateData.status;
-  const isArchiving = updateData.status === "ARCHIVED";
+  const hasStatusUpdate = typeof updateData.status === "string";
+  const isStatusChangeOnly = Object.keys(updateData).length === 1 && hasStatusUpdate;
 
-  if (
-    userRole !== "ADMIN" &&
-    product.status === "ACTIVE" &&
-    !isStatusChangeOnly
-  ) {
-    product.status = "PENDING";
-  } else if (updateData.status) {
+  if (userRole !== "ADMIN" && hasStatusUpdate) {
+    const isSellerStatusToggleAllowed =
+      (product.status === "ACTIVE" && updateData.status === "ARCHIVED") ||
+      (product.status === "ARCHIVED" && updateData.status === "ACTIVE");
+
+    if (!isSellerStatusToggleAllowed) {
+      throw new ApiError(
+        400,
+        "INVALID_STATUS_TRANSITION",
+        "Un vendeur peut uniquement basculer le statut entre ACTIVE et ARCHIVED",
+      );
+    }
+  }
+
+  if (hasStatusUpdate) {
     product.status = updateData.status;
     delete updateData.status;
   }

@@ -169,10 +169,9 @@ export class SellerOrdersComponent implements OnInit {
 
   async loadOrders(): Promise<void> {
     try {
-      await this.stockMovementService.getSellerOrders(
+      await this.stockMovementService.getSales(
         {
           shopId: this.selectedShopId || undefined,
-          movementType: 'SALE',
           status: this.selectedStatus || undefined,
         },
         this.currentPage(),
