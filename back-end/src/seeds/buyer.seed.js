@@ -11,7 +11,7 @@ import * as walletService from "../services/wallet.service.js";
 
 const BUYERS_DATA = [
   {
-    email: "buyer1@marketplace.mg",
+    email: "Rafidy@marketplace.mg",
     password: "Buyer@2026",
     profile: {
       firstName: "Rafidy",
