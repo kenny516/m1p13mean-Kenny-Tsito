@@ -203,3 +203,14 @@ export const listSuppliesQuerySchema = Joi.object({
 			"string.pattern.base": "Le tri doit être au format champ_asc ou champ_desc",
 		}),
 });
+
+	// ==========================================
+	// Schéma dashboard vendeur
+	// ==========================================
+
+	export const sellerDashboardSummaryQuerySchema = Joi.object({
+		startDate: Joi.date().iso(),
+		endDate: Joi.date().iso().min(Joi.ref("startDate")),
+		groupBy: Joi.string().valid("day", "week", "month").default("day"),
+		topLimit: Joi.number().integer().min(3).max(20).default(5),
+	});

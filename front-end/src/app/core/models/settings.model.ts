@@ -34,6 +34,9 @@ export interface Settings {
   // Paramètres Wallet
   minWithdrawalAmount: number;
 
+  // Paramètres Retour
+  returnWindowDays: number;
+
   // Timestamps
   createdAt: Date;
   updatedAt: Date;
@@ -56,6 +59,7 @@ export interface UpdateSettingsDto {
   minOrderAmount?: number;
   maxOrderAmount?: number;
   minWithdrawalAmount?: number;
+  returnWindowDays?: number;
 }
 
 /**

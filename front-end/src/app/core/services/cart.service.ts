@@ -10,6 +10,8 @@ import {
   CheckoutResponse,
   DeliveryAddress,
   OrdersResponse,
+  RestoreCartResponse,
+  ExpiredCart,
 } from '../models';
 import { Pagination } from '../models/api.model';
 
@@ -285,5 +287,32 @@ export class CartService {
    */
   resetCart(): void {
     this.cartSignal.set(null);
+  }
+
+  /**
+   * Récupère la liste des paniers expirés de l'utilisateur
+   * @returns Liste des paniers expirés avec informations de disponibilité
+   */
+  async getExpiredCarts(): Promise<ExpiredCart[]> {
+    return this.api.get<ExpiredCart[]>('/cart/expired');
+  }
+
+  /**
+   * Restaure un panier expiré spécifique
+   * Les items sont fusionnés avec le panier actif s'il existe
+   * @param cartId - Identifiant du panier expiré à restaurer (optionnel, sinon le plus récent)
+   * @returns Les détails de la restauration (items restaurés et non restaurés)
+   */
+  async restoreExpiredCart(cartId?: string): Promise<RestoreCartResponse> {
+    this.isLoadingSignal.set(true);
+    try {
+      const url = cartId ? `/cart/restore/${cartId}` : '/cart/restore';
+      const response = await this.api.post<RestoreCartResponse>(url, {});
+      // Mettre à jour le panier avec le résultat
+      this.cartSignal.set(response.cart);
+      return response;
+    } finally {
+      this.isLoadingSignal.set(false);
+    }
   }
 }

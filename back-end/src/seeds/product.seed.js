@@ -1,8 +1,9 @@
 import mongoose from "mongoose";
 import Product from "../models/Product.js";
 import Shop from "../models/Shop.js";
-import User from "../models/User.js"; // Requis pour populate
+import "../models/User.js";
 import config from "../config/env.js";
+import * as productService from "../services/product.service.js";
 
 /**
  * Script de seed pour créer des produits de démonstration
@@ -208,20 +209,40 @@ async function seedProducts() {
 					continue;
 				}
 
-				// Créer le produit
-				const product = await Product.create({
-					shopId: shop._id,
-					sellerId: shop.sellerId._id,
-					sku: productData.sku,
-					title: productData.title,
-					description: productData.description,
-					category: productData.category,
-					tags: productData.tags,
-					price: productData.price,
-					originalPrice: productData.originalPrice || null,
-					stock: productData.stock,
-					status: "ACTIVE", // Produits actifs pour les tests
-				});
+				const available = Number(productData.stock?.cache?.available || 0);
+				const reserved = Number(productData.stock?.cache?.reserved || 0);
+				const total = available + reserved;
+
+				const normalizedStock = {
+					cache: {
+						total,
+						reserved,
+						available,
+					},
+					alert: {
+						lowThreshold:
+							productData.stock?.alert?.lowThreshold ||
+							productData.stock?.alert?.threshold ||
+							5,
+					},
+				};
+
+				const product = await productService.createProduct(
+					{
+						sku: productData.sku,
+						title: productData.title,
+						description: productData.description,
+						category: productData.category,
+						tags: productData.tags,
+						price: productData.price,
+						originalPrice: productData.originalPrice || null,
+						stock: normalizedStock,
+					},
+					shop.sellerId._id.toString(),
+					shop._id.toString(),
+				);
+
+				await productService.moderateProduct(product._id.toString(), "ACTIVE");
 
 				createdProducts.push({ shop: shop.name, product });
 				totalCreated++;

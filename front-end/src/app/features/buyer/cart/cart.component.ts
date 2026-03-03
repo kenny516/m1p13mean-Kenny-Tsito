@@ -8,7 +8,13 @@ import {
   AuthService,
   WalletService,
 } from '../../../core/services';
-import { CartItem, PaymentMethod, DeliveryAddress } from '../../../core/models';
+import {
+  CartItem,
+  PaymentMethod,
+  DeliveryAddress,
+  NotRestoredItem,
+  ExpiredCart,
+} from '../../../core/models';
 import { ZardCardComponent } from '../../../shared/components/card';
 import { ZardButtonComponent } from '../../../shared/components/button';
 import { ZardIconComponent } from '../../../shared/components/icon';
@@ -120,10 +126,109 @@ import { ZardDialogService } from '../../../shared/components/dialog';
             <p class="mt-2 text-muted-foreground max-w-md mx-auto">
               Parcourez notre catalogue et ajoutez des produits à votre panier
             </p>
-            <button z-button class="mt-6" routerLink="/buyer/products">
-              <z-icon zType="shopping-bag" class="mr-2 h-4 w-4" />
-              Découvrir les produits
-            </button>
+            <div class="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+              <button z-button routerLink="/buyer/products">
+                <z-icon zType="shopping-bag" class="mr-2 h-4 w-4" />
+                Découvrir les produits
+              </button>
+              <button
+                z-button
+                zType="outline"
+                [disabled]="isLoadingExpiredCarts()"
+                (click)="loadExpiredCarts()"
+              >
+                @if (isLoadingExpiredCarts()) {
+                  <z-spinner class="mr-2" size="sm" />
+                  Chargement...
+                } @else {
+                  <z-icon zType="clock" class="mr-2 h-4 w-4" />
+                  Voir mes paniers expirés
+                }
+              </button>
+            </div>
+
+            <!-- Liste des paniers expirés -->
+            @if (showExpiredCarts()) {
+              <div class="mt-8 max-w-2xl mx-auto">
+                <div class="flex items-center justify-between mb-4">
+                  <h3 class="text-lg font-semibold">Paniers expirés</h3>
+                  <button z-button zType="ghost" size="sm" (click)="closeExpiredCarts()">
+                    <z-icon zType="x" class="h-4 w-4" />
+                  </button>
+                </div>
+                
+                @if (expiredCarts().length === 0) {
+                  <z-card class="p-6 text-center">
+                    <p class="text-muted-foreground">Aucun panier expiré trouvé</p>
+                  </z-card>
+                } @else {
+                  <div class="space-y-3">
+                    @for (expiredCart of expiredCarts(); track expiredCart._id) {
+                      <z-card class="p-4">
+                        <div class="flex items-center justify-between">
+                          <div class="text-left">
+                            <p class="font-medium">
+                              {{ expiredCart.itemsCount }} article(s) - 
+                              {{ expiredCart.totalAmount | number:'1.0-0' }} MGA
+                            </p>
+                            <p class="text-sm text-muted-foreground">
+                              Expiré le {{ expiredCart.expiredAt | date:'dd/MM/yyyy HH:mm' }}
+                            </p>
+                            <div class="flex gap-4 mt-1 text-xs">
+                              <span class="text-green-600">
+                                {{ expiredCart.availableItems }} disponible(s)
+                              </span>
+                              @if (expiredCart.unavailableItems > 0) {
+                                <span class="text-destructive">
+                                  {{ expiredCart.unavailableItems }} indisponible(s)
+                                </span>
+                              }
+                            </div>
+                          </div>
+                          <button
+                            z-button
+                            size="sm"
+                            [disabled]="isRestoring() || expiredCart.availableItems === 0"
+                            (click)="restoreExpiredCart(expiredCart._id)"
+                          >
+                            @if (isRestoring()) {
+                              <z-spinner size="sm" />
+                            } @else {
+                              Restaurer
+                            }
+                          </button>
+                        </div>
+                        
+                        <!-- Détails des items -->
+                        <div class="mt-3 pt-3 border-t border-border">
+                          <p class="text-xs text-muted-foreground mb-2">Articles :</p>
+                          <div class="space-y-1">
+                            @for (item of expiredCart.items; track item.productId) {
+                              <div class="flex items-center gap-2 text-sm">
+                                <div class="w-8 h-8 rounded bg-muted overflow-hidden shrink-0">
+                                  @if (item.productSnapshot.images.length) {
+                                    <img
+                                      [src]="item.productSnapshot.images[0]"
+                                      class="w-full h-full object-cover"
+                                    />
+                                  }
+                                </div>
+                                <span class="truncate flex-1">
+                                  {{ item.productSnapshot.title }}
+                                </span>
+                                <span class="text-muted-foreground shrink-0">
+                                  x{{ item.quantity }}
+                                </span>
+                              </div>
+                            }
+                          </div>
+                        </div>
+                      </z-card>
+                    }
+                  </div>
+                }
+              </div>
+            }
           </div>
         } @else {
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -514,6 +619,10 @@ export class CartComponent implements OnInit {
   cart = computed(() => this.cartService.cart());
   isUpdating = signal<string | null>(null);
   isCheckingOut = signal(false);
+  isRestoring = signal(false);
+  isLoadingExpiredCarts = signal(false);
+  expiredCarts = signal<ExpiredCart[]>([]);
+  showExpiredCarts = signal(false);
   selectedPaymentMethod: PaymentMethod = 'WALLET';
   walletBalance = signal(0);
   deliveryAddress: DeliveryAddress = {
@@ -667,5 +776,68 @@ export class CartComponent implements OnInit {
     } finally {
       this.isCheckingOut.set(false);
     }
+  }
+
+  /**
+   * Charge la liste des paniers expirés
+   */
+  async loadExpiredCarts(): Promise<void> {
+    this.isLoadingExpiredCarts.set(true);
+    try {
+      const carts = await this.cartService.getExpiredCarts();
+      this.expiredCarts.set(carts);
+      this.showExpiredCarts.set(true);
+    } catch {
+      this.toastService.error('Erreur lors du chargement des paniers expirés');
+      this.expiredCarts.set([]);
+    } finally {
+      this.isLoadingExpiredCarts.set(false);
+    }
+  }
+
+  /**
+   * Restaure un panier expiré spécifique
+   */
+  async restoreExpiredCart(cartId?: string): Promise<void> {
+    this.isRestoring.set(true);
+    try {
+      const result = await this.cartService.restoreExpiredCart(cartId);
+
+      // Construire le message de succès
+      if (result.notRestored.length > 0) {
+        // Restauration partielle
+        const notRestoredNames = result.notRestored
+          .map((item: NotRestoredItem) => item.title)
+          .join(', ');
+        this.toastService.warning(
+          `Panier restauré partiellement. Articles non disponibles : ${notRestoredNames}`,
+        );
+      } else {
+        this.toastService.success(
+          `Panier restauré avec succès (${result.restored} article(s))`,
+        );
+      }
+      
+      // Fermer la liste des paniers expirés et rafraîchir
+      this.showExpiredCarts.set(false);
+      this.expiredCarts.set([]);
+    } catch (error: unknown) {
+      // Gérer l'erreur "aucun panier expiré"
+      const err = error as { error?: { code?: string } };
+      if (err?.error?.code === 'NO_EXPIRED_CART') {
+        this.toastService.info('Aucun panier expiré à restaurer');
+      } else {
+        this.toastService.error('Erreur lors de la restauration du panier');
+      }
+    } finally {
+      this.isRestoring.set(false);
+    }
+  }
+
+  /**
+   * Ferme le panneau des paniers expirés
+   */
+  closeExpiredCarts(): void {
+    this.showExpiredCarts.set(false);
   }
 }

@@ -100,6 +100,8 @@ export interface StockMovementLine {
   cartId?: string;
   quantity: number;
   unitPrice: number;
+  commissionRate?: number;
+  commissionAmount?: number;
   totalAmount: number;
   stockBefore: number;
   stockAfter: number;
@@ -162,5 +164,102 @@ export interface StockMovementFilters {
   shopId?: string;
   productId?: string;
   status?: SaleStatus;
+  startDate?: string;
+  endDate?: string;
   sort?: string;
+}
+
+export type DashboardGroupBy = 'day' | 'week' | 'month';
+
+export interface SellerDashboardTrendPoint {
+  period: string;
+  grossSalesAmount: number;
+  returnAmount: number;
+  netSalesAmount: number;
+  deliveredSalesAmount: number;
+  salesCount: number;
+  returnCount: number;
+  suppliesCount: number;
+}
+
+export interface SellerDashboardProductRanking {
+  _id: string;
+  title: string;
+  sku?: string;
+  status?: string;
+  netRevenue: number;
+  netUnits: number;
+  saleUnits: number;
+  returnUnits: number;
+  saleAmount: number;
+  returnAmount: number;
+  views?: number;
+  stockAvailable?: number;
+}
+
+export interface SellerDashboardShopRanking {
+  _id: string;
+  name: string;
+  netRevenue: number;
+  saleAmount: number;
+  returnAmount: number;
+  netUnits: number;
+  saleUnits: number;
+  returnUnits: number;
+  deliveredSalesAmount?: number;
+}
+
+export interface SellerDashboardSummary {
+  meta: {
+    startDate: string;
+    endDate: string;
+    groupBy: DashboardGroupBy;
+    topLimit: number;
+  };
+  kpis: {
+    netSalesAmount: number;
+    grossSalesAmount: number;
+    returnAmount: number;
+    deliveredSalesAmount: number;
+    salesCount: number;
+    deliveredCount: number;
+    returnCount: number;
+    suppliesCount: number;
+    activeProducts: number;
+    pendingProducts: number;
+    archivedProducts: number;
+    lowStockProducts: number;
+    outOfStockProducts: number;
+    activeShops: number;
+    pendingShops: number;
+    archivedShops: number;
+    totalShops: number;
+  };
+  orderStatus: {
+    confirmed: number;
+    delivered: number;
+    returned: number;
+  };
+  trend: SellerDashboardTrendPoint[];
+  rankings: {
+    topProductsByRevenue: SellerDashboardProductRanking[];
+    topProductsByUnits: SellerDashboardProductRanking[];
+    topShopsByRevenue: SellerDashboardShopRanking[];
+  };
+  recent: {
+    orders: StockMovement[];
+    supplies: StockMovement[];
+  };
+}
+
+export interface ProductStockSnapshot {
+  total: number;
+  reserved: number;
+  available: number;
+}
+
+export interface ReconcileProductStockResult {
+  productId: string;
+  before: ProductStockSnapshot;
+  after: ProductStockSnapshot;
 }

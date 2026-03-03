@@ -75,6 +75,19 @@ export const updateSettingsSchema = Joi.object({
   minWithdrawalAmount: Joi.number().min(0).messages({
     "number.min": "Le montant minimum de retrait doit être supérieur ou égal à 0",
   }),
+  adminGlobalWalletId: Joi.string()
+    .pattern(/^[a-f\d]{24}$/i)
+    .allow(null, "")
+    .messages({
+      "string.pattern.base": "L'identifiant du wallet admin global est invalide",
+    }),
+
+  // === PARAMÈTRES RETOUR ===
+  returnWindowDays: Joi.number().integer().min(1).max(365).messages({
+    "number.min": "Le délai de retour doit être d'au moins 1 jour",
+    "number.max": "Le délai de retour ne peut pas dépasser 365 jours",
+    "number.integer": "Le délai de retour doit être un nombre entier",
+  }),
 });
 
 export default {

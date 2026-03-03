@@ -8,13 +8,14 @@ import {
 	listStockMovementsQuerySchema,
 	listSalesQuerySchema,
 	listSuppliesQuerySchema,
+	sellerDashboardSummaryQuerySchema,
 } from "../validations/stockMovement.validation.js";
 import { listStockMovementLineQuerySchema } from "../validations/stockMovementLine.validation.js";
 
 const router = Router();
 
 // Toutes les routes nécessitent une authentification
-router.use(auth);
+router.use(auth, authorize("SELLER", "ADMIN"));
 
 // ==========================================
 // Routes vendeur
@@ -27,22 +28,23 @@ router.use(auth);
  */
 router.get(
 	"/lines",
-	authorize("SELLER", "ADMIN"),
 	validateQuery(listStockMovementLineQuerySchema),
 	stockMovementController.listLines,
 );
+
+/**
+ * @route   POST /api/stock-movements/reconcile/:productId
+ * @desc    Réconcilier le cache stock d'un produit (recalcul depuis les mouvements)
+ * @access  Private (SELLER, ADMIN) - SELLER limité à ses produits
+ */
+router.post("/reconcile/:productId", stockMovementController.reconcile);
 
 /**
  * @route   GET /api/stock-movements/sales
  * @desc    Lister les ventes (mouvements de type SALE)
  * @access  Private (SELLER, ADMIN)
  */
-router.get(
-	"/sales",
-	authorize("SELLER", "ADMIN"),
-	validateQuery(listSalesQuerySchema),
-	stockMovementController.listSales,
-);
+router.get("/sales", validateQuery(listSalesQuerySchema), stockMovementController.listSales);
 
 /**
  * @route   GET /api/stock-movements/orders
@@ -51,7 +53,6 @@ router.get(
  */
 router.get(
 	"/orders",
-	authorize("SELLER"),
 	validateQuery(listSalesQuerySchema),
 	stockMovementController.listSellerOrders,
 );
@@ -63,9 +64,19 @@ router.get(
  */
 router.get(
 	"/supplies",
-	authorize("SELLER", "ADMIN"),
 	validateQuery(listSuppliesQuerySchema),
 	stockMovementController.listSupplies,
+);
+
+/**
+ * @route   GET /api/stock-movements/dashboard/summary
+ * @desc    Récupérer un résumé analytique pour le dashboard vendeur
+ * @access  Private (SELLER)
+ */
+router.get(
+	"/dashboard/summary",
+	validateQuery(sellerDashboardSummaryQuerySchema),
+	stockMovementController.getSellerDashboardSummary,
 );
 
 /**
@@ -73,42 +84,28 @@ router.get(
  * @desc    Consulter le stock calculé en temps réel d'un produit
  * @access  Private (SELLER, ADMIN)
  */
-router.get(
-	"/product/:productId/stock",
-	authorize("SELLER", "ADMIN"),
-	stockMovementController.getProductStock,
-);
+router.get("/product/:productId/stock", stockMovementController.getProductStock);
 
 /**
  * @route   GET /api/stock-movements
  * @desc    Lister les mouvements de stock des boutiques du vendeur connecté
  * @access  Private (SELLER)
  */
-router.get(
-	"/",
-	authorize("SELLER"),
-	validateQuery(listStockMovementsQuerySchema),
-	stockMovementController.list,
-);
+router.get("/", validateQuery(listStockMovementsQuerySchema), stockMovementController.list);
 
 /**
  * @route   GET /api/stock-movements/:id
  * @desc    Récupérer un mouvement par son ID
  * @access  Private (SELLER, ADMIN)
  */
-router.get("/:id", authorize("SELLER", "ADMIN"), stockMovementController.getOne);
+router.get("/:id", stockMovementController.getOne);
 
 /**
  * @route   POST /api/stock-movements
  * @desc    Créer un nouveau mouvement de stock
  * @access  Private (SELLER)
  */
-router.post(
-	"/",
-	authorize("SELLER"),
-	validate(createStockMovementSchema),
-	stockMovementController.create,
-);
+router.post("/", validate(createStockMovementSchema), stockMovementController.create);
 
 /**
  * @route   PATCH /api/stock-movements/:id/sale-status
@@ -117,7 +114,6 @@ router.post(
  */
 router.patch(
 	"/:id/sale-status",
-	authorize("SELLER", "ADMIN"),
 	validate(updateSaleStatusSchema),
 	stockMovementController.updateSaleStatus,
 );

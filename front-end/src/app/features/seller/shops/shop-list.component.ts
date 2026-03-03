@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { Shop, ShopService, ToastService } from '@/core';
 import { ZardButtonComponent } from '@/shared/components/button';
 import { ZardCardComponent } from '@/shared/components/card';
-import { DataTableColumn, DataTableComponent } from '@/shared/components/data-table';
+import { DataTableColumnDef, TanstackDataTableComponent } from '@/shared/components/data-table';
 import { ZardInputDirective } from '@/shared/components/input';
 import { ZardSelectImports } from '@/shared/components/select';
 import { SHOP_STATUS_LABELS, getStatusLabel } from '@/shared/utils/design-constants';
@@ -21,7 +21,7 @@ import { SHOP_STATUS_LABELS, getStatusLabel } from '@/shared/utils/design-consta
     ZardButtonComponent,
     ZardInputDirective,
     ...ZardSelectImports,
-    DataTableComponent,
+    TanstackDataTableComponent,
   ],
   template: `
     <div class="space-y-6">
@@ -66,65 +66,66 @@ import { SHOP_STATUS_LABELS, getStatusLabel } from '@/shared/utils/design-consta
         </div>
       </z-card>
 
-      @if (shopService.isLoading()) {
-        <z-card class="p-10 text-center text-muted-foreground">Chargement...</z-card>
-      } @else {
-        <app-data-table
-          [data]="shopService.shops()"
-          [columns]="columns"
-          [rowActions]="actionsTpl"
-          emptyMessage="Aucune boutique trouvée"
-        />
-      }
-
-      <ng-template #actionsTpl let-shop>
-        <div class="flex flex-wrap justify-end gap-2">
-          <a z-button zType="outline" zSize="sm" [routerLink]="['/seller/shops', shop._id]">
-            Détails
-          </a>
-          <a z-button zType="outline" zSize="sm" [routerLink]="['/seller/shops', shop._id, 'edit']">
-            Modifier
-          </a>
-          @if (shop.status === 'DRAFT' || shop.status === 'REJECTED') {
-            <button z-button zSize="sm" (click)="submitForReview(shop)">Soumettre</button>
-          }
-          @if (shop.status === 'ACTIVE') {
-            <button z-button zType="outline" zSize="sm" (click)="archive(shop)">Archiver</button>
-          }
-          @if (shop.status === 'ARCHIVED') {
-            <button z-button zType="outline" zSize="sm" (click)="activate(shop)">Activer</button>
-          }
-          <button z-button zType="destructive" zSize="sm" (click)="remove(shop)">Supprimer</button>
+      <z-card class="overflow-hidden">
+        <div class="p-4">
+          <app-tanstack-data-table
+            [data]="shopService.shops()"
+            [columnDefs]="columns"
+            [rowActions]="actionsTpl"
+            [isLoading]="shopService.isLoading()"
+            emptyMessage="Aucune boutique trouvée"
+          />
         </div>
-      </ng-template>
 
-      @if (shopService.pagination(); as pagination) {
-        <div class="flex items-center justify-between rounded-md border border-border bg-card p-3">
-          <p class="text-sm text-muted-foreground">
-            Page {{ pagination.page }} / {{ pagination.pages }} · {{ pagination.total }} résultats
-          </p>
-          <div class="flex gap-2">
-            <button
-              z-button
-              zType="outline"
-              zSize="sm"
-              [disabled]="pagination.page <= 1"
-              (click)="goToPage(pagination.page - 1)"
-            >
-              Précédent
-            </button>
-            <button
-              z-button
-              zType="outline"
-              zSize="sm"
-              [disabled]="pagination.page >= pagination.pages"
-              (click)="goToPage(pagination.page + 1)"
-            >
-              Suivant
-            </button>
+        <ng-template #actionsTpl let-shop>
+          <div class="flex flex-wrap justify-end gap-2">
+            <a z-button zType="outline" zSize="sm" [routerLink]="['/seller/shops', shop._id]">
+              Détails
+            </a>
+            <a z-button zType="outline" zSize="sm" [routerLink]="['/seller/shops', shop._id, 'edit']">
+              Modifier
+            </a>
+            @if (shop.status === 'DRAFT' || shop.status === 'REJECTED') {
+              <button z-button zSize="sm" (click)="submitForReview(shop)">Soumettre</button>
+            }
+            @if (shop.status === 'ACTIVE') {
+              <button z-button zType="outline" zSize="sm" (click)="archive(shop)">Archiver</button>
+            }
+            @if (shop.status === 'ARCHIVED') {
+              <button z-button zType="outline" zSize="sm" (click)="activate(shop)">Activer</button>
+            }
+            <button z-button zType="destructive" zSize="sm" (click)="remove(shop)">Supprimer</button>
           </div>
-        </div>
-      }
+        </ng-template>
+
+        @if (shopService.pagination(); as pagination) {
+          <div class="flex items-center justify-between px-4 py-3 border-t border-border bg-muted/20">
+            <p class="text-sm text-muted-foreground">
+              Page {{ pagination.page }} / {{ pagination.pages }} · {{ pagination.total }} résultats
+            </p>
+            <div class="flex gap-2">
+              <button
+                z-button
+                zType="outline"
+                zSize="sm"
+                [disabled]="pagination.page <= 1"
+                (click)="goToPage(pagination.page - 1)"
+              >
+                Précédent
+              </button>
+              <button
+                z-button
+                zType="outline"
+                zSize="sm"
+                [disabled]="pagination.page >= pagination.pages"
+                (click)="goToPage(pagination.page + 1)"
+              >
+                Suivant
+              </button>
+            </div>
+          </div>
+        }
+      </z-card>
     </div>
   `,
 })
@@ -136,8 +137,9 @@ export class ShopListComponent implements OnInit {
   searchTerm = '';
   selectedStatus = 'ALL';
 
-  readonly columns: DataTableColumn[] = [
+  readonly columns: DataTableColumnDef<Shop>[] = [
     {
+      id: 'name',
       accessorKey: 'name',
       header: 'Nom',
     },

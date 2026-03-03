@@ -190,7 +190,7 @@ import { ZardSeparatorComponent } from '@/shared/components/separator';
                   Portefeuille
                 </h2>
                 <div
-                  class="bg-gradient-to-br from-primary to-primary/60 rounded-lg p-6 text-primary-foreground"
+                  class="bg-linear-to-br from-primary to-primary/60 rounded-lg p-6 text-primary-foreground"
                 >
                   <p class="text-sm opacity-80">Solde disponible</p>
                   <p class="text-3xl font-bold mt-1">

@@ -2,7 +2,9 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { ApiService } from './api.service';
 import {
   CreateStockMovementRequest,
+  ReconcileProductStockResult,
   SaleStatus,
+  SellerDashboardSummary,
   StockMovement,
   StockMovementFilters,
   StockMovementLine,
@@ -212,6 +214,29 @@ export class StockMovementService {
     );
   }
 
+  async reconcileProductStock(productId: string): Promise<ReconcileProductStockResult> {
+    return this.api.post<ReconcileProductStockResult>(
+      `/stock-movements/reconcile/${productId}`,
+      {},
+    );
+  }
+
+  async getDashboardSummary(params?: {
+    startDate?: string;
+    endDate?: string;
+    groupBy?: 'day' | 'week' | 'month';
+    topLimit?: number;
+  }): Promise<SellerDashboardSummary> {
+    const query: Record<string, string> = {};
+
+    if (params?.startDate) query['startDate'] = params.startDate;
+    if (params?.endDate) query['endDate'] = params.endDate;
+    if (params?.groupBy) query['groupBy'] = params.groupBy;
+    if (params?.topLimit) query['topLimit'] = String(params.topLimit);
+
+    return this.api.get<SellerDashboardSummary>('/stock-movements/dashboard/summary', query);
+  }
+
   private buildListParams(
     filters: StockMovementFilters | undefined,
     page: number,
@@ -228,6 +253,8 @@ export class StockMovementService {
     if (filters.shopId) params['shopId'] = filters.shopId;
     if (filters.productId) params['productId'] = filters.productId;
     if (filters.status) params['status'] = filters.status;
+    if (filters.startDate) params['startDate'] = filters.startDate;
+    if (filters.endDate) params['endDate'] = filters.endDate;
     if (filters.sort) params['sort'] = filters.sort;
 
     return params;

@@ -14,6 +14,10 @@ export const getSettings = async () => {
   return await Settings.getSettings();
 };
 
+export const getSettingsWithSession = async (session = null) => {
+  return await Settings.getSettings({ session });
+};
+
 /**
  * Met à jour les paramètres de la plateforme
  * @param {Object} updates - Les paramètres à mettre à jour
@@ -23,6 +27,10 @@ export const updateSettings = async (updates) => {
   return await Settings.updateSettings(updates);
 };
 
+export const updateSettingsWithSession = async (updates, session = null) => {
+  return await Settings.updateSettings(updates, { session });
+};
+
 /**
  * Récupère un paramètre spécifique
  * @param {string} key - La clé du paramètre
@@ -30,6 +38,11 @@ export const updateSettings = async (updates) => {
  */
 export const getSetting = async (key) => {
   const settings = await getSettings();
+  return settings[key];
+};
+
+export const getSettingWithSession = async (key, session = null) => {
+  const settings = await getSettingsWithSession(session);
   return settings[key];
 };
 
@@ -81,14 +94,31 @@ export const getMaintenanceMessage = async () => {
   return await getSetting("maintenanceMessage");
 };
 
+export const getAdminGlobalWalletId = async (session = null) => {
+  return await getSettingWithSession("adminGlobalWalletId", session);
+};
+
+export const setAdminGlobalWalletId = async (walletId, session = null) => {
+  const normalizedWalletId = walletId ? walletId.toString() : null;
+  return await updateSettingsWithSession(
+    { adminGlobalWalletId: normalizedWalletId },
+    session,
+  );
+};
+
 export default {
   getSettings,
+  getSettingsWithSession,
   updateSettings,
+  updateSettingsWithSession,
   getSetting,
+  getSettingWithSession,
   getDefaultCommissionRate,
   getCartTTLMinutes,
   getLowStockThreshold,
   getOutOfStockThreshold,
   isMaintenanceMode,
   getMaintenanceMessage,
+  getAdminGlobalWalletId,
+  setAdminGlobalWalletId,
 };

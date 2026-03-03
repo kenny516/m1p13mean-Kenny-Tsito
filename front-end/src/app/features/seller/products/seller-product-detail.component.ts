@@ -5,15 +5,14 @@ import { Product, ProductService, StockMovementLine, StockMovementService, Toast
 import { RESERVATION_MOVEMENT_TYPES } from '@/core/models/stock-movement.constants';
 import { ZardButtonComponent } from '@/shared/components/button';
 import { ZardCardComponent } from '@/shared/components/card';
-import { DataTableColumn, DataTableComponent } from '@/shared/components/data-table';
+import { DataTableColumnDef, TanstackDataTableComponent } from '@/shared/components/data-table';
 
 @Component({
   selector: 'app-seller-product-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, ZardCardComponent, ZardButtonComponent, DataTableComponent],
+  imports: [CommonModule, RouterLink, ZardCardComponent, ZardButtonComponent, TanstackDataTableComponent],
   template: `
-    <div class="min-h-screen bg-muted/30 py-6">
-      <div class="mx-auto max-w-6xl space-y-6 px-4 sm:px-6 lg:px-8">
+    <div class="space-y-6">
         <div class="flex items-center justify-between">
           <div>
             <h1 class="text-2xl font-bold text-foreground">Détail produit</h1>
@@ -23,6 +22,9 @@ import { DataTableColumn, DataTableComponent } from '@/shared/components/data-ta
           </div>
           <div class="flex gap-2">
             @if (product(); as currentProduct) {
+              <button z-button zType="outline" type="button" [disabled]="isReconciling()" (click)="reconcileStock()">
+                {{ isReconciling() ? 'Réconciliation...' : 'Réconcilier le stock' }}
+              </button>
               <a z-button zType="outline" [routerLink]="['/seller/products', currentProduct._id, 'edit']">
                 Modifier
               </a>
@@ -47,6 +49,12 @@ import { DataTableColumn, DataTableComponent } from '@/shared/components/data-ta
             </div>
 
             @if (dashboard(); as metrics) {
+              <section class="space-y-4">
+                <div>
+                  <h3 class="text-sm font-semibold text-foreground">Performance commerciale</h3>
+                  <p class="text-xs text-muted-foreground">Indicateurs ventes, stock et rentabilité du produit.</p>
+                </div>
+
               <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <div class="rounded-lg border border-border bg-card p-4">
                   <p class="text-xs uppercase tracking-wide text-muted-foreground">Prix affiché</p>
@@ -110,6 +118,10 @@ import { DataTableColumn, DataTableComponent } from '@/shared/components/data-ta
                       <p class="text-lg font-semibold text-foreground">{{ currentProduct.stats.sales | number: '1.0-0' }}</p>
                     </div>
                     <div>
+                      <p class="text-xs text-muted-foreground">Ventes livrées</p>
+                      <p class="text-lg font-semibold text-foreground">{{ currentProduct.stats.deliveredSales | number: '1.0-0' }}</p>
+                    </div>
+                    <div>
                       <p class="text-xs text-muted-foreground">Vues</p>
                       <p class="text-lg font-semibold text-foreground">{{ currentProduct.stats.views | number: '1.0-0' }}</p>
                     </div>
@@ -169,9 +181,16 @@ import { DataTableColumn, DataTableComponent } from '@/shared/components/data-ta
                   <p class="mt-3 text-sm text-muted-foreground">Aucune donnée de mouvement exploitable pour le moment.</p>
                 }
               </div>
+              </section>
             }
 
-            <div class="mt-4 grid gap-4 md:grid-cols-4">
+            <section class="mt-6 space-y-4 border-t border-border pt-6">
+            <div>
+              <h3 class="text-sm font-semibold text-foreground">Métadonnées produit</h3>
+              <p class="text-xs text-muted-foreground">Informations de gestion et de traçabilité.</p>
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-4">
               <div>
                 <p class="text-sm text-muted-foreground">SKU</p>
                 <p class="font-medium text-foreground">{{ currentProduct.sku || '-' }}</p>
@@ -198,8 +217,10 @@ import { DataTableColumn, DataTableComponent } from '@/shared/components/data-ta
                 <p class="font-medium">{{ currentProduct.rejectionReason }}</p>
               </div>
             }
+            </section>
 
-            <div class="mt-6 grid gap-4 lg:grid-cols-3">
+            <section class="mt-6 space-y-4 border-t border-border pt-6">
+            <div class="grid gap-4 lg:grid-cols-3">
               <div class="space-y-3 lg:col-span-2">
                 <h2 class="text-lg font-semibold text-foreground">Images</h2>
                 @if (getCurrentImage(currentProduct); as heroImage) {
@@ -248,8 +269,9 @@ import { DataTableColumn, DataTableComponent } from '@/shared/components/data-ta
                 </div>
               </div>
             </div>
+            </section>
 
-            <div class="mt-6">
+            <section class="mt-6 space-y-3 border-t border-border pt-6">
               <h2 class="text-lg font-semibold text-foreground">Caractéristiques</h2>
               @if (getCharacteristicEntries(currentProduct).length > 0) {
                 <div class="mt-3 grid gap-3 md:grid-cols-2">
@@ -263,7 +285,7 @@ import { DataTableColumn, DataTableComponent } from '@/shared/components/data-ta
               } @else {
                 <p class="mt-2 text-sm text-muted-foreground">Aucune caractéristique renseignée</p>
               }
-            </div>
+            </section>
           </z-card>
 
           <z-card class="p-6">
@@ -272,16 +294,16 @@ import { DataTableColumn, DataTableComponent } from '@/shared/components/data-ta
                 <h2 class="text-lg font-semibold text-foreground">Lignes de mouvement</h2>
                 <p class="text-sm text-muted-foreground">Exclut les types RESERVATION et RESERVATION_CANCEL</p>
               </div>
+              <p class="text-xs text-muted-foreground">{{ movementLines().length }} ligne(s)</p>
             </div>
 
-            <app-data-table
+            <app-tanstack-data-table
               [data]="movementLines()"
-              [columns]="lineColumns"
+              [columnDefs]="lineColumns"
               emptyMessage="Aucune ligne de mouvement non-réservation pour ce produit"
             />
           </z-card>
         }
-      </div>
     </div>
   `,
 })
@@ -294,6 +316,7 @@ export class SellerProductDetailComponent implements OnInit {
   readonly product = signal<Product | null>(null);
   readonly movementLines = signal<StockMovementLine[]>([]);
   readonly selectedImageIndex = signal(0);
+  readonly isReconciling = signal(false);
   readonly dashboard = computed(() => {
     const lines = this.movementLines();
     const product = this.product();
@@ -372,11 +395,11 @@ export class SellerProductDetailComponent implements OnInit {
     };
   });
 
-  readonly lineColumns: DataTableColumn[] = [
-    { accessorKey: 'reference', header: 'Référence' },
-    { accessorKey: 'movementType', header: 'Type' },
-    { accessorKey: 'direction', header: 'Direction' },
-    { accessorKey: 'quantity', header: 'Qté' },
+  readonly lineColumns: DataTableColumnDef<StockMovementLine>[] = [
+    { id: 'reference', accessorKey: 'reference', header: 'Référence' },
+    { id: 'movementType', accessorKey: 'movementType', header: 'Type' },
+    { id: 'direction', accessorKey: 'direction', header: 'Direction' },
+    { id: 'quantity', accessorKey: 'quantity', header: 'Qté' },
     {
       accessorFn: (line: unknown) => `${(line as StockMovementLine).unitPrice.toLocaleString('fr-FR')} MGA`,
       id: 'unitPrice',
@@ -423,6 +446,24 @@ export class SellerProductDetailComponent implements OnInit {
       );
     } catch {
       this.toast.error('Impossible de charger les lignes de mouvements du produit');
+    }
+  }
+
+  async reconcileStock(): Promise<void> {
+    const currentProduct = this.product();
+    if (!currentProduct || this.isReconciling()) {
+      return;
+    }
+
+    this.isReconciling.set(true);
+    try {
+      await this.stockMovementService.reconcileProductStock(currentProduct._id);
+      this.toast.success('Stock réconcilié avec succès');
+      await this.loadProductDetails(currentProduct._id);
+    } catch {
+      this.toast.error('Impossible de réconcilier le stock du produit');
+    } finally {
+      this.isReconciling.set(false);
     }
   }
 

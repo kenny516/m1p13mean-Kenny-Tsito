@@ -1,8 +1,8 @@
-import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 import User from "../models/User.js";
-import Wallet from "../models/Wallet.js";
 import config from "../config/env.js";
+import * as userService from "../services/user.service.js";
+import * as walletService from "../services/wallet.service.js";
 
 /**
  * Script de seed pour créer des comptes acheteurs de test
@@ -77,31 +77,28 @@ async function seedBuyers() {
 
       console.log(`📝 Création de l'acheteur ${buyerData.email}...`);
 
-      // Hasher le mot de passe
-      const salt = await bcrypt.genSalt(12);
-      const passwordHash = await bcrypt.hash(buyerData.password, salt);
-
-      // Créer l'utilisateur acheteur
-      buyer = await User.create({
+      // Créer l'utilisateur acheteur via service
+      const createdBuyer = await userService.createUser({
         email: buyerData.email,
-        passwordHash,
+        password: buyerData.password,
         role: "BUYER",
         profile: buyerData.profile,
         isValidated: true,
         isActive: true,
       });
+      buyer = await User.findById(createdBuyer._id);
 
-      // Créer le wallet avec le solde initial
-      const wallet = await Wallet.create({
-        ownerId: buyer._id,
-        ownerModel: "User",
-        balance: buyerData.walletBalance,
-        currency: "MGA",
-      });
-
-      // Lier le wallet à l'acheteur
-      buyer.walletId = wallet._id;
-      await buyer.save();
+      // Créditer le wallet initial via service
+      await walletService.creditWalletByOwner(
+        { ownerId: buyer._id, ownerModel: "User" },
+        buyerData.walletBalance,
+        {
+          type: "DEPOSIT",
+          paymentMethod: "WALLET",
+          description: `Seed initial balance for ${buyerData.email}`,
+          metadata: { seedTag: "buyer-seed-2026-03" },
+        },
+      );
 
       createdBuyers.push(buyer);
       console.log(`✅ Acheteur ${buyerData.email} créé avec succès!`);
@@ -114,7 +111,7 @@ async function seedBuyers() {
     for (const buyerData of BUYERS_DATA) {
       const buyer = createdBuyers.find((b) => b.email === buyerData.email);
       if (buyer) {
-        const wallet = await Wallet.findOne({ ownerId: buyer._id });
+        const wallet = await walletService.getUserWallet(buyer._id);
         console.log(
           `\n👤 ${buyer.profile.firstName} ${buyer.profile.lastName}`,
         );

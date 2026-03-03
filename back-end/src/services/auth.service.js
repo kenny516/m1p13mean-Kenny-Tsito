@@ -12,6 +12,7 @@ import {
   uploadUserAvatar as uploadUserAvatarImage,
   deleteByFileId,
 } from "./imagekit.service.js";
+import * as settingsService from "./settings.service.js";
 
 /**
  * Service d'authentification
@@ -41,15 +42,35 @@ export const registerUser = async ({ email, password, role, profile, avatarFile 
       createUserOptions,
     );
 
-    // Créer le wallet associé
     const createWalletOptions = txn.session ? { session: txn.session } : {};
-    const [wallet] = await Wallet.create(
-      [{ ownerId: user._id, ownerModel: "User" }],
-      createWalletOptions,
-    );
+    const isAdmin = role === "ADMIN";
 
-    // Associer le wallet à l'utilisateur
-    user.walletId = wallet._id;
+    if (isAdmin) {
+      let adminGlobalWalletId = await settingsService.getAdminGlobalWalletId(
+        txn.session,
+      );
+
+      if (!adminGlobalWalletId) {
+        const [wallet] = await Wallet.create(
+          [{ ownerId: user._id, ownerModel: "User" }],
+          createWalletOptions,
+        );
+        adminGlobalWalletId = wallet._id;
+        await settingsService.setAdminGlobalWalletId(
+          adminGlobalWalletId,
+          txn.session,
+        );
+      }
+
+      user.walletId = adminGlobalWalletId;
+    } else {
+      const [wallet] = await Wallet.create(
+        [{ ownerId: user._id, ownerModel: "User" }],
+        createWalletOptions,
+      );
+
+      user.walletId = wallet._id;
+    }
 
     if (avatarFile) {
       const uploadedAvatar = await uploadUserAvatarImage(user._id.toString(), avatarFile);

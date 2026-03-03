@@ -6,6 +6,10 @@ import {
   uploadProductImageAtIndex,
   deleteByFileId,
 } from "./imagekit.service.js";
+import {
+  incrementProductViews,
+  recomputeShopProductStatusCounters,
+} from "./stats.service.js";
 
 const uploadAndAppendProductImages = async (product, files = []) => {
   if (!Array.isArray(files) || files.length === 0) return;
@@ -38,6 +42,25 @@ const uploadAndAppendProductImages = async (product, files = []) => {
   }
 
   product.images = [...(product.images || []), ...uploadedImages];
+};
+
+const resolveShopIdFromRef = (shopRef) => {
+  if (!shopRef) return null;
+
+  if (typeof shopRef === "string") {
+    return shopRef;
+  }
+
+  if (shopRef?._id) {
+    return shopRef._id.toString();
+  }
+
+  if (typeof shopRef.toString === "function") {
+    const value = shopRef.toString();
+    if (value && value !== "[object Object]") return value;
+  }
+
+  return null;
 };
 
 /**
@@ -97,6 +120,17 @@ export const createProduct = async (
   if (Array.isArray(imageFiles) && imageFiles.length > 0) {
     await product.save();
   }
+
+  const resolvedShopId = resolveShopIdFromRef(shopId);
+  if (!resolvedShopId) {
+    throw new ApiError(
+      400,
+      "INVALID_SHOP",
+      "Identifiant de boutique invalide pour les statistiques produit",
+    );
+  }
+
+  await recomputeShopProductStatusCounters(resolvedShopId);
 
   return product;
 };
@@ -292,6 +326,12 @@ export const getProductById = async (id, session = null) => {
   return product;
 };
 
+export const getProductByIdForPublicView = async (id) => {
+  const product = await getProductById(id);
+  await incrementProductViews(product._id);
+  return product;
+};
+
 /**
  * Met à jour un produit
  * Si le produit était ACTIVE et qu'un vendeur le modifie, il repasse en PENDING
@@ -304,6 +344,8 @@ export const updateProduct = async (
   imageFiles = [],
 ) => {
   const product = await getProductById(id);
+  const previousStatus = product.status;
+  const previousShopId = resolveShopIdFromRef(product.shopId);
 
   // Vérification des droits (Propriétaire ou Admin)
   if (userRole !== "ADMIN" && product.sellerId.toString() !== userId) {
@@ -346,6 +388,17 @@ export const updateProduct = async (
   await uploadAndAppendProductImages(product, imageFiles);
 
   await product.save();
+
+  const currentShopId = resolveShopIdFromRef(product.shopId);
+  if (previousStatus !== product.status || previousShopId !== currentShopId) {
+    if (previousShopId) {
+      await recomputeShopProductStatusCounters(previousShopId);
+    }
+    if (currentShopId && previousShopId !== currentShopId) {
+      await recomputeShopProductStatusCounters(currentShopId);
+    }
+  }
+
   return product;
 };
 
@@ -414,6 +467,7 @@ export const deleteProductImageByIndex = async (
  */
 export const deleteProduct = async (id, userId, userRole) => {
   const product = await getProductById(id);
+  const shopId = resolveShopIdFromRef(product.shopId);
 
   if (userRole !== "ADMIN" && product.sellerId.toString() !== userId) {
     throw new ApiError(
@@ -424,6 +478,9 @@ export const deleteProduct = async (id, userId, userRole) => {
   }
 
   await product.deleteOne();
+  if (shopId) {
+    await recomputeShopProductStatusCounters(shopId);
+  }
   return product;
 };
 
@@ -433,6 +490,8 @@ export const deleteProduct = async (id, userId, userRole) => {
  */
 export const moderateProduct = async (id, status, rejectionReason) => {
   const product = await getProductById(id);
+  const previousStatus = product.status;
+  const shopId = resolveShopIdFromRef(product.shopId);
 
   // Empêcher la modification des produits en brouillon
   if (product.status === "DRAFT") {
@@ -451,5 +510,10 @@ export const moderateProduct = async (id, status, rejectionReason) => {
   }
 
   await product.save();
+
+  if (previousStatus !== product.status && shopId) {
+    await recomputeShopProductStatusCounters(shopId);
+  }
+
   return product;
 };

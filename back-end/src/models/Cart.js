@@ -62,6 +62,11 @@ const cartSchema = new mongoose.Schema(
 			required: true,
 			default: () => new Date(Date.now() + 30 * 60 * 1000), // 30 minutes par défaut
 		},
+		// Date de confirmation de livraison
+		deliveredAt: {
+			type: Date,
+			default: null,
+		},
 	},
 	{ timestamps: true },
 );

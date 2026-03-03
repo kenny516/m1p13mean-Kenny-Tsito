@@ -1,9 +1,10 @@
-import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 import User from "../models/User.js";
 import Shop from "../models/Shop.js";
-import Wallet from "../models/Wallet.js";
 import config from "../config/env.js";
+import * as userService from "../services/user.service.js";
+import * as shopService from "../services/shop.service.js";
+import * as walletService from "../services/wallet.service.js";
 
 /**
  * Script de seed pour créer des boutiques avec leurs vendeurs
@@ -87,78 +88,75 @@ async function seedShops() {
 
 			if (seller) {
 				console.log(`ℹ️  Le vendeur ${sellerData.email} existe déjà`);
+				await walletService.ensureWalletByOwner({
+					ownerId: seller._id,
+					ownerModel: "User",
+				});
+
 				const existingShop = await Shop.findOne({ sellerId: seller._id });
 				if (existingShop) {
 					console.log(`ℹ️  La boutique ${existingShop.name} existe déjà`);
-					const existingShopWallet = await Wallet.findOne({
+					await walletService.ensureWalletByOwner({
 						ownerId: existingShop._id,
 						ownerModel: "Shop",
 					});
-					if (!existingShopWallet) {
-						await Wallet.create({
-							ownerId: existingShop._id,
-							ownerModel: "Shop",
-							balance: 0,
-							currency: "MGA",
-						});
-						console.log(`💳 Wallet boutique créé pour ${existingShop.name}`);
+
+					if (existingShop.status !== "ACTIVE") {
+						if (["DRAFT", "REJECTED"].includes(existingShop.status)) {
+							await shopService.submitForReview(
+								existingShop._id.toString(),
+								seller._id.toString(),
+							);
+						}
+
+						await shopService.moderateShop(
+							existingShop._id.toString(),
+							"ACTIVE",
+						);
 					}
+
 					createdShops.push({ seller, shop: existingShop });
 					continue;
 				}
 			} else {
 				// Créer le vendeur
 				console.log(`📝 Création du vendeur ${sellerData.email}...`);
-				const salt = await bcrypt.genSalt(12);
-				const passwordHash = await bcrypt.hash(sellerData.password, salt);
-
-				seller = await User.create({
+				const createdSeller = await userService.createUser({
 					email: sellerData.email,
-					passwordHash,
+					password: sellerData.password,
 					role: "SELLER",
 					profile: sellerData.profile,
 					isValidated: true,
 					isActive: true,
 				});
 
-				// Créer le wallet
-				const wallet = await Wallet.create({
-					ownerId: seller._id,
-					ownerModel: "User",
-					balance: 0,
-					currency: "MGA",
-				});
-
-				seller.walletId = wallet._id;
-				await seller.save();
+				seller = await User.findById(createdSeller._id);
 			}
 
 			// Créer la boutique
 			console.log(`🏪 Création de la boutique ${sellerData.shop.name}...`);
-			const shop = await Shop.create({
-				sellerId: seller._id,
-				name: sellerData.shop.name,
-				description: sellerData.shop.description,
-				categories: sellerData.shop.categories,
-				contact: sellerData.shop.contact,
-				commissionRate: sellerData.shop.commissionRate,
-				status: "ACTIVE",
-				isActive: true, // Boutique déjà validée pour les tests
-			});
+			const shop = await shopService.createShop(
+				{
+					name: sellerData.shop.name,
+					description: sellerData.shop.description,
+					categories: sellerData.shop.categories,
+					contact: sellerData.shop.contact,
+					commissionRate: sellerData.shop.commissionRate,
+				},
+				seller._id.toString(),
+			);
 
-			const shopWallet = await Wallet.findOne({
+			await shopService.submitForReview(
+				shop._id.toString(),
+				seller._id.toString(),
+			);
+
+			await shopService.moderateShop(shop._id.toString(), "ACTIVE");
+
+			await walletService.ensureWalletByOwner({
 				ownerId: shop._id,
 				ownerModel: "Shop",
 			});
-			if (!shopWallet) {
-				await Wallet.create({
-					ownerId: shop._id,
-					ownerModel: "Shop",
-					balance: 0,
-					currency: "MGA",
-				});
-				console.log(`💳 Wallet boutique créé pour ${shop.name}`);
-			}
 
 			createdShops.push({ seller, shop });
 			console.log(`✅ Boutique ${shop.name} créée`);

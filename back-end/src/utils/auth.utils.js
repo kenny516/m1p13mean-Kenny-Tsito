@@ -48,6 +48,7 @@ export const formatUserResponse = (user) => {
     role: serialized.role,
     profile: serialized.profile,
     isValidated: serialized.isValidated,
+    isActive: serialized.isActive,
     walletId: serialized.walletId,
     createdAt: serialized.createdAt,
     updatedAt: serialized.updatedAt,

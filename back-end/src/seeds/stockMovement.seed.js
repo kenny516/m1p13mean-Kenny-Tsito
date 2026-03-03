@@ -1,10 +1,9 @@
 import mongoose from "mongoose";
 import Product from "../models/Product.js";
-import Shop from "../models/Shop.js";
-import User from "../models/User.js";
-import StockMovement, { IN_MOVEMENTS } from "../models/StockMovement.js";
+import StockMovement from "../models/StockMovement.js";
 import StockMovementLine from "../models/StockMovementLine.js";
 import config from "../config/env.js";
+import * as stockMovementService from "../services/stockMovement.service.js";
 
 // Seed tag to keep runs traceable
 const SEED_NOTE = "seed-stock-2026-03";
@@ -54,11 +53,15 @@ const MOVEMENT_PLAN = [
 	},
 ];
 
-const computeDirection = (movementType) => (IN_MOVEMENTS.includes(movementType) ? "IN" : "OUT");
-
-const applyMovementTotals = (direction, quantity, runningTotal) => {
-	if (direction === "IN") return runningTotal + quantity;
-	return runningTotal - quantity;
+const resolveId = (value) => {
+	if (!value) return null;
+	if (typeof value === "string") return value;
+	if (value?._id) return value._id.toString();
+	if (typeof value.toString === "function") {
+		const stringValue = value.toString();
+		if (stringValue && stringValue !== "[object Object]") return stringValue;
+	}
+	return null;
 };
 
 async function seedStockMovements() {
@@ -85,75 +88,58 @@ async function seedStockMovements() {
 			continue;
 		}
 
-		// Start from the larger of cached stock and calculated stock to avoid negatives
-		const snapshot = await StockMovementLine.calculateStock(product._id);
-		let runningTotal = Math.max(snapshot.total || 0, product.stock?.cache?.total || 0);
+		const resolvedShopId = resolveId(product.shopId);
+		const resolvedSellerId = resolveId(product.sellerId);
 
-		for (const move of plan.movements) {
-			const direction = computeDirection(move.type);
-			const stockBefore = runningTotal;
-			const stockAfter = applyMovementTotals(direction, move.quantity, runningTotal);
-
-			if (stockAfter < 0) {
-				console.log(`⏭️  Skipping ${move.type} for ${plan.sku} (insufficient stock)`);
-				skippedCount += 1;
-				continue;
-			}
-
-			const movementDoc = {
-				movementType: move.type,
-				direction,
-				performedBy: product.sellerId,
-				shopId: product.shopId,
-				note: SEED_NOTE,
-				date: new Date(),
-			};
-
-			if (move.type === "SALE") {
-				const saleStatus = move.saleStatus || "CONFIRMED";
-				movementDoc.sale = {
-					paymentMethod: move.paymentMethod,
-					status: saleStatus,
-					confirmedAt: new Date(),
-					deliveredAt: saleStatus === "DELIVERED" ? new Date() : undefined,
-				};
-			}
-
-			const [movement] = await StockMovement.create([movementDoc]);
-
-			const lineDoc = {
-				reference: `${movement.reference}-${product._id}`,
-				moveId: movement._id,
-				productId: product._id,
-				shopId: product.shopId,
-				movementType: move.type,
-				direction,
-				quantity: move.quantity,
-				unitPrice: move.unitPrice || 0,
-				totalAmount: (move.quantity || 0) * (move.unitPrice || 0),
-				stockBefore,
-				stockAfter,
-				performedBy: product.sellerId,
-				date: new Date(),
-			};
-
-			const [line] = await StockMovementLine.create([lineDoc]);
-
-			movement.lineIds = [line._id];
-			movement.totalAmount = line.totalAmount || 0;
-			await movement.save();
-			createdCount += 1;
-			runningTotal = stockAfter;
-			console.log(`✅ ${move.type} created for ${plan.sku} (qty ${move.quantity})`);
+		if (!resolvedShopId || !resolvedSellerId) {
+			console.log(`⚠️  Invalid shop/seller reference for ${plan.sku}, skipping`);
+			skippedCount += plan.movements.length;
+			continue;
 		}
 
-		// Sync product stock cache with aggregated movements
-		const updatedStock = await StockMovementLine.calculateStock(product._id);
-		product.stock.cache.total = updatedStock.total;
-		product.stock.cache.reserved = updatedStock.reserved;
-		product.stock.cache.available = updatedStock.available;
-		product.stock.cache.lastUpdated = new Date();
-		await product.save();
+		for (const move of plan.movements) {
+			try {
+				const payload = {
+					movementType: move.type,
+					shopId: resolvedShopId,
+					note: `${SEED_NOTE} - ${move.notes || "seed"}`,
+					date: new Date(),
+					items: [
+						{
+							productId: product._id.toString(),
+							shopId: resolvedShopId,
+							quantity: move.quantity,
+							unitPrice: move.unitPrice || 0,
+						},
+					],
+				};
+
+				if (move.type === "SALE") {
+					payload.sale = {
+						paymentMethod: move.paymentMethod || "CARD",
+					};
+				}
+
+				const movement = await stockMovementService.createMovement(
+					payload,
+					resolvedSellerId,
+				);
+
+				if (move.type === "SALE" && move.saleStatus === "DELIVERED") {
+					await stockMovementService.updateSaleStatus(
+						movement._id.toString(),
+						{ status: "DELIVERED" },
+						resolvedSellerId,
+					);
+				}
+
+				createdCount += 1;
+				console.log(`✅ ${move.type} created for ${plan.sku} (qty ${move.quantity})`);
+			} catch (error) {
+				console.log(`⏭️  Skipping ${move.type} for ${plan.sku}: ${error.message}`);
+				skippedCount += 1;
+			}
+		}
 	}
 
 	console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");

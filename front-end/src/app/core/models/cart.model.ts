@@ -70,6 +70,7 @@ export interface Cart {
   items: CartItem[];
   totalAmount: number;
   expiresAt?: string;
+  deliveredAt?: string;
   createdAt: string;
   updatedAt?: string;
 }
@@ -128,4 +129,48 @@ export interface CartSummary {
   itemCount: number;
   totalAmount: number;
   shopCount: number;
+}
+
+/**
+ * Interface pour un item non restauré
+ */
+export interface NotRestoredItem {
+  productId: string;
+  title: string;
+  reason: string;
+  requestedQuantity: number;
+  adjustedQuantity?: number;
+}
+
+/**
+ * Interface pour un item restauré
+ */
+export interface RestoredItem {
+  productId: string;
+  title: string;
+  quantity: number;
+  adjustedQuantity?: boolean;
+}
+
+/**
+ * Interface pour la réponse de restauration du panier
+ */
+export interface RestoreCartResponse {
+  cart: Cart;
+  restored: number;
+  notRestored: NotRestoredItem[];
+}
+
+/**
+ * Interface pour un panier expiré enrichi avec infos de disponibilité
+ */
+export interface ExpiredCart {
+  _id: string;
+  userId: string;
+  items: CartItem[];
+  totalAmount: number;
+  expiredAt: string;
+  itemsCount: number;
+  availableItems: number;
+  unavailableItems: number;
 }

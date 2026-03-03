@@ -33,45 +33,59 @@ import { ZardInputDirective } from '@/shared/components/input';
       </div>
 
       <z-card class="p-6">
-        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-4">
-          <div class="grid gap-4 md:grid-cols-2">
+        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-6">
+          <section class="space-y-4 rounded-md border border-border p-4">
             <div>
-              <p class="mb-1 text-sm text-muted-foreground">Nom *</p>
-              <input z-input formControlName="name" placeholder="Nom de la boutique" />
+              <h2 class="text-sm font-semibold text-foreground">Informations principales</h2>
+              <p class="text-xs text-muted-foreground">Identité et description de la boutique.</p>
             </div>
+
+            <div class="grid gap-4 md:grid-cols-2">
+              <div>
+                <p class="mb-1 text-sm text-muted-foreground">Nom *</p>
+                <input z-input formControlName="name" placeholder="Nom de la boutique" />
+              </div>
+              <div>
+                <p class="mb-1 text-sm text-muted-foreground">Email de contact</p>
+                <input z-input type="email" formControlName="contactEmail" placeholder="contact@mail.com" />
+              </div>
+            </div>
+
             <div>
-              <p class="mb-1 text-sm text-muted-foreground">Email de contact</p>
-              <input z-input type="email" formControlName="contactEmail" placeholder="contact@mail.com" />
+              <p class="mb-1 text-sm text-muted-foreground">Description</p>
+              <textarea
+                formControlName="description"
+                rows="4"
+                class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="Description de la boutique"
+              ></textarea>
             </div>
-          </div>
+          </section>
 
-          <div>
-            <p class="mb-1 text-sm text-muted-foreground">Description</p>
-            <textarea
-              formControlName="description"
-              rows="4"
-              class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              placeholder="Description de la boutique"
-            ></textarea>
-          </div>
-
-          <div class="grid gap-4 md:grid-cols-2">
+          <section class="space-y-4 rounded-md border border-border p-4">
             <div>
-              <p class="mb-1 text-sm text-muted-foreground">Téléphone</p>
-              <input z-input formControlName="contactPhone" placeholder="+261XXXXXXXXX" />
+              <h2 class="text-sm font-semibold text-foreground">Contact et classification</h2>
+              <p class="text-xs text-muted-foreground">Coordonnées et catégories visibles côté client.</p>
             </div>
+
+            <div class="grid gap-4 md:grid-cols-2">
+              <div>
+                <p class="mb-1 text-sm text-muted-foreground">Téléphone</p>
+                <input z-input formControlName="contactPhone" placeholder="+261XXXXXXXXX" />
+              </div>
+              <div>
+                <p class="mb-1 text-sm text-muted-foreground">Adresse</p>
+                <input z-input formControlName="contactAddress" placeholder="Adresse de contact" />
+              </div>
+            </div>
+
             <div>
-              <p class="mb-1 text-sm text-muted-foreground">Adresse</p>
-              <input z-input formControlName="contactAddress" placeholder="Adresse de contact" />
+              <p class="mb-1 text-sm text-muted-foreground">Catégories (séparées par virgule)</p>
+              <input z-input formControlName="categories" placeholder="Informatique, Maison, Beauté" />
             </div>
-          </div>
+          </section>
 
-          <div>
-            <p class="mb-1 text-sm text-muted-foreground">Catégories (séparées par virgule)</p>
-            <input z-input formControlName="categories" placeholder="Informatique, Maison, Beauté" />
-          </div>
-
-          <div class="flex justify-end gap-2">
+          <div class="flex justify-end gap-2 border-t border-border pt-4">
             <a z-button zType="outline" routerLink="/seller/shops">Annuler</a>
             <button z-button type="submit" [disabled]="isSubmitting() || form.invalid">
               {{ isSubmitting() ? 'Enregistrement...' : isEditMode() ? 'Mettre à jour' : 'Créer' }}

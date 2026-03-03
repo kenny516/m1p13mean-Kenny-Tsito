@@ -86,6 +86,7 @@ const productSchema = new mongoose.Schema(
     stats: {
       views: { type: Number, default: 0 },
       sales: { type: Number, default: 0 },
+      deliveredSales: { type: Number, default: 0 },
       rating: { type: Number, default: 0 },
       reviewCount: { type: Number, default: 0 },
     },

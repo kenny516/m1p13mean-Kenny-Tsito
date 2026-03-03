@@ -15,8 +15,11 @@ import {
   debitWallet,
   debitWalletByOwner,
   creditWalletByOwner,
+  debitWalletById,
+  creditWalletById,
 } from "./wallet.service.js";
 import { requireActiveProduct } from "./product.service.js";
+import { requireActiveShop } from "./shop.service.js";
 import { createOptionalSession } from "../utils/transaction.util.js";
 import * as settingsService from "./settings.service.js";
 
@@ -162,6 +165,45 @@ const hasWithdrawalByType = async (
   return Boolean(existing);
 };
 
+const hasDepositByType = async (
+  stockMovementId,
+  kind,
+  shopId,
+  session = null,
+) => {
+  const query = {
+    type: "DEPOSIT",
+    stockMovementId,
+    "metadata.kind": kind,
+  };
+
+  if (shopId) {
+    query["metadata.shopId"] = shopId;
+  }
+
+  const findQuery = WalletTransaction.findOne(query).select("_id");
+  if (session) findQuery.session(session);
+
+  const existing = await findQuery;
+  return Boolean(existing);
+};
+
+const getRequiredAdminGlobalWalletId = async (session = null) => {
+  const adminGlobalWalletId = await settingsService.getAdminGlobalWalletId(
+    session,
+  );
+
+  if (!adminGlobalWalletId) {
+    throw new ApiError(
+      500,
+      "ADMIN_GLOBAL_WALLET_NOT_CONFIGURED",
+      "Wallet admin global non configuré",
+    );
+  }
+
+  return adminGlobalWalletId;
+};
+
 const creditCheckoutSalesToShops = async ({
   saleId,
   orderReference,
@@ -218,6 +260,8 @@ const debitDeliveryCommissions = async (cart, session = null) => {
     return;
   }
 
+  const adminGlobalWalletId = await getRequiredAdminGlobalWalletId(session);
+
   const commissionByShop = await groupSaleCommissionsByShop(saleId, session);
 
   for (const [shopId, totalCommission] of commissionByShop.entries()) {
@@ -226,24 +270,57 @@ const debitDeliveryCommissions = async (cart, session = null) => {
       continue;
     }
 
-    const alreadyDebited = await hasCommissionDebit(saleId, shopId, session);
-    if (alreadyDebited) {
+    const alreadyDebitedSeller = await hasCommissionDebit(
+      saleId,
+      shopId,
+      session,
+    );
+    if (!alreadyDebitedSeller) {
+      await debitWalletByOwner(
+        { ownerId: shopId, ownerModel: "Shop" },
+        amount,
+        {
+          type: "COMMISSION",
+          allowNegative: true,
+          paymentMethod: "WALLET",
+          description: `Commission commande ${cart.order.reference || cart._id}`,
+          stockMovementId: saleId,
+          metadata: {
+            kind: "DELIVERY_COMMISSION",
+            cartId: cart._id.toString(),
+            saleId,
+            shopId,
+            adminWalletId: adminGlobalWalletId.toString(),
+          },
+          session,
+        },
+      );
+    }
+
+    const alreadyCreditedAdmin = await hasDepositByType(
+      saleId,
+      "DELIVERY_COMMISSION",
+      shopId,
+      session,
+    );
+    if (alreadyCreditedAdmin) {
       continue;
     }
 
-    await debitWalletByOwner(
-      { ownerId: shopId, ownerModel: "Shop" },
+    await creditWalletById(
+      adminGlobalWalletId,
       amount,
       {
-        type: "COMMISSION",
-        allowNegative: true,
+        type: "DEPOSIT",
         paymentMethod: "WALLET",
-        description: `Commission commande ${cart.order.reference || cart._id}`,
+        description: `Encaissement commission commande ${cart.order.reference || cart._id}`,
         stockMovementId: saleId,
         metadata: {
+          kind: "DELIVERY_COMMISSION",
           cartId: cart._id.toString(),
           saleId,
           shopId,
+          adminWalletId: adminGlobalWalletId.toString(),
         },
         session,
       },
@@ -311,6 +388,8 @@ const refundDeliveryCommissions = async ({
   cartId,
   session = null,
 }) => {
+  const adminGlobalWalletId = await getRequiredAdminGlobalWalletId(session);
+
   const query = WalletTransaction.find({
     type: "COMMISSION",
     stockMovementId: saleId,
@@ -323,6 +402,39 @@ const refundDeliveryCommissions = async ({
   for (const tx of commissionTransactions) {
     const shopId = tx.metadata?.get("shopId") || tx.metadata?.shopId;
     if (!shopId) continue;
+
+    const amount = Number(tx.amount) || 0;
+    if (amount <= 0) continue;
+
+    const alreadyDebitedAdmin = await hasWithdrawalByType(
+      returnMovementId,
+      "RETURN_COMMISSION_ADMIN",
+      shopId,
+      session,
+    );
+
+    if (!alreadyDebitedAdmin) {
+      await debitWalletById(
+        adminGlobalWalletId,
+        amount,
+        {
+          type: "WITHDRAWAL",
+          allowNegative: true,
+          paymentMethod: "WALLET",
+          description: `Reverse commission commande ${orderReference || cartId}`,
+          stockMovementId: returnMovementId,
+          metadata: {
+            kind: "RETURN_COMMISSION_ADMIN",
+            cartId: cartId.toString(),
+            saleId,
+            returnMovementId,
+            shopId,
+            adminWalletId: adminGlobalWalletId.toString(),
+          },
+          session,
+        },
+      );
+    }
 
     const alreadyRefunded = await hasRefundByType(
       returnMovementId,
@@ -337,7 +449,7 @@ const refundDeliveryCommissions = async ({
 
     await creditWalletByOwner(
       { ownerId: shopId, ownerModel: "Shop" },
-      Number(tx.amount) || 0,
+      amount,
       {
         type: "REFUND",
         paymentMethod: "WALLET",
@@ -349,6 +461,7 @@ const refundDeliveryCommissions = async ({
           saleId,
           returnMovementId,
           shopId,
+          adminWalletId: adminGlobalWalletId.toString(),
         },
         session,
       },
@@ -479,9 +592,9 @@ const expireOneCart = async (cartId, now, ttlMinutes) => {
       skipMissingProduct: true,
     });
 
+    // Marquer comme expiré mais conserver les items pour permettre la restauration
     cart.status = "EXPIRED";
-    cart.items = [];
-    cart.totalAmount = 0;
+    // Note: items et totalAmount sont conservés pour permettre la restauration ultérieure
 
     const saveOptions = txn.session ? { session: txn.session } : {};
     await cart.save(saveOptions);
@@ -957,6 +1070,7 @@ export const confirmDelivery = async (userId, cartId) => {
     await debitDeliveryCommissions(cart, txn.session);
  
     cart.status = "DELIVERED";
+    cart.deliveredAt = new Date();
     const saveOptions = txn.session ? { session: txn.session } : {};
     await cart.save(saveOptions);
 
@@ -992,6 +1106,19 @@ export const returnOrder = async (userId, orderId, payload = {}) => {
         "INVALID_STATUS",
         "Seules les commandes en cours ou livrées peuvent être retournées",
       );
+    }
+
+    // Vérifier le délai de retour pour les commandes déjà livrées
+    if (cart.status === "DELIVERED" && cart.deliveredAt) {
+      const settings = await settingsService.getSettings();
+      const returnWindowMs = (settings.returnWindowDays ?? 7) * 24 * 60 * 60 * 1000;
+      if (Date.now() - new Date(cart.deliveredAt).getTime() > returnWindowMs) {
+        throw new ApiError(
+          400,
+          "RETURN_WINDOW_EXPIRED",
+          `Le délai de retour de ${settings.returnWindowDays ?? 7} jour(s) est dépassé`,
+        );
+      }
     }
 
     if (!cart.order?.saleId) {
@@ -1173,4 +1300,242 @@ export const getOrderById = async (userId, orderId) => {
   }
 
   return order;
+};
+
+/**
+ * Récupère la liste des paniers expirés de l'utilisateur qui ont encore des items
+ * @param {string} userId - ID de l'utilisateur
+ * @returns {Promise<Array>} Liste des paniers expirés avec leurs items
+ */
+export const getExpiredCarts = async (userId) => {
+  const expiredCarts = await Cart.find({
+    userId,
+    status: "EXPIRED",
+    "items.0": { $exists: true },
+  })
+    .sort({ updatedAt: -1 })
+    .lean();
+
+  // Enrichir chaque panier avec les infos de disponibilité
+  const enrichedCarts = await Promise.all(
+    expiredCarts.map(async (cart) => {
+      let availableItems = 0;
+      let unavailableItems = 0;
+
+      for (const item of cart.items) {
+        try {
+          // Vérifier si le produit est toujours actif
+          const product = await Product.findOne({
+            _id: item.productId,
+            status: "ACTIVE",
+          }).lean();
+
+          if (!product) {
+            unavailableItems++;
+            continue;
+          }
+
+          // Vérifier si le shop est actif
+          const shop = await Shop.findOne({
+            _id: product.shopId,
+            isActive: true,
+          }).lean();
+
+          if (!shop) {
+            unavailableItems++;
+            continue;
+          }
+
+          // Vérifier le stock disponible
+          const stockData = await StockMovementLine.calculateStock(product._id);
+          const effectiveAvailable = stockData.total - stockData.reserved;
+
+          if (effectiveAvailable > 0) {
+            availableItems++;
+          } else {
+            unavailableItems++;
+          }
+        } catch {
+          unavailableItems++;
+        }
+      }
+
+      return {
+        ...cart,
+        itemsCount: cart.items.length,
+        availableItems,
+        unavailableItems,
+        expiredAt: cart.updatedAt,
+      };
+    })
+  );
+
+  return enrichedCarts;
+};
+
+/**
+ * Restaure un panier expiré spécifique de l'utilisateur
+ * Si l'utilisateur a un panier actif, les items restaurés sont fusionnés
+ * 
+ * @param {string} userId - ID de l'utilisateur
+ * @param {string} cartId - ID du panier expiré à restaurer
+ * @returns {Object} { cart, restored: [], notRestored: [] }
+ */
+export const restoreExpiredCart = async (userId, cartId) => {
+  // Pas de transaction pour éviter les conflits d'écriture MongoDB
+  // Les opérations de réservation sont gérées individuellement
+
+  // 1. Trouver le panier expiré spécifique
+  const query = {
+    userId,
+    status: "EXPIRED",
+    "items.0": { $exists: true },
+  };
+
+  // Si un cartId est fourni, chercher ce panier spécifique
+  if (cartId) {
+    query._id = cartId;
+  }
+
+  const expiredCart = await Cart.findOne(query).sort({ updatedAt: -1 });
+
+  if (!expiredCart) {
+    throw new ApiError(
+      404,
+      "NO_EXPIRED_CART",
+      "Aucun panier expiré à restaurer",
+    );
+  }
+
+  // 2. Récupérer ou créer le panier actif
+  let activeCart = await findActiveCartByUser(userId);
+
+  if (!activeCart) {
+    const expiresAt = await getExpiresAt();
+    activeCart = await Cart.create({
+      userId,
+      items: [],
+      status: "CART",
+      totalAmount: 0,
+      expiresAt,
+    });
+  }
+
+  const restored = [];
+  const notRestored = [];
+
+  // 3. Vérifier et restaurer chaque item du panier expiré
+  for (const item of expiredCart.items) {
+    try {
+      // Vérifier produit actif
+      const product = await requireActiveProduct(item.productId);
+
+      // Vérifier shop actif
+      await requireActiveShop(product.shopId);
+
+      // Vérifier stock disponible
+      const stockData = await StockMovementLine.calculateStock(product._id);
+      const effectiveAvailable = stockData.total - stockData.reserved;
+
+      let quantityToRestore = item.quantity;
+
+      if (effectiveAvailable < item.quantity) {
+        if (effectiveAvailable > 0) {
+          // Restauration partielle - ajuster la quantité
+          quantityToRestore = effectiveAvailable;
+        } else {
+          // Stock épuisé - ne pas restaurer cet item
+          notRestored.push({
+            productId: item.productId,
+            productSnapshot: item.productSnapshot,
+            originalQuantity: item.quantity,
+            reason: "INSUFFICIENT_STOCK",
+            message: "Stock épuisé",
+          });
+          continue;
+        }
+      }
+
+      // Vérifier si le produit est déjà dans le panier actif
+      const existingItemIndex = activeCart.items.findIndex(
+        (cartItem) =>
+          cartItem.productId.toString() === item.productId.toString(),
+      );
+
+      // Recréer la réservation de stock (sans transaction)
+      await createCartMovementLine(
+        {
+          productId: product._id.toString(),
+          shopId: product.shopId.toString(),
+          movementType: "RESERVATION",
+          quantity: quantityToRestore,
+          unitPrice: product.price,
+          cartId: activeCart._id,
+          date: new Date(),
+        },
+        userId,
+        { product, cache: true },
+      );
+
+      // Mettre à jour le snapshot avec le prix actuel
+      const updatedSnapshot = buildItemSnapshot(product);
+
+      if (existingItemIndex !== -1) {
+        // Fusionner avec l'item existant
+        activeCart.items[existingItemIndex].quantity += quantityToRestore;
+        activeCart.items[existingItemIndex].totalAmount =
+          product.price * activeCart.items[existingItemIndex].quantity;
+        activeCart.items[existingItemIndex].productSnapshot = updatedSnapshot;
+      } else {
+        // Ajouter comme nouvel item
+        activeCart.items.push({
+          productId: product._id,
+          shopId: product.shopId,
+          quantity: quantityToRestore,
+          productSnapshot: updatedSnapshot,
+          totalAmount: product.price * quantityToRestore,
+        });
+      }
+
+      restored.push({
+        productId: item.productId,
+        productSnapshot: item.productSnapshot,
+        originalQuantity: item.quantity,
+        restoredQuantity: quantityToRestore,
+        adjustedQuantity: quantityToRestore < item.quantity,
+      });
+    } catch (error) {
+      notRestored.push({
+        productId: item.productId,
+        productSnapshot: item.productSnapshot,
+        originalQuantity: item.quantity,
+        reason: error.code || "VALIDATION_ERROR",
+        message: error.message,
+      });
+    }
+  }
+
+  if (restored.length === 0) {
+    throw new ApiError(
+      400,
+      "CANNOT_RESTORE",
+      "Aucun article n'a pu être restauré (produits indisponibles ou stock épuisé)",
+    );
+  }
+
+  // 4. Mettre à jour le panier actif
+  activeCart.totalAmount = computeTotal(activeCart.items);
+  activeCart.expiresAt = await getExpiresAt();
+  await activeCart.save();
+
+  // 5. Vider les items du panier expiré pour éviter double restauration
+  expiredCart.items = [];
+  expiredCart.totalAmount = 0;
+  await expiredCart.save();
+
+  return {
+    cart: activeCart,
+    restored,
+    notRestored,
+  };
 };

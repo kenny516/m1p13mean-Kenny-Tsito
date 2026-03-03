@@ -185,7 +185,7 @@ export const listMyProducts = async (req, res, next) => {
 export const getOne = async (req, res, next) => {
 	try {
 		const { id } = req.params;
-		const product = await productService.getProductById(id);
+		const product = await productService.getProductByIdForPublicView(id);
 
 		res.json({
 			success: true,

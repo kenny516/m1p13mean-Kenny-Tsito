@@ -32,6 +32,7 @@ export interface ProductStock {
 export interface ProductStats {
   views: number;
   sales: number;
+  deliveredSales: number;
   rating: number;
   reviewCount: number;
 }

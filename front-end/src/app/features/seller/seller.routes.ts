@@ -12,7 +12,14 @@ export const SELLER_ROUTES: Routes = [
       {
         path: '',
         pathMatch: 'full',
-        redirectTo: 'shops',
+        redirectTo: 'dashboard',
+      },
+      {
+        path: 'dashboard',
+        loadComponent: () =>
+          import('./dashboard/seller-dashboard.component').then(
+            (m) => m.SellerDashboardComponent,
+          ),
       },
       {
         path: 'shops',
