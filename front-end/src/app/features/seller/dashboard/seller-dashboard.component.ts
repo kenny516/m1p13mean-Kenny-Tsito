@@ -4,11 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration, ChartData } from 'chart.js';
-import { StockMovementService, ToastService } from '@/core/services';
+import { ShopService, StockMovementService, ToastService } from '@/core/services';
 import {
   SellerDashboardSummary,
   SellerDashboardTrendPoint,
 } from '@/core/models/stock-movement.model';
+import { Shop } from '@/core/models/shop.model';
 import { ZardButtonComponent } from '@/shared/components/button';
 import { ZardCardComponent } from '@/shared/components/card';
 import { ZardSelectImports } from '@/shared/components/select';
@@ -47,6 +48,18 @@ type RankingMode = 'shops' | 'productsAmount' | 'productsUnits';
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
+          <z-select
+            [(zValue)]="selectedShopId"
+            (zSelectionChange)="reloadSummary()"
+            zPlaceholder="Boutique"
+            class="w-56"
+          >
+            <z-select-item zValue="">Toutes boutiques</z-select-item>
+            @for (shop of shops(); track shop._id) {
+              <z-select-item [zValue]="shop._id">{{ shop.name }}</z-select-item>
+            }
+          </z-select>
+
           <z-select
             [(zValue)]="selectedRange"
             (zSelectionChange)="reloadSummary()"
@@ -347,12 +360,15 @@ type RankingMode = 'shops' | 'productsAmount' | 'productsUnits';
   `,
 })
 export class SellerDashboardComponent implements OnInit {
+  private readonly shopService = inject(ShopService);
   private readonly stockMovementService = inject(StockMovementService);
   private readonly toast = inject(ToastService);
 
   readonly summary = signal<SellerDashboardSummary | null>(null);
   readonly isLoading = signal(false);
+  readonly shops = signal<Shop[]>([]);
 
+  selectedShopId = '';
   selectedRange: DashboardRange = '30d';
   selectedGroupBy: 'day' | 'week' | 'month' = 'day';
   selectedTrendMetric: TrendMetric = 'netSalesAmount';
@@ -449,7 +465,17 @@ export class SellerDashboardComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    void this.loadShops();
     void this.reloadSummary();
+  }
+
+  async loadShops(): Promise<void> {
+    try {
+      const response = await this.shopService.getMyShops(undefined, 1, 100);
+      this.shops.set(response.shops);
+    } catch {
+      this.toast.error('Impossible de charger les boutiques');
+    }
   }
 
   async reloadSummary(): Promise<void> {
@@ -460,6 +486,7 @@ export class SellerDashboardComponent implements OnInit {
         startDate: range.startDate,
         endDate: range.endDate,
         groupBy: this.selectedGroupBy,
+        shopId: this.selectedShopId || undefined,
         topLimit: 5,
       });
 

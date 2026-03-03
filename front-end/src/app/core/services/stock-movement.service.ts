@@ -225,6 +225,7 @@ export class StockMovementService {
     startDate?: string;
     endDate?: string;
     groupBy?: 'day' | 'week' | 'month';
+    shopId?: string;
     topLimit?: number;
   }): Promise<SellerDashboardSummary> {
     const query: Record<string, string> = {};
@@ -232,6 +233,7 @@ export class StockMovementService {
     if (params?.startDate) query['startDate'] = params.startDate;
     if (params?.endDate) query['endDate'] = params.endDate;
     if (params?.groupBy) query['groupBy'] = params.groupBy;
+    if (params?.shopId) query['shopId'] = params.shopId;
     if (params?.topLimit) query['topLimit'] = String(params.topLimit);
 
     return this.api.get<SellerDashboardSummary>('/stock-movements/dashboard/summary', query);
