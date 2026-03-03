@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject } from "@angular/core";
 
 import {
   FormBuilder,
@@ -7,15 +7,15 @@ import {
   ReactiveFormsModule,
   AbstractControl,
   ValidationErrors,
-} from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
-import { AuthService, ToastService } from '../../../core';
-import { ZardButtonComponent } from '@/shared/components/button';
-import { ZardInputDirective } from '@/shared/components/input';
-import { ZardCardComponent } from '@/shared/components/card';
-import { ZardSpinnerComponent } from '@/shared/components/spinner';
-import { ZardLabelComponent } from '@/shared/components/label';
-import { ZardIconComponent } from '@/shared/components/icon';
+} from "@angular/forms";
+import { Router, RouterLink } from "@angular/router";
+import { AuthService, ToastService } from "../../../core";
+import { ZardButtonComponent } from "@/shared/components/button";
+import { ZardInputDirective } from "@/shared/components/input";
+import { ZardCardComponent } from "@/shared/components/card";
+import { ZardSpinnerComponent } from "@/shared/components/spinner";
+import { ZardLabelComponent } from "@/shared/components/label";
+import { ZardIconComponent } from "@/shared/components/icon";
 
 /**
  * Interface pour les données du profil utilisateur
@@ -33,7 +33,7 @@ interface RegisterFormData {
   email: string;
   password: string;
   confirmPassword: string;
-  role: 'BUYER' | 'SELLER';
+  role: "BUYER" | "SELLER";
   profile: UserProfile;
 }
 
@@ -42,7 +42,7 @@ interface RegisterFormData {
  * Design : Logo + formulaire dans une seule card, pas de navbar
  */
 @Component({
-  selector: 'app-register',
+  selector: "app-register",
   standalone: true,
   imports: [
     ReactiveFormsModule,
@@ -124,7 +124,9 @@ interface RegisterFormData {
                   <div class="flex items-center gap-2">
                     <span class="text-xl">🏪</span>
                     <div>
-                      <p class="font-medium text-sm text-foreground">Vendeur</p>
+                      <p class="font-medium text-sm text-foreground">
+                        Boutique
+                      </p>
                       <p class="text-xs text-muted-foreground">
                         Vendre mes produits
                       </p>
@@ -151,11 +153,11 @@ interface RegisterFormData {
                   class="w-full pl-10"
                 />
               </div>
-              @if (isFieldInvalid('email')) {
+              @if (isFieldInvalid("email")) {
                 <p class="text-xs text-destructive">
-                  @if (getControl('email')?.errors?.['required']) {
+                  @if (getControl("email")?.errors?.["required"]) {
                     L'email est requis
-                  } @else if (getControl('email')?.errors?.['email']) {
+                  } @else if (getControl("email")?.errors?.["email"]) {
                     Email invalide
                   }
                 </p>
@@ -174,10 +176,10 @@ interface RegisterFormData {
                   placeholder="Jean"
                   class="w-full"
                 />
-                @if (isFieldInvalid('profile.firstName')) {
+                @if (isFieldInvalid("profile.firstName")) {
                   <p class="text-xs text-destructive">
                     @if (
-                      getControl('profile.firstName')?.errors?.['required']
+                      getControl("profile.firstName")?.errors?.["required"]
                     ) {
                       Requis
                     } @else {
@@ -196,9 +198,9 @@ interface RegisterFormData {
                   placeholder="Dupont"
                   class="w-full"
                 />
-                @if (isFieldInvalid('profile.lastName')) {
+                @if (isFieldInvalid("profile.lastName")) {
                   <p class="text-xs text-destructive">
-                    @if (getControl('profile.lastName')?.errors?.['required']) {
+                    @if (getControl("profile.lastName")?.errors?.["required"]) {
                       Requis
                     } @else {
                       Min. 2 caractères
@@ -239,7 +241,7 @@ interface RegisterFormData {
                     class="w-full pl-10"
                   />
                 </div>
-                @if (isFieldInvalid('password')) {
+                @if (isFieldInvalid("password")) {
                   <p class="text-xs text-destructive">
                     Min. 8 car. + Maj + min + chiffre
                   </p>
@@ -255,7 +257,7 @@ interface RegisterFormData {
                   placeholder="••••••••"
                   class="w-full"
                 />
-                @if (isFieldInvalid('confirmPassword')) {
+                @if (isFieldInvalid("confirmPassword")) {
                   <p class="text-xs text-destructive">Ne correspondent pas</p>
                 }
               </div>
@@ -323,20 +325,20 @@ export class RegisterComponent {
    */
   registerForm: FormGroup = this.fb.group(
     {
-      email: ['', [Validators.required, Validators.email]],
+      email: ["", [Validators.required, Validators.email]],
       password: [
-        '',
+        "",
         [
           Validators.required,
           Validators.minLength(8),
           Validators.pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/),
         ],
       ],
-      confirmPassword: ['', [Validators.required]],
-      role: ['BUYER', [Validators.required]],
+      confirmPassword: ["", [Validators.required]],
+      role: ["BUYER", [Validators.required]],
       profile: this.fb.group({
         firstName: [
-          '',
+          "",
           [
             Validators.required,
             Validators.minLength(2),
@@ -344,14 +346,14 @@ export class RegisterComponent {
           ],
         ],
         lastName: [
-          '',
+          "",
           [
             Validators.required,
             Validators.minLength(2),
             Validators.maxLength(50),
           ],
         ],
-        phone: ['', [Validators.pattern(/^(\+261|0)[0-9]{9}$/)]],
+        phone: ["", [Validators.pattern(/^(\+261|0)[0-9]{9}$/)]],
       }),
     },
     { validators: this.passwordMatchValidator },
@@ -361,8 +363,8 @@ export class RegisterComponent {
    * Validateur personnalisé pour vérifier que les mots de passe correspondent
    */
   passwordMatchValidator(control: AbstractControl): ValidationErrors | null {
-    const password = control.get('password');
-    const confirmPassword = control.get('confirmPassword');
+    const password = control.get("password");
+    const confirmPassword = control.get("confirmPassword");
 
     if (
       password &&

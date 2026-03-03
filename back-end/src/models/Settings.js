@@ -110,25 +110,21 @@ const settingsSchema = new mongoose.Schema(
 
 // Méthode statique pour récupérer les settings (crée si n'existe pas)
 settingsSchema.statics.getSettings = async function (options = {}) {
-  const session = options.session || null;
-
-  const findQuery = this.findOne();
-  if (session) findQuery.session(session);
-
-  let settings = await findQuery;
+  // NOTE: this collection is capped; MongoDB forbids writes in transactions
+  // on capped collections. We intentionally ignore any provided session here.
+  let settings = await this.findOne();
   if (!settings) {
-    const createOptions = session ? { session } : {};
-    [settings] = await this.create([{}], createOptions);
+    [settings] = await this.create([{}]);
   }
   return settings;
 };
 
 // Méthode statique pour mettre à jour les settings
 settingsSchema.statics.updateSettings = async function (updates, options = {}) {
-  const session = options.session || null;
-  const settings = await this.getSettings({ session });
+  // options.session is accepted for API compatibility but ignored.
+  const settings = await this.getSettings(options);
   Object.assign(settings, updates);
-  await settings.save(session ? { session } : {});
+  await settings.save();
   return settings;
 };
 
