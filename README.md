@@ -76,194 +76,251 @@ Application web de marketplace pour un centre commercial (type Akoor / La City) 
 
 ## 📸 Copies d'Écran
 
-### Page d'accueil / Catalogue
+### 🌍 Page d'accueil
 
-<!-- SCREENSHOT: Page d'accueil avec liste des produits, recherche et filtres -->
 > 📷 *Ajouter ici une capture de la page d'accueil*
 
 ---
 
-### Interface Acheteur
+### 🛒 Acheteur
 
-<!-- SCREENSHOT: Panier d'achat avec produits et total -->
-> 📷 *Ajouter ici une capture du panier d'achat*
+> 📷 *Ajouter ici une capture du catalogue / panier*
 
-<!-- SCREENSHOT: Page de détail d'un produit avec avis -->
-> 📷 *Ajouter ici une capture de la fiche produit*
-
-<!-- SCREENSHOT: Historique des commandes acheteur -->
-> 📷 *Ajouter ici une capture des commandes acheteur*
-
-<!-- SCREENSHOT: Wallet acheteur avec dépôt et historique -->
-> 📷 *Ajouter ici une capture du wallet acheteur*
+> 📷 *Ajouter ici une capture des commandes / wallet*
 
 ---
 
-### Interface Vendeur
+### 🏪 Vendeur
 
-<!-- SCREENSHOT: Dashboard vendeur avec statistiques -->
-> 📷 *Ajouter ici une capture du dashboard vendeur*
+> 📷 *Ajouter ici une capture du dashboard / produits*
 
-<!-- SCREENSHOT: Liste des produits vendeur avec stock -->
-> 📷 *Ajouter ici une capture de la gestion produits*
-
-<!-- SCREENSHOT: Gestion des commandes et statuts -->
-> 📷 *Ajouter ici une capture de la gestion commandes vendeur*
-
-<!-- SCREENSHOT: Mouvements de stock (approvisionnement) -->
-> 📷 *Ajouter ici une capture des mouvements de stock*
+> 📷 *Ajouter ici une capture des commandes / stock*
 
 ---
 
-### Interface Administrateur
+### 👑 Administrateur
 
-<!-- SCREENSHOT: Dashboard admin avec KPIs et commissions -->
 > 📷 *Ajouter ici une capture du dashboard admin*
 
-<!-- SCREENSHOT: Liste des boutiques avec modération -->
-> 📷 *Ajouter ici une capture de la gestion boutiques admin*
-
-<!-- SCREENSHOT: Liste des utilisateurs avec actions -->
-> 📷 *Ajouter ici une capture de la gestion utilisateurs admin*
-
-<!-- SCREENSHOT: Paramètres de la plateforme -->
-> 📷 *Ajouter ici une capture des paramètres admin*
+> 📷 *Ajouter ici une capture de la gestion boutiques / utilisateurs*
 
 ---
 
 ## 🗄️ Structure MongoDB
 
-L'application utilise **7 collections** principales :
+L'application utilise **10 collections** :
 
 ### 1. `users` — Utilisateurs
 
-| Champ           | Type       | Description                          |
-| --------------- | ---------- | ------------------------------------ |
-| `email`         | String     | Email unique (login)                 |
-| `passwordHash`  | String     | Mot de passe hashé (bcrypt)          |
-| `role`          | Enum       | `BUYER` \| `SELLER` \| `ADMIN`       |
-| `profile`       | Object     | `{ name, phone, address, avatar }`   |
-| `walletId`      | ObjectId   | Référence vers le wallet             |
-| `isValidated`   | Boolean    | Validé par l'admin                   |
-| `isActive`      | Boolean    | Compte actif                         |
-| `createdAt`     | Date       | Date de création (auto)              |
+| Champ          | Type     | Description                                                                 |
+| -------------- | -------- | --------------------------------------------------------------------------- |
+| `email`        | String   | Email unique (login)                                                        |
+| `passwordHash` | String   | Mot de passe hashé (bcrypt) — non retourné par défaut                       |
+| `role`         | Enum     | `BUYER` \| `SELLER` \| `ADMIN`                                              |
+| `profile`      | Object   | `{ firstName, lastName, phone, address: { street, city, postalCode, country }, avatar: { url, fileId } }` |
+| `walletId`     | ObjectId | Référence vers le wallet                                                    |
+| `isValidated`  | Boolean  | Validé par l'admin                                                          |
+| `isActive`     | Boolean  | Compte actif                                                                |
 
-**Index** : `email`, `role + isActive`
+**Index** : `role + isActive`
 
 ---
 
 ### 2. `shops` — Boutiques
 
-| Champ            | Type     | Description                                     |
-| ---------------- | -------- | ----------------------------------------------- |
-| `sellerId`       | ObjectId | Référence vers le vendeur                        |
-| `name`           | String   | Nom de la boutique                               |
-| `description`    | String   | Description                                      |
-| `logo`           | String   | URL du logo                                      |
-| `banner`         | String   | URL de la bannière                               |
-| `contact`        | Object   | `{ email, phone, address }`                      |
-| `categories`     | [String] | Catégories de la boutique                        |
-| `status`         | Enum     | `DRAFT` \| `PENDING` \| `ACTIVE` \| `REJECTED`  |
-| `isActive`       | Boolean  | Boutique accessible publiquement                 |
-| `commissionRate` | Number   | Taux de commission (%)                           |
-| `stats`          | Object   | `{ totalProducts, totalSales, totalRevenue }`    |
+| Champ            | Type     | Description                                                        |
+| ---------------- | -------- | ------------------------------------------------------------------ |
+| `sellerId`       | ObjectId | Référence vers le vendeur                                           |
+| `name`           | String   | Nom de la boutique                                                  |
+| `description`    | String   | Description                                                         |
+| `logo`           | Object   | `{ url, fileId }` — sérialisé en URL                               |
+| `banner`         | Object   | `{ url, fileId }` — sérialisé en URL                               |
+| `contact`        | Object   | `{ email, phone, address }`                                         |
+| `categories`     | [String] | Catégories de la boutique                                           |
+| `status`         | Enum     | `DRAFT` \| `PENDING` \| `ACTIVE` \| `REJECTED` \| `ARCHIVED`       |
+| `rejectionReason`| String   | Motif de rejet (si `REJECTED`)                                      |
+| `isActive`       | Boolean  | Synchronisé automatiquement avec `status === ACTIVE`                |
+| `commissionRate` | Number   | Taux de commission (%)                                              |
+| `stats`          | Object   | `{ totalSales, deliveredSalesAmount, products: { pending, active, archived }, rating }` |
 
-**Index** : `name + description` (text), `isActive`, `categories`
+**Index** : `name + description` (text), `isActive`, `categories`, `status + createdAt`, `sellerId + status`
 
 ---
 
 ### 3. `products` — Produits
 
-| Champ              | Type       | Description                                             |
-| ------------------ | ---------- | ------------------------------------------------------- |
-| `shopId`           | ObjectId   | Boutique propriétaire                                    |
-| `sellerId`         | ObjectId   | Vendeur propriétaire                                     |
-| `sku`              | String     | Code produit (unique)                                    |
-| `title`            | String     | Titre du produit                                         |
-| `description`      | String     | Description détaillée                                    |
-| `price`            | Number     | Prix de vente (MGA)                                      |
-| `originalPrice`    | Number     | Prix original (promotions)                               |
-| `stockCache`       | Object     | `{ available, reserved, total, lastUpdated }`            |
-| `stockAlert`       | Object     | `{ lowThreshold, outOfStock }`                           |
-| `images`           | [String]   | URLs des images                                          |
-| `category`         | String     | Catégorie                                                |
-| `tags`             | [String]   | Tags de recherche                                        |
-| `characteristics`  | Map        | Caractéristiques libres (couleur, taille, etc.)          |
-| `status`           | Enum       | `DRAFT` \| `PENDING` \| `ACTIVE` \| `REJECTED` \| `OUT_OF_STOCK` |
-| `stats`            | Object     | `{ views, sales, rating, reviewCount }`                  |
+| Champ             | Type     | Description                                                              |
+| ----------------- | -------- | ------------------------------------------------------------------------ |
+| `shopId`          | ObjectId | Boutique propriétaire                                                     |
+| `sellerId`        | ObjectId | Vendeur propriétaire                                                      |
+| `sku`             | String   | Code produit (unique, sparse)                                             |
+| `title`           | String   | Titre du produit                                                          |
+| `description`     | String   | Description détaillée                                                     |
+| `category`        | String   | Catégorie                                                                 |
+| `tags`            | [String] | Tags de recherche                                                         |
+| `characteristics` | Map      | Caractéristiques libres (couleur, taille, etc.)                           |
+| `images`          | Array    | `[{ url, fileId }]` — sérialisé en tableau de strings                    |
+| `price`           | Number   | Prix de vente (MGA)                                                       |
+| `originalPrice`   | Number   | Prix original (promotions)                                                |
+| `stock.cache`     | Object   | `{ total, reserved, available, lastUpdated }` — cache dénormalisé        |
+| `stock.alert`     | Object   | `{ lowThreshold, outOfStock }`                                            |
+| `status`          | Enum     | `DRAFT` \| `PENDING` \| `ACTIVE` \| `REJECTED` \| `ARCHIVED`             |
+| `rejectionReason` | String   | Motif de rejet (si `REJECTED`)                                            |
+| `stats`           | Object   | `{ views, sales, deliveredSales, rating, reviewCount }`                   |
 
-**Index** : `title + description + tags` (text), `shopId + status`, `category + status + price`
+**Virtual** : `isLowStock`, `isOutOfStock`
 
----
-
-### 4. `stockmovements` — Mouvements de Stock ⭐
-
-Collection centrale qui trace **toutes** les entrées/sorties de stock, ainsi que les **ventes** (avec snapshot complet).
-
-| Champ          | Type     | Description                                                                                                      |
-| -------------- | -------- | ---------------------------------------------------------------------------------------------------------------- |
-| `reference`    | String   | Référence unique auto-générée (ex: `VNT-2026-000001`)                                                           |
-| `productId`    | ObjectId | Produit concerné                                                                                                 |
-| `shopId`       | ObjectId | Boutique concernée                                                                                               |
-| `movementType` | Enum     | `SUPPLY` \| `SALE` \| `RETURN_CUSTOMER` \| `RETURN_SUPPLIER` \| `ADJUSTMENT_PLUS` \| `ADJUSTMENT_MINUS` \| `RESERVATION` \| `RESERVATION_CANCEL` |
-| `direction`    | Enum     | `IN` (entrée) \| `OUT` (sortie) — calculé automatiquement                                                       |
-| `quantity`     | Number   | Quantité déplacée                                                                                                |
-| `unitPrice`    | Number   | Prix unitaire                                                                                                    |
-| `totalAmount`  | Number   | Montant total                                                                                                    |
-| `stockBefore`  | Number   | Stock avant le mouvement (audit)                                                                                 |
-| `stockAfter`   | Number   | Stock après le mouvement (audit)                                                                                 |
-| `sale`         | Object   | *(si SALE)* `{ buyerId, productSnapshot, buyerSnapshot, deliveryAddress, commission, status, paymentStatus... }` |
-| `supply`       | Object   | *(si SUPPLY)* `{ supplier, batch, unitCost }`                                                                   |
-| `adjustment`   | Object   | *(si ADJUSTMENT)* `{ reason, stockTheoretical, stockActual }`                                                   |
-| `reservation`  | Object   | *(si RESERVATION)* `{ cartId, expiresAt }`                                                                      |
-| `groupId`      | String   | Lie plusieurs mouvements d'une même transaction                                                                  |
-| `performedBy`  | ObjectId | Utilisateur ayant effectué le mouvement                                                                          |
-
-**Index** : `productId + createdAt`, `shopId + movementType`, `sale.buyerId`, `sale.status`
+**Index** : `title + description + tags` (text), `shopId + status`, `category + status + price`, `stock.cache.available + status`
 
 ---
 
-### 5. `carts` — Paniers
+### 4. `stockmovements` — En-têtes de Mouvements de Stock ⭐
 
-| Champ       | Type     | Description                              |
-| ----------- | -------- | ---------------------------------------- |
-| `userId`    | ObjectId | Acheteur propriétaire                    |
-| `items`     | Array    | `[{ productId, shopId, priceSnapshot, quantity, reservationMovementId }]` |
-| `expiresAt` | Date     | Expiration TTL (30 min après dernière modif) |
+Document **header** qui regroupe les lignes d'un même mouvement (`StockMovementLine`).
 
-**Index** : `userId`, TTL sur `expiresAt`
+| Champ                  | Type       | Description                                                                                                 |
+| ---------------------- | ---------- | ----------------------------------------------------------------------------------------------------------- |
+| `reference`            | String     | Référence unique auto-générée (ex: `SAL-260303-ABCD12`)                                                    |
+| `movementType`         | Enum       | `SUPPLY` \| `SALE` \| `RETURN_CUSTOMER` \| `RETURN_SUPPLIER` \| `ADJUSTMENT_PLUS` \| `ADJUSTMENT_MINUS` \| `RESERVATION` \| `RESERVATION_CANCEL` |
+| `direction`            | Enum       | `IN` \| `OUT` — calculé automatiquement depuis le type                                                     |
+| `totalAmount`          | Number     | Montant total (somme des lignes)                                                                            |
+| `totalCommissionAmount`| Number     | Total des commissions                                                                                       |
+| `lineIds`              | [ObjectId] | Références aux `StockMovementLine`                                                                          |
+| `cartId`               | ObjectId   | Panier lié (réservation / vente)                                                                            |
+| `shopId`               | ObjectId   | Boutique concernée                                                                                          |
+| `sale`                 | Object     | *(si SALE)* `{ cartId, paymentTransaction, deliveryAddress, status, paymentMethod, confirmedAt, deliveredAt, returnedAt }` |
+| `supply`               | Object     | *(si SUPPLY)* `{ supplier: { name, contact }, invoiceNumber, notes }`                                      |
+| `adjustment`           | Object     | *(si ADJUSTMENT)* `{ reason, notes }` — reason : `INVENTORY_COUNT \| DAMAGED \| LOST \| STOLEN \| EXPIRED \| OTHER` |
+| `performedBy`          | ObjectId   | Utilisateur ayant effectué le mouvement                                                                     |
+| `note`                 | String     | Notes générales                                                                                             |
+| `date`                 | Date       | Date métier                                                                                                 |
+
+**Index** : `movementType + createdAt`, `performedBy + createdAt`, `shopId + createdAt`, `cartId`, `sale.cartId`, `sale.status`
 
 ---
 
-### 6. `wallets` — Portefeuilles
+### 5. `stockmovementlines` — Lignes de Mouvements de Stock
 
-| Champ          | Type     | Description                        |
-| -------------- | -------- | ---------------------------------- |
-| `ownerId`      | ObjectId | Utilisateur ou Boutique propriétaire|
-| `ownerModel`   | Enum     | `User` \| `Shop`                   |
-| `balance`      | Number   | Solde disponible (MGA)             |
-| `pendingBalance`| Number  | Solde en attente (ventes non livrées)|
-| `currency`     | String   | Devise (défaut: `MGA`)             |
+Détail par produit pour chaque en-tête `StockMovement`.
+
+| Champ             | Type     | Description                                                                                                 |
+| ----------------- | -------- | ----------------------------------------------------------------------------------------------------------- |
+| `reference`       | String   | Référence unique auto-générée                                                                               |
+| `moveId`          | ObjectId | Référence vers le `StockMovement` header                                                                    |
+| `productId`       | ObjectId | Produit concerné                                                                                            |
+| `shopId`          | ObjectId | Boutique concernée                                                                                          |
+| `movementType`    | Enum     | Même enum que `StockMovement`                                                                               |
+| `cartId`          | ObjectId | Panier lié (si réservation)                                                                                 |
+| `direction`       | Enum     | `IN` \| `OUT` — calculé automatiquement                                                                     |
+| `quantity`        | Number   | Quantité déplacée                                                                                           |
+| `unitPrice`       | Number   | Prix unitaire                                                                                               |
+| `commissionRate`  | Number   | Taux de commission (%)                                                                                      |
+| `commissionAmount`| Number   | Montant de la commission                                                                                    |
+| `totalAmount`     | Number   | Montant total de la ligne                                                                                   |
+| `stockBefore`     | Number   | Stock disponible avant le mouvement (audit)                                                                 |
+| `stockAfter`      | Number   | Stock disponible après le mouvement (audit)                                                                 |
+| `performedBy`     | ObjectId | Utilisateur ayant effectué le mouvement                                                                     |
+| `date`            | Date     | Date métier                                                                                                 |
+
+**Méthode statique** : `calculateStock(productId)` — agrège IN/OUT et réservations
+
+**Index** : `moveId + createdAt`, `productId + createdAt`, `shopId + movementType + createdAt`, `cartId`
+
+---
+
+### 6. `carts` — Paniers
+
+| Champ         | Type     | Description                                                                              |
+| ------------- | -------- | ---------------------------------------------------------------------------------------- |
+| `userId`      | ObjectId | Acheteur propriétaire                                                                    |
+| `status`      | Enum     | `CART` \| `ORDER` \| `EXPIRED` \| `RETURNED` \| `DELIVERED`                             |
+| `order`       | Object   | *(si commandé)* `{ reference, paymentTransaction, paymentMethod, saleId }`              |
+| `items`       | Array    | `[{ productId, shopId, productSnapshot: { title, description, images, unitPrice }, quantity, totalAmount }]` |
+| `totalAmount` | Number   | Montant total du panier                                                                  |
+| `expiresAt`   | Date     | Expiration (30 min par défaut après création/modif)                                      |
+| `deliveredAt` | Date     | Date de confirmation de livraison                                                        |
+
+**Index** : `userId`, `status + expiresAt + updatedAt`
+
+---
+
+### 7. `wallets` — Portefeuilles
+
+| Champ           | Type     | Description                              |
+| --------------- | -------- | ---------------------------------------- |
+| `ownerId`       | ObjectId | Utilisateur ou Boutique propriétaire      |
+| `ownerModel`    | Enum     | `User` \| `Shop`                         |
+| `balance`       | Number   | Solde disponible (MGA)                   |
+| `pendingBalance`| Number   | Solde en attente (ventes non livrées)    |
+| `totalEarned`   | Number   | Total cumulé gagné (historique)           |
+| `totalSpent`    | Number   | Total cumulé dépensé (historique)         |
+| `currency`      | String   | Devise (défaut: `MGA`)                   |
+| `isActive`      | Boolean  | Wallet actif                             |
 
 **Index** : `ownerId + ownerModel` (unique)
 
 ---
 
-### 7. `wallettransactions` — Transactions Wallet
+### 8. `wallettransactions` — Transactions Wallet
 
-| Champ              | Type     | Description                                                                 |
-| ------------------ | -------- | --------------------------------------------------------------------------- |
-| `walletId`         | ObjectId | Wallet concerné                                                              |
-| `type`             | Enum     | `DEPOSIT` \| `WITHDRAWAL` \| `SALE_PAYMENT` \| `SALE_REVENUE` \| `REFUND` \| `COMMISSION` |
-| `amount`           | Number   | Montant (positif ou négatif)                                                 |
-| `balanceBefore`    | Number   | Solde avant transaction                                                      |
-| `balanceAfter`     | Number   | Solde après transaction                                                      |
-| `stockMovementId`  | ObjectId | Référence au mouvement de stock source                                       |
-| `stockMovementRef` | String   | Numéro de référence du mouvement                                             |
-| `description`      | String   | Description de la transaction                                                |
-| `status`           | Enum     | `PENDING` \| `COMPLETED` \| `FAILED` \| `CANCELLED`                         |
+| Champ               | Type     | Description                                                                                                            |
+| ------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `walletId`          | ObjectId | Wallet concerné                                                                                                         |
+| `type`              | Enum     | `DEPOSIT` \| `WITHDRAWAL` \| `PURCHASE` \| `SALE_INCOME` \| `REFUND` \| `COMMISSION` \| `TRANSFER_IN` \| `TRANSFER_OUT` |
+| `amount`            | Number   | Montant (positif ou négatif)                                                                                            |
+| `balanceBefore`     | Number   | Solde avant transaction                                                                                                 |
+| `balanceAfter`      | Number   | Solde après transaction                                                                                                 |
+| `stockMovementId`   | ObjectId | Référence au mouvement de stock associé (ventes/achats)                                                                 |
+| `relatedTransactionId` | ObjectId | Référence à une autre transaction (transferts)                                                                       |
+| `status`            | Enum     | `PENDING` \| `COMPLETED` \| `FAILED` \| `CANCELLED`                                                                    |
+| `paymentMethod`     | Enum     | `WALLET` \| `CARD` \| `MOBILE_MONEY` \| `BANK_TRANSFER` \| `CASH`                                                      |
+| `externalReference` | String   | Référence de transaction externe                                                                                        |
+| `description`       | String   | Description de la transaction                                                                                           |
+| `metadata`          | Map      | Données supplémentaires libres                                                                                          |
 
 **Index** : `walletId + createdAt`, `type + status`, `stockMovementId`
+
+---
+
+### 9. `reviews` — Avis Produits
+
+| Champ             | Type     | Description                                               |
+| ----------------- | -------- | --------------------------------------------------------- |
+| `productId`       | ObjectId | Produit noté                                              |
+| `userId`          | ObjectId | Acheteur ayant laissé l'avis                              |
+| `rating`          | Number   | Note de 1 à 5                                             |
+| `comment`         | String   | Commentaire (max 1000 caractères, optionnel)              |
+| `sellerResponse`  | Object   | `{ comment, respondedAt }` — réponse du vendeur          |
+| `isVerifiedPurchase` | Boolean | Achat vérifié                                          |
+| `isVisible`       | Boolean  | Avis visible publiquement                                 |
+
+**Méthode statique** : `calculateAverageRating(productId)`
+
+**Index** : `productId + userId` (unique), `productId + createdAt`, `userId + createdAt`
+
+---
+
+### 10. `settings` — Paramètres de la Plateforme (Singleton)
+
+| Champ                | Type     | Description                                          |
+| -------------------- | -------- | ---------------------------------------------------- |
+| `defaultCommissionRate` | Number | Taux de commission par défaut pour les boutiques (%) |
+| `cartTTLMinutes`     | Number   | Durée de vie du panier en minutes (défaut: 30)       |
+| `lowStockThreshold`  | Number   | Seuil d'alerte stock bas (défaut: 10)                |
+| `outOfStockThreshold`| Number   | Seuil de rupture de stock (défaut: 0)                |
+| `currency`           | String   | Devise (défaut: `MGA`)                               |
+| `platformName`       | String   | Nom de la plateforme                                 |
+| `maintenanceMode`    | Boolean  | Mode maintenance actif                               |
+| `maintenanceMessage` | String   | Message affiché en maintenance                       |
+| `contactEmail`       | String   | Email de contact                                     |
+| `supportEmail`       | String   | Email du support                                     |
+| `minOrderAmount`     | Number   | Montant minimum de commande                          |
+| `maxOrderAmount`     | Number   | Montant maximum (0 = illimité)                       |
+| `minWithdrawalAmount`| Number   | Montant minimum de retrait (défaut: 10 000 MGA)      |
+| `adminGlobalWalletId`| ObjectId | Référence vers le wallet global admin                |
+| `returnWindowDays`   | Number   | Délai de retour en jours (défaut: 7)                 |
+
+**Collection cappée** (max 1 document) — méthodes statiques : `getSettings()`, `updateSettings(updates)`
 
 ---
 
